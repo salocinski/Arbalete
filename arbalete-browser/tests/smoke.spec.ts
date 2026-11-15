@@ -89,7 +89,9 @@ test.beforeAll(async () => {
   serveur = createServer((req, res) => {
     // Fichier de 100 Mo envoyé par blocs de 1 Mo, un bloc toutes les `ms` millisecondes (ARB-55).
     if (req.url?.startsWith('/gros-fichier.bin')) {
-      void envoyerGrosFichier(res, Number(new URL(req.url, 'http://x').searchParams.get('ms') ?? 20))
+      const msParam = Number(new URL(req.url, 'http://x').searchParams.get('ms'))
+      const ms = Number.isFinite(msParam) ? Math.min(1000, Math.max(0, msParam)) : 20
+      void envoyerGrosFichier(res, ms)
       return
     }
     const corps = pages[req.url ?? '']

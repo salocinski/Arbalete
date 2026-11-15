@@ -45,6 +45,7 @@ import { creerEspace, ecrireEspaceActif, lireEspaceActif, lireEspaces, modifierE
 import { champsNouvelEspace, ordreApresDeplacement, type CouleurEspace, type Espace } from '../shared/espaces.ts'
 import { creerGestionnaire } from './gestionnaireTelechargements.ts'
 import { ARCHIVE_GARDEE_MAX, delaiArchivageValide, epinglesDabord, ongletsAArchiver } from '../shared/archivage.ts'
+import { delaiVeilleValide, memoireDesOnglets, ongletsAEndormir, type MemoireOnglets } from '../shared/veille.ts'
 import { archiver, listerArchive, retirerDeLArchive } from './donnees/archive.ts'
 
 const CHEMIN_INTERFACE = join(__dirname, '../renderer/index.html')
@@ -1186,16 +1187,7 @@ function createTab(initialUrl = reglages.accueil, restaure?: { titre: string, es
   const espaceDeLOnglet = restaure ? restaure.espace ?? null : espaceActif
   // Le dossier d'un onglet restauré doit exister dans l'espace de l'onglet (l'onglet a pu changer d'espace) ; jamais épinglé.
   const dossier = dossierAccepte(dossiersOnglets, restaure?.dossier, espaceDeLOnglet, !!restaure?.epingle) ? restaure?.dossier : undefined
-  const view = new WebContentsView({
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      sandbox: true,
-      webSecurity: true,
-      session: session.defaultSession
-    }
-  })
-  view.setBorderRadius(RAYON_PAGE)
+  const view = nouvelleVue()
 
   const record: TabRecord = {
     data: {
@@ -1217,7 +1209,35 @@ function createTab(initialUrl = reglages.accueil, restaure?: { titre: string, es
     activite: restaure?.activite ?? Date.now()
   }
   tabs.set(id, record)
+  brancherOnglet(id, record)
 
+  if (!restaure) {
+    toucher(activeTabId)
+    activeTabId = id
+    setActiveView()
+  }
+  broadcastState()
+  return id
+}
+
+function nouvelleVue(): WebContentsView {
+  const view = new WebContentsView({
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      webSecurity: true,
+      session: session.defaultSession
+    }
+  })
+  view.setBorderRadius(RAYON_PAGE)
+  return view
+}
+
+// Câble les événements de la vue de l'onglet. Rappelé pour la vue neuve d'un onglet qui sort de veille (ARB-78) : l'état
+// propre à une vue (`dernierGeste`, `blancDePage`…) vit dans cette fermeture et repart de zéro avec elle.
+function brancherOnglet(id: string, record: TabRecord) {
+  const view = record.view
   view.webContents.on('enter-html-full-screen', () => entrerPleinEcranPage(view))
   view.webContents.on('leave-html-full-screen', () => sortirPleinEcranPage(view))
   view.webContents.on('page-title-updated', (_event, titre, explicite) => {
@@ -1329,14 +1349,6 @@ function createTab(initialUrl = reglages.accueil, restaure?: { titre: string, es
   brancherF12(view.webContents)
   brancherRaccourcis(view.webContents)
   masquerAuClic(view.webContents)
-
-  if (!restaure) {
-    toucher(activeTabId)
-    activeTabId = id
-    setActiveView()
-  }
-  broadcastState()
-  return id
 }
 
 function lireSessionSauvee(): OngletSauve[] {
@@ -1475,6 +1487,51 @@ function archiverAnciens() {
     return
   }
   for (const id of archivables) closeTab(id, false)
+}
+
+// Mise en veille (ARB-78) : la page d'un onglet non affiché, ni sonore, laissé de côté plus longtemps que le délai de
+// Paramètres est fermée pour libérer son processus ; une vue neuve la remplace, dans l'état d'un onglet restauré (ARB-45) :
+// titre, adresse et favicon restent, la page se recharge à l'affichage.
+// shortcut: l'historique de navigation (Précédent / Suivant), le défilement et les formulaires non envoyés de la page sont
+// perdus (la fermeture n'attend pas beforeunload) ; les garder demanderait de sérialiser l'historique, à faire si la mise en
+// veille gêne en usage réel. Un appel micro / caméra sans son de sortie, un envoi en cours, un téléchargement blob: et une
+// pop-up de connexion ouverte par la page sont coupés aussi : exclure les onglets qui capturent un média si cela arrive.
+function endormir(id: string) {
+  const record = tabs.get(id)
+  if (!record || id === activeTabId) return
+  record.view.webContents.close()
+  record.view = nouvelleVue()
+  record.chargee = false
+  record.popupsBloquees = 0
+  record.data = { ...record.data, isLoading: false, audible: false, muted: false, canGoBack: false, canGoForward: false, error: false }
+  brancherOnglet(id, record)
+  broadcastState()
+}
+
+function endormirAnciens() {
+  const aEndormir = ongletsAEndormir([...tabs.values()].map(({ data, activite, chargee }) => ({
+    id: data.id,
+    affiche: data.id === activeTabId,
+    // Un onglet rendu muet par l'utilisateur joue peut-être encore : la vue neuve perdrait son réglage.
+    sonore: !!data.audible || !!data.muted,
+    enVeille: !chargee,
+    activite
+  })), Date.now(), reglages.veilleMinutes)
+  for (const id of aEndormir) {
+    try {
+      endormir(id)
+    } catch (erreur) {
+      console.error('Onglet non mis en veille :', erreur)
+    }
+  }
+}
+
+// Mémoire des onglets (ARB-78), pour mesurer avant / après : processus des pages chargées, et nombre d'onglets sans page.
+function mesurerMemoire(): MemoireOnglets {
+  const enregistres = [...tabs.values()]
+  const pids = enregistres.filter((r) => r.chargee).map((r) => r.view.webContents.getOSProcessId())
+  const metriques = app.getAppMetrics().map((m) => ({ pid: m.pid, ko: m.memory.workingSetSize }))
+  return { mo: memoireDesOnglets(pids, metriques), enVeille: enregistres.filter((r) => !r.chargee).length }
 }
 
 // Passe à un autre espace (ARB-61) : les onglets de l'espace choisi remplacent ceux affichés et son dernier onglet actif
@@ -1835,6 +1892,8 @@ app.whenReady().then(() => {
     setTimeout(archiverAnciens, 30_000)
     setInterval(archiverAnciens, 600_000).unref()
   }
+  // Mise en veille (ARB-78) : ne dépend pas de la base, les onglets se rechargent depuis leur adresse.
+  setInterval(endormirAnciens, 60_000).unref()
 
   // ARB-15 : plein écran, caméra, micro, notifications et position se décident par site (hôte de la page de l'onglet, pas
   // celui d'un sous-cadre) ; tout le reste, et toute vue qui n'est pas la page de l'onglet actif, reste refusé.
@@ -1921,6 +1980,11 @@ app.whenReady().then(() => {
     if (!delaiArchivageValide(valeur)) throw new Error('Argument IPC invalide : délai inconnu')
     appliquerReglages({ ...reglages, archivageHeures: valeur })
   })
+  traiter('browser:set-sleep-delay', (valeur) => {
+    if (!delaiVeilleValide(valeur)) throw new Error('Argument IPC invalide : délai inconnu')
+    appliquerReglages({ ...reglages, veilleMinutes: valeur })
+  })
+  traiter('browser:get-memory', () => mesurerMemoire())
   ipcMain.handle('browser:set-download-folder', async (event, action) => {
     exigerBarre(event)
     if (exigerChoix(action, ['choisir', 'defaut'] as const) === 'defaut') return appliquerReglages({ ...reglages, dossierTelechargements: null })

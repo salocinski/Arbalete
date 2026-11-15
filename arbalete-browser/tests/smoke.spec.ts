@@ -3836,7 +3836,7 @@ test('C87 : au plus 3 pop-ups ouvertes, la suivante s’ouvre en onglet', async 
 //   no_claim=ne couvre ni la boîte de choix du dossier, ni l'enregistrement d'un téléchargement dans le dossier choisi
 //   (tests unitaires de preferences.test.ts), ni le rendu de la modale (aperçu web), ni le retour au redémarrage.
 test('C90 : page d’accueil, animations et dossier de téléchargement des Paramètres', async () => {
-  const defaut = { accueil: 'https://www.google.com', animationsReduites: false, dossierTelechargements: null, archivageHeures: 12 }
+  const defaut = { accueil: 'https://www.google.com', animationsReduites: false, dossierTelechargements: null, archivageHeures: 12, veilleMinutes: 30 }
   expect(await ui.evaluate(() => window.arbalete.getSettings())).toEqual(defaut)
 
   // Page d'accueil : http(s) seulement, normalisée ; un nouvel onglet l'ouvre.
@@ -3886,4 +3886,17 @@ test('C91 : le délai d’archivage valide son argument ; la liste et la restaur
   const avant = (await etat()).tabs.length
   await barreUi.evaluate(() => window.arbalete.restoreArchived(999999)).catch(() => undefined)
   expect((await etat()).tabs.length).toBe(avant)
+})
+
+test('C94 : le délai de mise en veille valide son argument et la mesure de mémoire répond', async () => {
+  // Délai : liste fermée (15, 30, 60, 240, 0), le reste est refusé et ne change rien.
+  expect(await ui.evaluate(() => Promise.all([5, -30, '30', null].map((v) => window.arbalete.setSleepDelay(v as unknown as number).then(() => 'ok', () => 'refuse'))))).toEqual(['refuse', 'refuse', 'refuse', 'refuse'])
+  expect((await ui.evaluate(() => window.arbalete.getSettings())).veilleMinutes).toBe(30)
+  await ui.evaluate(() => window.arbalete.setSleepDelay(60))
+  expect((await ui.evaluate(() => window.arbalete.getSettings())).veilleMinutes).toBe(60)
+  await ui.evaluate(() => window.arbalete.setSleepDelay(30))
+
+  const memoire = await ui.evaluate(() => window.arbalete.getMemory())
+  expect(memoire.mo).toBeGreaterThanOrEqual(0)
+  expect(memoire.enVeille).toBeGreaterThanOrEqual(0)
 })

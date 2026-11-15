@@ -3,6 +3,7 @@ import { COULEURS_ESPACE, ESPACES_INITIAUX, LONGUEUR_MAX_NOM_ESPACE, champsNouve
 import { MOTEUR_DEFAUT, modeleDe, urlRecherche, type ChoixMoteur } from '../../shared/moteurs'
 import { REGLAGES_DEFAUT, accueilValide, type Reglages } from '../../shared/reglages'
 import { delaiArchivageValide, type ElementArchive } from '../../shared/archivage'
+import { delaiVeilleValide } from '../../shared/veille'
 import { estActif, type Telechargement } from '../../shared/telechargements'
 import type { BrowserAPI, BrowserState, BrowserTab, SidebarState, ThemeChoice } from '../../shared/types'
 
@@ -412,6 +413,11 @@ export function installPreviewApi(): boolean {
       if (!delaiArchivageValide(heures)) throw new Error('Délai inconnu')
       changerReglages({ ...reglages, archivageHeures: heures })
     },
+    setSleepDelay: async (minutes) => {
+      if (!delaiVeilleValide(minutes)) throw new Error('Délai inconnu')
+      changerReglages({ ...reglages, veilleMinutes: minutes })
+    },
+    getMemory: async () => ({ mo: 0, enVeille: 0 }),
     listArchive: async () => archive.map((element) => ({ ...element })),
     restoreArchived: async (id) => {
       const element = archive.find((autre) => autre.id === id)

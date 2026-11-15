@@ -3,6 +3,7 @@ import { ETAT_BARRE_INITIAL, borneLargeurBarre } from '../../shared/barre.ts'
 import { MOTEUR_DEFAUT, choixMoteurValide, type ChoixMoteur } from '../../shared/moteurs.ts'
 import { isAbsolute } from 'node:path'
 import { DELAI_ARCHIVAGE_DEFAUT, delaiArchivageValide } from '../../shared/archivage.ts'
+import { DELAI_VEILLE_DEFAUT, delaiVeilleValide } from '../../shared/veille.ts'
 import { ACCUEIL_DEFAUT, CHEMIN_LONGUEUR_MAX, accueilValide, type Reglages } from '../../shared/reglages.ts'
 import { enTransaction } from './transaction.ts'
 import type { SidebarState, ThemeChoice } from '../../shared/types.ts'
@@ -56,11 +57,13 @@ export function ecrireMoteur(db: DatabaseSync, choix: ChoixMoteur): void {
 export function lireReglages(db: DatabaseSync): Reglages {
   const dossier = lirePreference(db, 'telechargements.dossier')
   const delai = Number(lirePreference(db, 'archivage.heures') ?? NaN)
+  const veille = Number(lirePreference(db, 'veille.minutes') ?? NaN)
   return {
     accueil: accueilValide(lirePreference(db, 'accueil')) ?? ACCUEIL_DEFAUT,
     animationsReduites: lirePreference(db, 'animations.reduites') === '1',
     dossierTelechargements: dossier && dossier.length <= CHEMIN_LONGUEUR_MAX && isAbsolute(dossier) ? dossier : null,
-    archivageHeures: delaiArchivageValide(delai) ? delai : DELAI_ARCHIVAGE_DEFAUT
+    archivageHeures: delaiArchivageValide(delai) ? delai : DELAI_ARCHIVAGE_DEFAUT,
+    veilleMinutes: delaiVeilleValide(veille) ? veille : DELAI_VEILLE_DEFAUT
   }
 }
 
@@ -70,6 +73,7 @@ export function ecrireReglages(db: DatabaseSync, reglages: Reglages): void {
     ecrirePreference(db, 'animations.reduites', reglages.animationsReduites ? '1' : '0')
     ecrirePreference(db, 'telechargements.dossier', reglages.dossierTelechargements ?? '')
     ecrirePreference(db, 'archivage.heures', String(reglages.archivageHeures))
+    ecrirePreference(db, 'veille.minutes', String(reglages.veilleMinutes))
   })
 }
 

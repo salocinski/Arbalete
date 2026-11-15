@@ -2,6 +2,11 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.9] - 2026-11-14
+
+### Modifié
+- La carte ARB-94 passe à « Terminé » dans `kanban.html` : le skill `security-audit` est installé sur le poste (hors dépôt), prêt pour l'audit ARB-95.
+
 ## [0.12.44.8] - 2026-11-14
 
 ### Ajouté

@@ -13,7 +13,7 @@ Pour chaque extension : une session persistante jetable (profil sous `%TEMP%`), 
 | Dark Reader 4.9.135 | Actif | Affichée | **Affichée** (`ui/popup/index.html`, contenu rendu, 1204 caractères) | `query({})` renvoie la page de test | Content scripts toujours injectés (10 éléments `style.darkreader`) ; plus rien à signaler |
 | Bitwarden 2026.10.2 | **Actif** (échec d'ARB-24 levé) | Affichée | **Affichée** (`popup/index.html#/intro-carousel`, contenu rendu : la page d'accueil de l'extension non connectée) | `query({})` renvoie la page de test | `chrome.webNavigation` fourni par la bibliothèque ; les permissions `sidePanel`, `privacy` restent « inconnues » d'Electron |
 | uBlock Origin Lite 2026.1110.1816 | **Plante toujours** (`reading 'onCommand'`, enregistrement refusé, code 15) | Affichée | Affichée mais quasi vide (13 caractères, service worker absent) | `query({})` renvoie la page de test | Inchangé : `chrome.commands` n'est pas fourni par la bibliothèque (cases `getAll` et `onCommand` non cochées dans son README) |
-| 1Password, Immersive Translate | — | — | — | — | Non testées : installables seulement depuis le Chrome Web Store, dépendent d'ARB-26 |
+| 1Password, Immersive Translate | — | — | — | — | Testées en ARB-26 (`arb-26-poc-crx-chrome-web-store.md`) : Immersive Translate fonctionne, 1Password plante au démarrage |
 
 Critère du ticket (« popup d'une extension affichée ») : **atteint** pour Dark Reader et Bitwarden, et l'élément fonctionne aussi pour uBOL Lite, dont la popup s'ouvre mais ne peut pas fonctionner sans son service worker.
 

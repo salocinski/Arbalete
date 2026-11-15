@@ -2,6 +2,15 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.8] - 2026-11-14
+
+### Ajouté
+- `docs/extensions/arb-26-poc-crx-chrome-web-store.md` : essai du téléchargement de `.crx` depuis le Chrome Web Store, puis du chargement dans le POC. Immersive Translate fonctionne ; 1Password plante au démarrage et manque de `nativeMessaging` (ARB-26).
+- `docs/decisions/0004-extensions-chrome.md` : rapport de compatibilité et décision Go conditionnel pour les extensions Chrome (Electron avec `electron-chrome-extensions`, sans CEF ni fork de Chromium ; uBlock Origin Lite à réévaluer ; 1Password No-Go tant que `nativeMessaging` manque) (ARB-27).
+
+### Modifié
+- Les cartes ARB-26 et ARB-27 passent à « Terminé » dans `kanban.html`.
+
 ## [0.12.44.7] - 2026-11-14
 
 ### Modifié

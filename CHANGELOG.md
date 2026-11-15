@@ -2,6 +2,14 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.18] - 2026-11-15
+
+### Ajouté
+- Dossiers d'onglets (ARB-69) : le bouton « Nouveau dossier » du titre « Aujourd’hui » crée un dossier dans l'espace affiché ; glisser un onglet sur son en-tête l'y range, sur le titre « Aujourd’hui » ou sur un onglet sans dossier le sort. Un clic sur l'en-tête replie (l'onglet actif reste visible), le crayon ou le double-clic renomme, la croix supprime le dossier sans fermer ses onglets. Dossiers et appartenance reviennent au redémarrage (migration 9) ; épingler un onglet le sort de son dossier.
+
+### Modifié
+- La carte ARB-69 de `kanban.html` passe à `done` ; test C93 (tests unitaires seuls, le glisser-déposer reste manuel).
+
 ## [0.12.44.17] - 2026-11-15
 
 ### Ajouté

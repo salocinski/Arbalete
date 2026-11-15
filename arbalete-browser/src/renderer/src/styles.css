@@ -168,6 +168,18 @@ kbd { color: var(--color-text-secondary); font: 10px var(--font-ui); border: 1px
 .tab-item--active .tab-title { color: var(--color-text-primary); font-weight: 600; }
 .tab-item--error .tab-favicon, .tab-item--error .tab-title { color: var(--color-error); }
 .tab-item--dragging { opacity: 0.5; }
+/* Dossiers d'onglets (ARB-69) */
+.folder-section { display: grid; gap: 3px; }
+.folder-header { display: flex; align-items: center; min-width: 0; height: 30px; border-radius: var(--radius-button); }
+.folder-header:hover { background: var(--color-surface-hover); }
+.folder-toggle { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; height: 100%; padding: 0 4px 0 6px; background: transparent; border: 0; text-align: left; color: var(--color-text-secondary); font-size: 11px; font-weight: 600; }
+.folder-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-count { font-size: 10px; font-weight: 400; }
+.folder-actions { display: flex; opacity: 0; }
+.folder-header:hover .folder-actions, .folder-header:focus-within .folder-actions { opacity: 1; }
+.folder-tabs { display: grid; gap: 3px; padding-left: 12px; }
+.sidebar--compact .folder-header { display: none; }
+.sidebar--compact .folder-tabs { padding-left: 0; }
 .tab-secure { display: inline-flex; color: var(--color-success); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .tab-audio, .tab-pin { display: inline-flex; color: var(--color-text-secondary); flex-shrink: 0; }

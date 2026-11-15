@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { Archive, ChevronDown, Clock3, Download, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings2, Star } from 'lucide-react'
+import { Archive, ChevronDown, Clock3, Download, FolderPlus, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings2, Star } from 'lucide-react'
 import { LARGEUR_ETENDUE_MAX, LARGEUR_ETENDUE_MIN, barreCompacte, largeurApresTouche, largeurBarre } from '../../../shared/barre'
 import type { BrowserState, SidebarState } from '../../../shared/types'
 import { LIBELLES_MENU_PAGE } from '../../../shared/menuPage'
@@ -14,6 +14,7 @@ import { PinButton } from './PinButton'
 import { SettingsModal } from './SettingsModal'
 import { IconButton } from './ui/IconButton'
 import { TabList } from './TabList'
+import { TYPE_GLISSE } from './TabItem'
 import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 
 // Poignée du bord droit de la barre étendue (ARB-123) : glissée ou au clavier (flèches, Début, Fin). La capture du
@@ -48,6 +49,7 @@ function initialeFavori(url: string): string {
 // Elle se retire quand la souris la quitte, sauf si elle est épinglée ou si le focus y est (champ, menu).
 export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: SidebarState }) {
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false)
+  const [dossierRenomme, setDossierRenomme] = useState<number | null>(null) // dossier d'onglets dont le nom est en saisie (ARB-69)
   const zoneRef = useRef<HTMLDivElement>(null)
   // Menu d'un onglet (ARB-39) : demandé ici, affiché une fois que le processus principal a agrandi la vue, sinon il
   // serait coupé au bord de la barre le temps d'une image. Il disparaît avec l'overlay, quelle qu'en soit la cause.
@@ -189,8 +191,16 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
               <TabList state={state} onMenu={ouvrirMenuOnglet} groupe="epingles" />
             </>
           )}
-          <div className="section-heading"><span>AUJOURD’HUI</span><IconButton size="sm" title="Nouvel onglet" onClick={() => void window.arbalete.createTab()}><Plus size={14}/></IconButton></div>
-          <TabList state={state} onMenu={ouvrirMenuOnglet} groupe="jour" />
+          {/* Un onglet déposé sur ce titre sort de son dossier (ARB-69). */}
+          <div className="section-heading" onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => { event.preventDefault(); const id = event.dataTransfer.getData(TYPE_GLISSE); if (id) void window.arbalete.setTabFolder(id, null) }}>
+            <span>AUJOURD’HUI</span>
+            <span>
+              <IconButton size="sm" title="Nouveau dossier" onClick={() => void window.arbalete.createTabFolder().then((id) => setDossierRenomme(id))}><FolderPlus size={14}/></IconButton>
+              <IconButton size="sm" title="Nouvel onglet" onClick={() => void window.arbalete.createTab()}><Plus size={14}/></IconButton>
+            </span>
+          </div>
+          <TabList state={state} onMenu={ouvrirMenuOnglet} groupe="jour" renomme={dossierRenomme} onRenommer={setDossierRenomme} />
           <button className="new-tab-button" title="Nouvel onglet (Ctrl T)" onClick={() => void window.arbalete.createTab()}><Plus size={16}/><span>Nouvel onglet</span><kbd>Ctrl T</kbd></button>
           <div className="sidebar-spacer" />
           <div className="sidebar-bottom">

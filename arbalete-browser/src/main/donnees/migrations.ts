@@ -81,7 +81,16 @@ export const MIGRATIONS: readonly string[] = [
     titre TEXT NOT NULL DEFAULT '',
     espace INTEGER REFERENCES espace (id) ON DELETE SET NULL,
     date INTEGER NOT NULL
-  )`
+  )`,
+  // 9 — Dossiers d'onglets (ARB-69) : un dossier appartient à un espace (supprimé avec lui) et peut être replié ; un onglet
+  // de la session peut être rangé dans un dossier (NULL : à la racine, y compris quand son dossier est supprimé).
+  `CREATE TABLE dossier_onglet (
+    id INTEGER PRIMARY KEY,
+    nom TEXT NOT NULL,
+    espace INTEGER NOT NULL REFERENCES espace (id) ON DELETE CASCADE,
+    replie INTEGER NOT NULL DEFAULT 0 CHECK (replie IN (0, 1))
+  );
+  ALTER TABLE onglet ADD COLUMN dossier INTEGER REFERENCES dossier_onglet (id) ON DELETE SET NULL`
 ]
 
 export function versionDuSchema(db: DatabaseSync): number {

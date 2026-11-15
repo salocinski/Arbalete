@@ -6,6 +6,7 @@ import type { EntreeMenuPage, MenuPage } from './menuPage'
 import type { ActionOnglet } from './menuOnglet'
 import type { EntreePalette } from './palette'
 import type { ListeFavoris } from './favoris'
+import type { DossierOnglet } from './dossiersOnglets'
 import type { DemandePermission, ReponsePermission } from './permissions'
 import type { ElementArchive } from './archivage'
 import type { PeriodeEffacement, TypeEffacement, VisiteHistorique } from './historique'
@@ -20,6 +21,7 @@ export type BrowserTab = {
   favicon?: string
   // États visuels de l'onglet (ARB-124). 
   pinned?: boolean // épinglé par le menu de l'onglet (ARB-41), écrit dans la session et gardé en tête de liste (ARB-64)
+  folder?: number // id du dossier d'onglets qui le contient (ARB-69), jamais pour un onglet épinglé
   audible?: boolean
   muted?: boolean
   error?: boolean
@@ -38,6 +40,8 @@ export type BrowserState = {
   favorites: { url: string; title: string }[]
   // Pop-ups bloquées sur la page de l'onglet actif, sans geste de l'utilisateur (ARB-108) ; 0 : rien à signaler.
   popupsBloquees: number
+  // Dossiers d'onglets de l'espace affiché (ARB-69), dans l'ordre de création.
+  folders: DossierOnglet[]
 }
 
 // Barre latérale (ARB-33, ARB-123) : masquée par défaut, ouverte par-dessus la page au survol du bord gauche ;
@@ -75,6 +79,13 @@ export type BrowserAPI = {
   closeTab: (id: string) => Promise<void>
   tabAction: (id: string, action: ActionOnglet) => Promise<void>
   moveTab: (id: string, index: number) => Promise<void>
+  // Dossiers d'onglets (ARB-69), dans l'espace affiché. `createTabFolder` renvoie l'id du dossier créé ; `setTabFolder` range
+  // un onglet non épinglé de l'espace dans un dossier, ou le remet à la racine avec null ; supprimer un dossier garde ses onglets.
+  createTabFolder: () => Promise<number | null>
+  renameTabFolder: (id: number, nom: string) => Promise<void>
+  toggleTabFolder: (id: number) => Promise<void>
+  deleteTabFolder: (id: number) => Promise<void>
+  setTabFolder: (tabId: string, dossier: number | null) => Promise<void>
   activateTab: (id: string) => Promise<void>
   navigate: (url: string) => Promise<void>
   goBack: () => Promise<void>

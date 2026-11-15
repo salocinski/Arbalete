@@ -9,7 +9,7 @@ import type { BrowserTab } from '../../../shared/types'
 // shortcut: Muted s'affiche sans bouton pour couper le son ; à brancher avec la gestion du son par onglet.
 // Glisser-déposer (ARB-68) : `drag` relie l'élément à la liste, qui garde l'onglet tenu et décide du déplacement.
 // L'identifiant voyage dans le glissé : un dépôt venu d'ailleurs (texte, fichier) n'en porte pas et ne déplace rien.
-const TYPE_GLISSE = 'application/x-arbalete-tab'
+export const TYPE_GLISSE ='application/x-arbalete-tab'
 export type GlisserOnglet = { onDragStart: () => void; onDrop: (id: string) => void; onDragEnd: () => void; dragging: boolean }
 export function TabItem({ tab, active, onSelect, onClose, onMenu, drag }: { tab: BrowserTab; active: boolean; onSelect: () => void; onClose: () => void; onMenu: (x: number, y: number) => void; drag?: GlisserOnglet }) {
   const etats = etatsOnglet(tab, active)

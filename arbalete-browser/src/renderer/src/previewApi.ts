@@ -20,6 +20,7 @@ import type { BrowserAPI, BrowserState, BrowserTab, SidebarState, ThemeChoice } 
 
 import { ongletsAFermer } from '../../shared/menuOnglet'
 import { fusionnerOrdre, ordreApresDeplacementOnglet } from '../../shared/ordreOnglets'
+import { nomDossierOngletValide, type DossierOnglet } from '../../shared/dossiersOnglets'
 type PreviewTab = BrowserTab & { history: string[]; index: number }
 
 let previewMode = false
@@ -113,6 +114,9 @@ export function installPreviewApi(): boolean {
     { id: 1, url: 'https://example.com/', titre: 'Exemple', date: Date.now() - 3_600_000 },
     { id: 2, url: 'https://fr.wikipedia.org/', titre: 'Wikipédia', date: Date.now() - 86_400_000 }
   ]
+  // Dossiers d'onglets de l'aperçu (ARB-69) : en mémoire, chacun dans l'espace où il a été créé.
+  const folders: (DossierOnglet & { espace: number })[] = []
+  let nextFolderId = 1
   // Favoris de l'aperçu (ARB-47) : en mémoire, perdus au rechargement de la page.
   const favorites = new Set<string>()
   const snapshot = (): BrowserState => ({
@@ -122,7 +126,8 @@ export function installPreviewApi(): boolean {
     activeWorkspaceId,
     favorite: favorites.has(active()?.url ?? ''),
     favorites: [...favorites].slice(0, 8).map((url) => ({ url, title: titleFor(url) })),
-    popupsBloquees: 0
+    popupsBloquees: 0,
+    folders: folders.filter((dossier) => dossier.espace === activeWorkspaceId).map(({ id, nom, replie }) => ({ id, nom, replie }))
   })
   const emit = () => {
     const state = snapshot()
@@ -237,7 +242,7 @@ export function installPreviewApi(): boolean {
       if (!tab) return
       if (action === 'dupliquer') createTab(tab.url)
       else if (action === 'copier-adresse') await navigator.clipboard?.writeText(tab.url).catch(() => {})
-      else if (action === 'epingler') { tab.pinned = !tab.pinned; emit() }
+      else if (action === 'epingler') { tab.pinned = !tab.pinned; if (tab.pinned) delete tab.folder; emit() }
       else {
         for (const autre of ongletsAFermer(visible(), id)) {
           tabs.splice(tabs.findIndex((item) => item.id === autre), 1)
@@ -251,6 +256,37 @@ export function installPreviewApi(): boolean {
       const ordre = ordreApresDeplacementOnglet(visible().map((tab) => tab.id), id, index)
       const nouveaux = fusionnerOrdre(tabs.map((tab) => tab.id), visible().map((tab) => tab.id), ordre)
       tabs.sort((a, b) => nouveaux.indexOf(a.id) - nouveaux.indexOf(b.id))
+      emit()
+    },
+    createTabFolder: async () => {
+      const dossier = { id: nextFolderId++, nom: 'Nouveau dossier', replie: false, espace: activeWorkspaceId }
+      folders.push(dossier)
+      emit()
+      return dossier.id
+    },
+    renameTabFolder: async (id, nom) => {
+      const propre = nomDossierOngletValide(nom)
+      const dossier = folders.find((item) => item.id === id && item.espace === activeWorkspaceId)
+      if (propre === null) throw new Error('Nom de dossier invalide')
+      if (dossier) { dossier.nom = propre; emit() }
+    },
+    toggleTabFolder: async (id) => {
+      const dossier = folders.find((item) => item.id === id && item.espace === activeWorkspaceId)
+      if (dossier) { dossier.replie = !dossier.replie; emit() }
+    },
+    deleteTabFolder: async (id) => {
+      const index = folders.findIndex((item) => item.id === id && item.espace === activeWorkspaceId)
+      if (index < 0) return
+      folders.splice(index, 1)
+      for (const tab of tabs) if (tab.folder === id) delete tab.folder
+      emit()
+    },
+    setTabFolder: async (tabId, dossier) => {
+      const tab = tabs.find((item) => item.id === tabId)
+      if (!tab) return
+      if (dossier === null) delete tab.folder
+      else if (!tab.pinned && folders.some((item) => item.id === dossier && item.espace === spaceOf.get(tabId))) tab.folder = dossier
+      else return
       emit()
     },
     activateTab: async (id) => {

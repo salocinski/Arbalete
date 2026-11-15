@@ -13,7 +13,7 @@ import type { BrowserState, DataIncident, SidebarState, SuggestionsState, ThemeC
 
 // Aucun onglet fictif avant la réponse du processus principal (ARB-115, ARB-9) : l'aperçu navigateur crée ses propres
 // onglets de démonstration dans previewApi.ts.
-const starterState: BrowserState = { tabs: [], activeTabId: null, workspaces: [], activeWorkspaceId: null, favorite: false, favorites: [], popupsBloquees: 0 }
+const starterState: BrowserState = { tabs: [], activeTabId: null, workspaces: [], activeWorkspaceId: null, favorite: false, favorites: [], popupsBloquees: 0, folders: [] }
 
 export type ThemeState = { choice: ThemeChoice; effective: 'dark' | 'light' }
 

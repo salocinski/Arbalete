@@ -39,6 +39,8 @@ import { ETAT_BARRE_INITIAL, borneLargeurBarre, largeurBarre, transitionBarre } 
 import { THEMES, ecrireBarre, ecrireMoteur, ecrireReglages, ecrireTheme, lireBarre, lireMoteur, lireReglages, lireTheme } from './donnees/preferences.ts'
 import { CHEMIN_LONGUEUR_MAX, REGLAGES_DEFAUT, accueilValide, type Reglages } from '../shared/reglages.ts'
 import { actifsParEspace, lireSession, ongletsARestaurer, rattacherAuxEspaces, sauverSession, type OngletSauve } from './donnees/session.ts'
+import { dossierAccepte } from '../shared/dossiersOnglets.ts'
+import { creerDossierOnglet, lireDossiersOnglets, renommerDossierOnglet, replierDossierOnglet, supprimerDossierOnglet, type DossierOngletEspace } from './donnees/dossiersOnglets.ts'
 import { creerEspace, ecrireEspaceActif, lireEspaceActif, lireEspaces, modifierEspace, ordonnerEspaces, semerEspaces, supprimerEspace } from './donnees/espaces.ts'
 import { champsNouvelEspace, ordreApresDeplacement, type CouleurEspace, type Espace } from '../shared/espaces.ts'
 import { creerGestionnaire } from './gestionnaireTelechargements.ts'
@@ -144,6 +146,8 @@ const tabs = new Map<string, TabRecord>()
 let activeTabId: string | null = null
 let espaces: Espace[] = []
 let espaceActif: number | null = null
+// Dossiers d'onglets de tous les espaces (ARB-69) ; la barre n'en reçoit que ceux de l'espace affiché.
+let dossiersOnglets: DossierOngletEspace[] = []
 const dernierActif = new Map<number | null, string>()
 let nextTabNumber = 1
 
@@ -217,7 +221,8 @@ function stateSnapshot(): BrowserState {
     activeWorkspaceId: espaceActif,
     favorite: pageActiveEstFavorite(),
     favorites: grilleFavoris(),
-    popupsBloquees: activeRecord()?.popupsBloquees ?? 0
+    popupsBloquees: activeRecord()?.popupsBloquees ?? 0,
+    folders: dossiersOnglets.filter((dossier) => dossier.espace === espaceActif).map(({ id, nom, replie }) => ({ id, nom, replie }))
   }
 }
 
@@ -325,6 +330,7 @@ function ecrireSession() {
     actif: data.id === (espace === espaceActif ? activeTabId : dernierActif.get(espace)),
     ...(espace === null ? {} : { espace }),
     ...(data.pinned ? { epingle: true } : {}),
+    ...(data.folder === undefined ? {} : { dossier: data.folder }),
     activite
   }))
   const serialisee = JSON.stringify(onglets)
@@ -1175,8 +1181,11 @@ function chargerOnglet(record: TabRecord) {
 
 // Un onglet restauré (ARB-45) s'ouvre en arrière-plan avec son titre enregistré ; sa page attend d'être affichée.
 // Un onglet s'ouvre dans l'espace affiché ; un onglet restauré garde le sien (ARB-61).
-function createTab(initialUrl = reglages.accueil, restaure?: { titre: string, espace?: number, epingle?: boolean, activite?: number }): string {
+function createTab(initialUrl = reglages.accueil, restaure?: { titre: string, espace?: number, epingle?: boolean, activite?: number, dossier?: number }): string {
   const id = `tab-${nextTabNumber++}`
+  const espaceDeLOnglet = restaure ? restaure.espace ?? null : espaceActif
+  // Le dossier d'un onglet restauré doit exister dans l'espace de l'onglet (l'onglet a pu changer d'espace) ; jamais épinglé.
+  const dossier = dossierAccepte(dossiersOnglets, restaure?.dossier, espaceDeLOnglet, !!restaure?.epingle) ? restaure?.dossier : undefined
   const view = new WebContentsView({
     webPreferences: {
       nodeIntegration: false,
@@ -1196,13 +1205,14 @@ function createTab(initialUrl = reglages.accueil, restaure?: { titre: string, es
       isLoading: !restaure,
       canGoBack: false,
       canGoForward: false,
-      ...(restaure?.epingle ? { pinned: true } : {})
+      ...(restaure?.epingle ? { pinned: true } : {}),
+      ...(dossier === undefined ? {} : { folder: dossier })
     },
     view,
     chargee: false,
     // Rouvrir un onglet restauré n'est pas une visite.
     adresseVisitee: restaure ? adresseHistorique(normalizeUrl(initialUrl)) : null,
-    espace: restaure ? restaure.espace ?? null : espaceActif,
+    espace: espaceDeLOnglet,
     popupsBloquees: 0,
     activite: restaure?.activite ?? Date.now()
   }
@@ -1348,7 +1358,7 @@ function rouvrirSession(session: OngletSauve[]): boolean {
   // réactivera, celui de l'espace affiché l'est tout de suite.
   const rattaches = rattacherAuxEspaces(onglets, espaces.map((espace) => espace.id))
   // L'activité écrite n'est pas rendue : le temps où Arbalète était fermée ne compte pas comme du temps laissé de côté.
-  const ids = rattaches.map((onglet) => createTab(onglet.url, { titre: onglet.titre, espace: onglet.espace, epingle: onglet.epingle }))
+  const ids = rattaches.map((onglet) => createTab(onglet.url, { titre: onglet.titre, espace: onglet.espace, epingle: onglet.epingle, dossier: onglet.dossier }))
   for (const [espace, indice] of actifsParEspace(rattaches)) dernierActif.set(espace ?? null, ids[indice])
   const restaure = dernierActif.get(espaceActif)
   if (restaure && tabs.get(restaure)?.espace === espaceActif) activeTabId = restaure
@@ -1430,6 +1440,8 @@ function actionOnglet(id: string, action: ActionOnglet) {
     if (adresseWeb(record.data.url)) clipboard.writeText(record.data.url)
   } else if (action === 'epingler') {
     record.data.pinned = !record.data.pinned
+    // Un onglet épinglé quitte son dossier : les épinglés ont leur propre groupe (ARB-69).
+    if (record.data.pinned) delete record.data.folder
     broadcastState()
   } else {
     for (const autre of ongletsAFermer([...tabs.values()].filter((t) => t.espace === record.espace).map((t) => t.data), id)) closeTab(autre)
@@ -1535,8 +1547,46 @@ function supprimerEspaceUtilisateur(id: number) {
   if (id === espaceActif) changerEspace((espaces[index + 1] ?? espaces[index - 1]).id)
   supprimerEspace(base, id)
   espaces = lireEspaces(base)
+  dossiersOnglets = lireDossiersOnglets(base) // supprimés avec l'espace (ARB-69)
   dernierActif.delete(id)
   for (const [ongletId, onglet] of [...tabs]) if (onglet.espace === id) closeTab(ongletId, false)
+  broadcastState()
+}
+
+// Dossiers d'onglets (ARB-69), dans l'espace affiché. Écrits en base avant de changer l'état (une erreur remonte à l'appelant) ;
+// l'appartenance d'un onglet suit la session. Sans base ou sans espace, il n'y a pas de dossiers : sans effet.
+const NOM_NOUVEAU_DOSSIER = 'Nouveau dossier'
+
+function creerDossierOngletUtilisateur(): number | null {
+  if (!base || espaceActif === null) return null
+  const id = creerDossierOnglet(base, espaceActif, NOM_NOUVEAU_DOSSIER)
+  dossiersOnglets = lireDossiersOnglets(base)
+  broadcastState()
+  return id
+}
+
+function modifierDossierOnglet(id: number, agir: (db: DatabaseSync, dossier: DossierOngletEspace) => void) {
+  const dossier = dossiersOnglets.find((item) => item.id === id && item.espace === espaceActif)
+  if (!base || !dossier) return
+  agir(base, dossier)
+  dossiersOnglets = lireDossiersOnglets(base)
+  broadcastState()
+}
+
+function supprimerDossierOngletUtilisateur(id: number) {
+  modifierDossierOnglet(id, (db) => {
+    supprimerDossierOnglet(db, id)
+    for (const { data } of tabs.values()) if (data.folder === id) delete data.folder
+  })
+}
+
+// Range un onglet non épinglé dans un dossier de son espace, ou le remet à la racine (null).
+function rangerOnglet(tabId: string, dossier: number | null) {
+  const record = tabs.get(tabId)
+  if (!record) return
+  if (dossier === null) delete record.data.folder
+  else if (dossierAccepte(dossiersOnglets, dossier, record.espace, !!record.data.pinned)) record.data.folder = dossier
+  else return
   broadcastState()
 }
 
@@ -1764,6 +1814,7 @@ app.whenReady().then(() => {
       semerEspaces(base)
       espaces = lireEspaces(base)
       espaceActif = lireEspaceActif(base, espaces)
+      dossiersOnglets = lireDossiersOnglets(base)
     } catch (erreur) {
       console.error('Espaces non relus :', erreur)
     }
@@ -1923,6 +1974,15 @@ app.whenReady().then(() => {
     for (const [cle, record] of nouveau) tabs.set(cle, record)
     broadcastState()
   })
+  // Dossiers d'onglets (ARB-69).
+  traiter('browser:create-tab-folder', creerDossierOngletUtilisateur)
+  traiter('browser:rename-tab-folder', (id, valeur) => {
+    const nom = exigerTexte(valeur)
+    modifierDossierOnglet(exigerEntier(id), (db, dossier) => renommerDossierOnglet(db, dossier.id, nom))
+  })
+  traiter('browser:toggle-tab-folder', (id) => modifierDossierOnglet(exigerEntier(id), (db, dossier) => replierDossierOnglet(db, dossier.id, !dossier.replie)))
+  traiter('browser:delete-tab-folder', (id) => supprimerDossierOngletUtilisateur(exigerEntier(id)))
+  traiter('browser:set-tab-folder', (tabId, dossier) => rangerOnglet(exigerTexte(tabId), dossier === null ? null : exigerEntier(dossier)))
   traiter('browser:activate-tab', (valeur) => {
     const id = exigerTexte(valeur)
     activerOnglet(id)

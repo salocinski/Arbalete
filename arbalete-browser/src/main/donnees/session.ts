@@ -10,17 +10,20 @@ export type OngletSauve = {
   // Épinglé (ARB-64) et dernier usage en millisecondes depuis 1970 (absent : session d'avant, lu comme « maintenant »).
   epingle?: boolean
   activite?: number
+  // id du dossier d'onglets (ARB-69) ; absent s'il est à la racine.
+  dossier?: number
 }
 
 // Onglets de la dernière session, dans leur ordre.
 export function lireSession(db: DatabaseSync): OngletSauve[] {
-  const lignes = db.prepare('SELECT url, titre, actif, espace, epingle, activite FROM onglet ORDER BY position').all() as Array<{
+  const lignes = db.prepare('SELECT url, titre, actif, espace, epingle, activite, dossier FROM onglet ORDER BY position').all() as Array<{
     url: string
     titre: string
     actif: number
     espace: number | null
     epingle: number
     activite: number | null
+    dossier: number | null
   }>
   return lignes.map((ligne) => ({
     url: ligne.url,
@@ -28,19 +31,21 @@ export function lireSession(db: DatabaseSync): OngletSauve[] {
     actif: ligne.actif === 1,
     ...(ligne.espace === null ? {} : { espace: ligne.espace }),
     ...(ligne.epingle === 1 ? { epingle: true } : {}),
-    ...(ligne.activite === null ? {} : { activite: ligne.activite })
+    ...(ligne.activite === null ? {} : { activite: ligne.activite }),
+    ...(ligne.dossier === null ? {} : { dossier: ligne.dossier })
   }))
 }
 
 // Remplace la session enregistrée par ces onglets, d'un bloc : une lecture ne voit jamais une session à moitié écrite.
 export function sauverSession(db: DatabaseSync, onglets: readonly OngletSauve[]): void {
   // Un espace supprimé entre-temps devient « aucun espace » (NULL) : un id périmé ne doit pas faire perdre toute la session.
+  // Un dossier supprimé entre-temps devient « à la racine », de même.
   const inserer = db.prepare(
-    'INSERT INTO onglet (position, url, titre, actif, espace, epingle, activite) VALUES (?, ?, ?, ?, (SELECT id FROM espace WHERE id = ?), ?, ?)'
+    'INSERT INTO onglet (position, url, titre, actif, espace, epingle, activite, dossier) VALUES (?, ?, ?, ?, (SELECT id FROM espace WHERE id = ?), ?, ?, (SELECT id FROM dossier_onglet WHERE id = ?))'
   )
   enTransaction(db, () => {
     db.exec('DELETE FROM onglet')
-    onglets.forEach((onglet, position) => inserer.run(position, onglet.url, onglet.titre, onglet.actif ? 1 : 0, onglet.espace ?? null, onglet.epingle ? 1 : 0, onglet.activite ?? null))
+    onglets.forEach((onglet, position) => inserer.run(position, onglet.url, onglet.titre, onglet.actif ? 1 : 0, onglet.espace ?? null, onglet.epingle ? 1 : 0, onglet.activite ?? null, onglet.dossier ?? null))
   })
 }
 

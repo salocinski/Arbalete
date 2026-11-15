@@ -2,6 +2,11 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.10] - 2026-11-14
+
+### Modifié
+- Les cartes ARB-26 et ARB-27 de `kanban.html` notent que leur PR est fusionnée (v0.12.44.8).
+
 ## [0.12.44.9] - 2026-11-14
 
 ### Modifié

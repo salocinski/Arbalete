@@ -36,6 +36,7 @@ npm run dev:web   # http://localhost:5180
 - Précédent / suivant : `Alt+←` / `Alt+→`
 - Zoom de la page de l'onglet actif : `Ctrl+=` (plus), `Ctrl+-` (moins), `Ctrl+0` (100 %) ; plein écran : `F11`
 - Changer d'onglet : `Ctrl+Tab` / `Ctrl+Maj+Tab` (ou `Ctrl+PageDown` / `Ctrl+PageUp`), en boucle ; `Ctrl+1` à `Ctrl+8` visent le n-ième onglet, `Ctrl+9` le dernier
+- Changer d'espace : `Ctrl+Alt+→` (suivant) / `Ctrl+Alt+←` (précédent), en boucle
 - Recharger la page de l'onglet actif : `F5` ou `Ctrl+R` ; sans le cache : `Ctrl+F5`, `Maj+F5` ou `Ctrl+Maj+R`
 - Rechercher dans la page : `Ctrl+F` ; compteur « 3/12 », `Entrée` / `Maj+Entrée` pour le résultat suivant / précédent, `Échap` ou la croix pour fermer (absent de l'aperçu navigateur)
 - Suggestions de la barre d'adresse : en tapant, une liste propose de chercher ou d'aller à l'adresse, puis les pages déjà visitées ; `↑` / `↓` choisissent une ligne, `Entrée` ou un clic l'ouvre, `Échap` la ferme (absentes de l'aperçu navigateur)
@@ -75,7 +76,7 @@ Arbalète est en développement, pas encore un navigateur prêt à être utilis�
 - `src/main/index.ts` : fenêtre, gestion des vues web, navigation, IPC et raccourcis clavier.
 - `src/main/favicon.ts` : choix du favicon transmis à l'interface, dont la CSP n'autorise que `'self'`, `data:` et `https:` pour les images.
 - `src/main/telechargements.ts` et `src/main/gestionnaireTelechargements.ts` : nom de fichier sûr et chemin libre, liste des téléchargements (`will-download`), progression, pause, reprise, annulation, ouverture du fichier terminé (hors exécutables) et affichage dans l'Explorateur ; persistés par `donnees/telechargements.ts` (migration 6) et affichés par `components/DownloadsOverlay.tsx`.
-- `src/main/navigationClavier.ts` : reconnaissance des raccourcis de changement d'onglet (Ctrl+Tab, Ctrl+1…9) et de rechargement (F5, Ctrl+R), et onglet visé.
+- `src/main/navigationClavier.ts` : reconnaissance des raccourcis de changement d'onglet (Ctrl+Tab, Ctrl+1…9), d'espace (Ctrl+Alt+←/→) et de rechargement (F5, Ctrl+R), et onglet ou espace visé.
 - `src/main/ongletsFermes.ts` : pile des 10 derniers onglets fermés (adresses web et `file:`), pour `Ctrl+Maj+T`.
 - `src/main/apercuUrl.ts` : texte, placement et document de la bulle d'adresse du lien survolé, vue native dédiée (décision 0003).
 - `src/main/recherche.ts` : placement de la petite vue native de recherche (coin haut-droit de la page) et texte accepté ; sa vue est `?vue=recherche` (`views/FindView.tsx`).

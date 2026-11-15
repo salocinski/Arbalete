@@ -7,7 +7,7 @@ import type { BrowserState, BrowserTab, DataIncident, RestoreAnswer, SidebarActi
 import { importerFavoris, lireFavorisHtml, TAILLE_MAX_IMPORT } from './donnees/importFavoris.ts'
 import { ouvrirBaseOuRecuperer, type IncidentBase } from './donnees/base.ts'
 import { estAboutBlank, retourPermis } from './aboutBlank.ts'
-import { numeroDOnglet, ongletNumero, ongletRelatif, pasDOnglet, rechargement } from './navigationClavier.ts'
+import { numeroDOnglet, ongletNumero, ongletRelatif, pasDEspace, pasDOnglet, rechargement } from './navigationClavier.ts'
 import { ongletVoisin } from './voisin.ts'
 import { depiler, empiler } from './ongletsFermes.ts'
 import { borner } from './bornes.ts'
@@ -1088,7 +1088,7 @@ function basculerPleinEcran() {
   mainWindow.setFullScreen(!mainWindow.isFullScreen())
 }
 
-// Action du raccourci d'Arbalète que forme la touche, ou undefined. AltGr arrive comme Ctrl+Alt : il est écarté.
+// Action du raccourci d'Arbalète que forme la touche, ou undefined. AltGr arrive comme Ctrl+Alt : il est écarté, sauf pour Ctrl+Alt+←/→ (espaces, ARB-66), qui ne produit aucun caractère.
 function actionDuRaccourci(input: Electron.Input): (() => void) | undefined {
   // Disposition non latine (russe, grec…) : key est une lettre d'un autre alphabet, la touche physique (code) prend le
   // relais. Une lettre latine accentuée (é, è du BÉPO) garde son sens : Ctrl+é ne ferme pas l'onglet.
@@ -1101,6 +1101,11 @@ function actionDuRaccourci(input: Electron.Input): (() => void) | undefined {
   // Changement d'onglet et rechargement (ARB-19, ARB-21), avant le test de Maj : Ctrl+Maj+Tab et Ctrl+Maj+R en dépendent.
   const pas = pasDOnglet(input)
   if (pas) return () => activerAutreOnglet(ongletRelatif(ongletsVisibles(), activeTabId, pas))
+  const pasEspace = pasDEspace(input)
+  if (pasEspace) return () => {
+    const cible = ongletRelatif(espaces.map((espace) => espace.id), espaceActif, pasEspace)
+    if (cible !== null) changerEspace(cible)
+  }
   const numero = numeroDOnglet(input)
   if (numero) return () => activerAutreOnglet(ongletNumero(ongletsVisibles(), numero))
   const recharge = rechargement(input, touche)

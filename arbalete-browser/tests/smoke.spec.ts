@@ -3286,6 +3286,37 @@ test('C75 : raccourcis, fermeture d’onglet et favoris ne regardent que l’esp
   }
 })
 
+// Value: protects=ARB-66 : Ctrl+Alt+→ / ← passent à l'espace suivant / précédent, en boucle, depuis la page, la barre et la
+//   fenêtre; fails_when=pasDEspace n'est plus appelé par actionDuRaccourci, la touche est lue avant son bloc (Alt seul,
+//   Ctrl seul) ou l'ordre des espaces suit autre chose que la barre latérale; why_new=le câblage d'index.ts n'a que le test
+//   unitaire de pasDEspace, qui ne voit pas un branchement retiré; seam=none (touches comme C66 et C75);
+//   no_claim=ni AZERTY réel, ni AltGr réel (modificateurs control+alt simulés), ni le cas d'un seul espace (le test en a au
+//   moins deux), ni l'onglet affiché après le changement.
+test('C92 : Ctrl+Alt+←/→ changent d’espace en boucle depuis la page, la barre et la fenêtre', async () => {
+  const depart = await etat()
+  const ids = depart.workspaces.map((e) => e.id)
+  expect(ids.length).toBeGreaterThanOrEqual(2)
+  const affiche = async () => (await etat()).activeWorkspaceId
+  try {
+    expect(await affiche()).toBe(ids[0])
+    const cibles = ['onglet', 'barre', 'fenetre'] as const
+    for (let i = 1; i <= ids.length; i++) {
+      await presserSur(cibles[i % 3], 'Right', ['control', 'alt'])
+      await expect.poll(affiche).toBe(ids[i % ids.length])
+    }
+    await presserSur('onglet', 'Left', ['control', 'alt'])
+    await expect.poll(affiche).toBe(ids[ids.length - 1])
+    // Ctrl seul ou Alt seul ne changent pas d'espace.
+    await presserSur('onglet', 'Right', ['control'])
+    await presserSur('onglet', 'Right', ['alt'])
+    await new Promise((attente) => setTimeout(attente, 500))
+    expect(await affiche()).toBe(ids[ids.length - 1])
+  } finally {
+    await ui.evaluate((id) => window.arbalete.setWorkspace(id), ids[0])
+    await expect.poll(affiche).toBe(ids[0])
+  }
+})
+
 test('C65 : F11 bascule le plein écran depuis la page, la barre et la fenêtre, sans ouvrir de DevTools', async () => {
   await saisirAdresse(`${origine}/page-survol.html`)
   await attendreUrlActive(`${origine}/page-survol.html`)

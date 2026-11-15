@@ -2,6 +2,14 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.17] - 2026-11-15
+
+### Ajouté
+- Raccourcis d'espaces (ARB-66) : Ctrl+Alt+flèche droite passe à l'espace suivant et Ctrl+Alt+flèche gauche au précédent, en boucle, depuis la page, la barre ou la fenêtre. Ctrl+Alt+1…9 n'est pas pris : sur un clavier AZERTY c'est AltGr+chiffre.
+
+### Modifié
+- La carte ARB-66 de `kanban.html` passe à `done` ; `ongletRelatif` sert aussi aux espaces ; test C92.
+
 ## [0.12.44.16] - 2026-11-15
 
 ### Ajouté

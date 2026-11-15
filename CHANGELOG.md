@@ -2,6 +2,16 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.14] - 2026-11-15
+
+### Ajouté
+- Installeur Windows (ARB-75) : `npm run dist` construit `release/Arbalete-Setup-<version>.exe` (electron-builder, NSIS, installation par utilisateur avec choix du dossier, raccourcis bureau et menu Démarrer). L'application prend la version du fichier `VERSION`. L'installeur n'est ni signé ni mis à jour automatiquement (EP-14).
+- L'icône de la fenêtre et les licences OFL des polices sont livrées hors de `app.asar` ; `CHEMIN_ICONE` lit `process.resourcesPath` une fois l'application empaquetée.
+
+### Modifié
+- Les paquets embarqués par Vite dans l'interface (react, lucide-react, polices) passent en `devDependencies` : `app.asar` ne pèse plus que 1 Mo au lieu de 37 Mo. Les données de l'utilisateur survivent à la désinstallation.
+- La carte ARB-75 de `kanban.html` passe à `done`.
+
 ## [0.12.44.13] - 2026-11-15
 
 ### Modifié

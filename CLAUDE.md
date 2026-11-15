@@ -67,6 +67,7 @@ arbalete-browser/
   src/renderer/src/previewApi.ts  API simulée pour l'aperçu navigateur (hors Electron)
   vite-csp.ts              CSP de l'interface injectée dans index.html (stricte au build, assouplie en dev)
   resources/icone.ico      icône de l'application, 4 tailles (16, 32, 48, 256), passée en `icon` à BrowserWindow
+  electron-builder.yml     installeur Windows NSIS (ARB-75) : icône, licences OFL des polices et LICENSE copiées hors `app.asar` (`extraResources`, `CHEMIN_ICONE` lit `process.resourcesPath` une fois empaquetée), `out/web` exclu ; ni signature ni mise à jour automatique (EP-14) ; test installeur.test.ts
   scripts/test-unitaire.mjs  lance les tests unitaires sous le Node d'Electron
   scripts/poc-extensions.mjs  POC extensions (ARB-24), lancé à la main (`npx electron scripts/poc-extensions.mjs`), hors de l'application : charge dans un profil jetable sous `%TEMP%` les extensions décompressées de `.poc/ext/` (dossier ignoré par Git) ; résultat dans `docs/extensions/arb-24-poc-loadextension.md`
   scripts/poc-electron-chrome-extensions.mjs  POC ARB-25, lancé à la main (`npx electron scripts/poc-electron-chrome-extensions.mjs`), hors de l'application : mêmes extensions que ARB-24, avec la bibliothèque `electron-chrome-extensions` installée dans `.poc/lib/` (pas une dépendance d'Arbalète), barre d'actions, popup et `chrome.tabs.query` ; résultat dans `docs/extensions/arb-25-poc-electron-chrome-extensions.md`
@@ -88,6 +89,7 @@ Toutes les commandes se lancent dans `arbalete-browser/`.
 | `npm run typecheck` | Vérification TypeScript |
 | `npm run build` | Build Electron (main, preload, renderer) dans `out/` |
 | `npm run build:web` | Build de l'aperçu navigateur dans `out/web/` |
+| `npm run dist` | Build puis installeur `release/Arbalete-Setup-<version>.exe` (NSIS, par utilisateur, non signé). `release/` est ignoré par Git ; `scripts/dist.mjs` donne à l'application la version du fichier `VERSION` |
 | `npm run test:unit` | Tests unitaires `node:test` (`src/**/*.test.ts`) sous le Node d'Electron, sans build : couche de données, design tokens, palette des couleurs d'espace, polices, composants de base, états des onglets, onglet voisin à la fermeture, bornage du rectangle de la page, lecture d'`ELECTRON_RENDERER_URL`, détection d'`about:blank`, aperçu de l'adresse survolée, recherche dans la page, zoom de page, raccourcis d'onglets et de rechargement, et garde-fous de la CI |
 | `npm run test:smoke` | Build puis tests Playwright de l'app Electron : `tests/smoke.spec.ts` (app construite) et `tests/developpement.spec.ts` (mode développement, serveur Vite) |
 

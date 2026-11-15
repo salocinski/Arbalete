@@ -43,8 +43,8 @@ import { champsNouvelEspace, ordreApresDeplacement, type CouleurEspace, type Esp
 import { creerGestionnaire } from './gestionnaireTelechargements.ts'
 
 const CHEMIN_INTERFACE = join(__dirname, '../renderer/index.html')
-// shortcut: icône lue sur disque (dev et build), l'empaquetage devra la fournir à l'installeur (EP-14).
-const CHEMIN_ICONE = join(__dirname, '../../resources/icone.ico')
+// Icône lue sur disque : resources/ en développement, extraResources de l'installeur (hors app.asar) une fois empaquetée.
+const CHEMIN_ICONE = app.isPackaged ? join(process.resourcesPath, 'icone.ico') : join(__dirname, '../../resources/icone.ico')
 
 type TabRecord = {
   data: BrowserTab

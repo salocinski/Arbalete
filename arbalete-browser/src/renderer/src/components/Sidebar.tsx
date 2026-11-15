@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { ChevronDown, Clock3, Download, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings2, Star } from 'lucide-react'
+import { Archive, ChevronDown, Clock3, Download, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings2, Star } from 'lucide-react'
 import { LARGEUR_ETENDUE_MAX, LARGEUR_ETENDUE_MIN, barreCompacte, largeurApresTouche, largeurBarre } from '../../../shared/barre'
 import type { BrowserState, SidebarState } from '../../../shared/types'
 import { LIBELLES_MENU_PAGE } from '../../../shared/menuPage'
@@ -8,6 +8,7 @@ import { ColorModal } from './ColorModal'
 import { DownloadsOverlay } from './DownloadsOverlay'
 import { FavoritesPanel } from './FavoritesPanel'
 import { HistoryPanel } from './HistoryPanel'
+import { ArchivePanel } from './ArchivePanel'
 import { MenuOverlay } from './Overlay'
 import { PinButton } from './PinButton'
 import { SettingsModal } from './SettingsModal'
@@ -102,6 +103,13 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
     void window.arbalete.setOverlay(true).then(() => window.arbalete.getOverlay())
       .then((ouvert) => { if (!ouvert) setPanneauHistorique(false) }, () => setPanneauHistorique(false))
   }
+  // Panneau des onglets archivés (ARB-64) : modale centrée, comme l'historique.
+  const [panneauArchive, setPanneauArchive] = useState(false)
+  const ouvrirArchive = () => {
+    setPanneauArchive(true)
+    void window.arbalete.setOverlay(true).then(() => window.arbalete.getOverlay())
+      .then((ouvert) => { if (!ouvert) setPanneauArchive(false) }, () => setPanneauArchive(false))
+  }
   // Panneau des favoris (ARB-48) : modale centrée, comme l'historique.
   const [panneauFavoris, setPanneauFavoris] = useState(false)
   const ouvrirFavoris = () => {
@@ -172,10 +180,17 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
             <button className="nav-item" title="Rechercher (Ctrl K)" onClick={() => void window.arbalete.openPalette()}><Search size={16} /><span>Rechercher</span><kbd>Ctrl K</kbd></button>
             <button className="nav-item" title="Favoris" onClick={ouvrirFavoris}><Star size={16} /><span>Favoris</span></button>
             <button className="nav-item" title="Historique" onClick={ouvrirHistorique}><Clock3 size={16} /><span>Historique</span></button>
+            <button className="nav-item" title="Onglets archivés" onClick={ouvrirArchive}><Archive size={16} /><span>Archive</span></button>
           </nav>
 
-          <div className="section-heading"><span>ONGLETS</span><IconButton size="sm" title="Nouvel onglet" onClick={() => void window.arbalete.createTab()}><Plus size={14}/></IconButton></div>
-          <TabList state={state} onMenu={ouvrirMenuOnglet} />
+          {state.tabs.some((tab) => tab.pinned) && (
+            <>
+              <div className="section-heading"><span>ÉPINGLÉS</span></div>
+              <TabList state={state} onMenu={ouvrirMenuOnglet} groupe="epingles" />
+            </>
+          )}
+          <div className="section-heading"><span>AUJOURD’HUI</span><IconButton size="sm" title="Nouvel onglet" onClick={() => void window.arbalete.createTab()}><Plus size={14}/></IconButton></div>
+          <TabList state={state} onMenu={ouvrirMenuOnglet} groupe="jour" />
           <button className="new-tab-button" title="Nouvel onglet (Ctrl T)" onClick={() => void window.arbalete.createTab()}><Plus size={16}/><span>Nouvel onglet</span><kbd>Ctrl T</kbd></button>
           <div className="sidebar-spacer" />
           <div className="sidebar-bottom">
@@ -211,6 +226,7 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
       )}
       {overlay && panneauFavoris && <FavoritesPanel onClose={fermerOverlay} />}
       {overlay && panneauHistorique && <HistoryPanel onClose={fermerOverlay} />}
+      {overlay && panneauArchive && <ArchivePanel onClose={fermerOverlay} />}
       {overlay && panneauParametres && <SettingsModal sidebar={sidebar} onClose={fermerOverlay} />}
       {overlay && modaleEspace !== null && espaceDuMenu && (
         <ColorModal espace={espaceDuMenu} onClose={fermerOverlay}

@@ -1,5 +1,7 @@
 // Réglages de la page Paramètres (ARB-57, EP-11) qui ne sont ni le thème, ni le moteur, ni la barre latérale : page
 // d'accueil, réduction des animations, dossier de téléchargement. Partagé par le processus principal et l'aperçu web.
+import { DELAI_ARCHIVAGE_DEFAUT } from './archivage.ts'
+
 export const ACCUEIL_DEFAUT = 'https://www.google.com'
 export const ACCUEIL_LONGUEUR_MAX = 2048
 export const CHEMIN_LONGUEUR_MAX = 260 // MAX_PATH de Windows
@@ -9,9 +11,11 @@ export interface Reglages {
   accueil: string
   animationsReduites: boolean
   dossierTelechargements: string | null
+  // Délai avant l'archivage d'un onglet non épinglé (ARB-64), en heures ; 0 : jamais.
+  archivageHeures: number
 }
 
-export const REGLAGES_DEFAUT: Reglages = { accueil: ACCUEIL_DEFAUT, animationsReduites: false, dossierTelechargements: null }
+export const REGLAGES_DEFAUT: Reglages = { accueil: ACCUEIL_DEFAUT, animationsReduites: false, dossierTelechargements: null, archivageHeures: DELAI_ARCHIVAGE_DEFAUT }
 
 export type ActionDossier = 'choisir' | 'defaut'
 

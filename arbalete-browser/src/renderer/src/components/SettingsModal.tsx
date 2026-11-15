@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { LARGEUR_ETENDUE_MAX, LARGEUR_ETENDUE_MIN, MODES_BARRE, actionsVersMode, modeBarre, type ModeBarre } from '../../../shared/barre'
+import { DELAIS_ARCHIVAGE, LIBELLES_DELAI } from '../../../shared/archivage'
 import { accueilValide } from '../../../shared/reglages'
 import type { SidebarState, ThemeChoice } from '../../../shared/types'
 import { useSettings, useTheme } from '../state'
@@ -65,6 +66,12 @@ export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onC
         </Section>
 
         <Section titre="Moteur de recherche"><SearchEngineSection /></Section>
+
+        <Section titre="Onglets">
+          <Choix label="Archiver les onglets non épinglés après" options={DELAIS_ARCHIVAGE.map((heures): [string, string] => [String(heures), LIBELLES_DELAI[heures]])}
+            valeur={String(reglages.archivageHeures)} onChoisir={(heures) => void window.arbalete.setArchiveDelay(Number(heures)).catch(() => {})} />
+          <p className="settings-help">Un onglet épinglé, affiché ou qui joue du son n’est jamais archivé. Les onglets archivés se rouvrent depuis « Archive ».</p>
+        </Section>
 
         <Section titre="Démarrage">
           <Input aria-label="Page d’accueil" placeholder="https://www.google.com" value={accueil} onChange={(event) => setAccueil(event.target.value)}

@@ -42,6 +42,8 @@ import { actifsParEspace, lireSession, ongletsARestaurer, rattacherAuxEspaces, s
 import { creerEspace, ecrireEspaceActif, lireEspaceActif, lireEspaces, modifierEspace, ordonnerEspaces, semerEspaces, supprimerEspace } from './donnees/espaces.ts'
 import { champsNouvelEspace, ordreApresDeplacement, type CouleurEspace, type Espace } from '../shared/espaces.ts'
 import { creerGestionnaire } from './gestionnaireTelechargements.ts'
+import { ARCHIVE_GARDEE_MAX, delaiArchivageValide, epinglesDabord, ongletsAArchiver } from '../shared/archivage.ts'
+import { archiver, listerArchive, retirerDeLArchive } from './donnees/archive.ts'
 
 const CHEMIN_INTERFACE = join(__dirname, '../renderer/index.html')
 // Icône lue sur disque : resources/ en développement, extraResources de l'installeur (hors app.asar) une fois empaquetée.
@@ -58,6 +60,8 @@ type TabRecord = {
   espace: number | null
   // Pop-ups refusées faute de geste de l'utilisateur sur la page affichée (ARB-108), remises à zéro à la navigation.
   popupsBloquees: number
+  // Dernier usage, en millisecondes depuis 1970 (ARB-64) : l'archivage compte le délai à partir de là.
+  activite: number
 }
 
 let mainWindow: BrowserWindow | null = null
@@ -144,8 +148,9 @@ const dernierActif = new Map<number | null, string>()
 let nextTabNumber = 1
 
 // Ids des onglets de l'espace affiché, dans leur ordre : ceux que la barre, Ctrl+Tab, Ctrl+1…9 et la fermeture parcourent.
+// Les épinglés d'abord (ARB-64), chaque groupe dans l'ordre de la Map.
 function ongletsVisibles(): string[] {
-  return [...tabs.values()].filter((tab) => tab.espace === espaceActif).map((tab) => tab.data.id)
+  return epinglesDabord([...tabs.values()].filter((tab) => tab.espace === espaceActif).map((tab) => ({ id: tab.data.id, epingle: !!tab.data.pinned }))).map((tab) => tab.id)
 }
 // Bornes de la vue web avant que l'interface envoie les siennes : pleine largeur sous la barre de contrôle (48 px, --size-control-bar),
 // la barre latérale étant masquée à l'ouverture (ARB-33).
@@ -206,7 +211,7 @@ function appliquerMoteur(choix: ChoixMoteur) {
 
 function stateSnapshot(): BrowserState {
   return {
-    tabs: [...tabs.values()].filter((tab) => tab.espace === espaceActif).map((tab) => ({ ...tab.data })),
+    tabs: ongletsVisibles().map((id) => ({ ...tabs.get(id)!.data })),
     activeTabId,
     workspaces: espaces,
     activeWorkspaceId: espaceActif,
@@ -314,11 +319,13 @@ let ongletDeDemarrage: string | null = null
 
 function ecrireSession() {
   if (!base || sessionProposee) return
-  const onglets: OngletSauve[] = [...tabs.values()].map(({ data, espace }) => ({
+  const onglets: OngletSauve[] = [...tabs.values()].map(({ data, espace, activite }) => ({
     url: data.url,
     titre: data.title,
     actif: data.id === (espace === espaceActif ? activeTabId : dernierActif.get(espace)),
-    ...(espace === null ? {} : { espace })
+    ...(espace === null ? {} : { espace }),
+    ...(data.pinned ? { epingle: true } : {}),
+    activite
   }))
   const serialisee = JSON.stringify(onglets)
   if (serialisee === derniereSessionEcrite) return
@@ -1006,9 +1013,17 @@ function siteAutorisePopups(url: string): boolean {
   }
 }
 
+function toucher(id: string | null) {
+  const record = id ? tabs.get(id) : undefined
+  if (record) record.activite = Date.now()
+}
+
 function activerOnglet(id: string) {
   // Seul un onglet de l'espace affiché s'active ; un autre espace s'atteint par changerEspace (ARB-61).
   if (tabs.get(id)?.espace !== espaceActif) return
+  // L'onglet qu'on quitte et celui qu'on prend viennent d'être utilisés (ARB-64).
+  toucher(activeTabId)
+  toucher(id)
   activeTabId = id
   setActiveView()
   updateTabFromView(id)
@@ -1155,7 +1170,7 @@ function chargerOnglet(record: TabRecord) {
 
 // Un onglet restauré (ARB-45) s'ouvre en arrière-plan avec son titre enregistré ; sa page attend d'être affichée.
 // Un onglet s'ouvre dans l'espace affiché ; un onglet restauré garde le sien (ARB-61).
-function createTab(initialUrl = reglages.accueil, restaure?: { titre: string, espace?: number }): string {
+function createTab(initialUrl = reglages.accueil, restaure?: { titre: string, espace?: number, epingle?: boolean, activite?: number }): string {
   const id = `tab-${nextTabNumber++}`
   const view = new WebContentsView({
     webPreferences: {
@@ -1175,14 +1190,16 @@ function createTab(initialUrl = reglages.accueil, restaure?: { titre: string, es
       url: normalizeUrl(initialUrl),
       isLoading: !restaure,
       canGoBack: false,
-      canGoForward: false
+      canGoForward: false,
+      ...(restaure?.epingle ? { pinned: true } : {})
     },
     view,
     chargee: false,
     // Rouvrir un onglet restauré n'est pas une visite.
     adresseVisitee: restaure ? adresseHistorique(normalizeUrl(initialUrl)) : null,
     espace: restaure ? restaure.espace ?? null : espaceActif,
-    popupsBloquees: 0
+    popupsBloquees: 0,
+    activite: restaure?.activite ?? Date.now()
   }
   tabs.set(id, record)
 
@@ -1299,6 +1316,7 @@ function createTab(initialUrl = reglages.accueil, restaure?: { titre: string, es
   masquerAuClic(view.webContents)
 
   if (!restaure) {
+    toucher(activeTabId)
     activeTabId = id
     setActiveView()
   }
@@ -1324,7 +1342,8 @@ function rouvrirSession(session: OngletSauve[]): boolean {
   // Chaque onglet retrouve son espace (ARB-61) ; l'onglet actif de chaque espace est celui que le changement d'espace
   // réactivera, celui de l'espace affiché l'est tout de suite.
   const rattaches = rattacherAuxEspaces(onglets, espaces.map((espace) => espace.id))
-  const ids = rattaches.map((onglet) => createTab(onglet.url, { titre: onglet.titre, espace: onglet.espace }))
+  // L'activité écrite n'est pas rendue : le temps où Arbalète était fermée ne compte pas comme du temps laissé de côté.
+  const ids = rattaches.map((onglet) => createTab(onglet.url, { titre: onglet.titre, espace: onglet.espace, epingle: onglet.epingle }))
   for (const [espace, indice] of actifsParEspace(rattaches)) dernierActif.set(espace ?? null, ids[indice])
   const restaure = dernierActif.get(espaceActif)
   if (restaure && tabs.get(restaure)?.espace === espaceActif) activeTabId = restaure
@@ -1394,8 +1413,8 @@ function closeTab(id: string, memoriser = true) {
   }
 }
 
-// Menu d'un onglet (ARB-41). shortcut: l'épinglage vit en mémoire, il n'est pas écrit dans la session ; à persister avec
-// une colonne de la table onglet quand l'épinglage sera un vrai rangement (EP-12).
+// Menu d'un onglet (ARB-41). L'épinglage est écrit dans la session (ARB-64) : l'onglet épinglé garde sa place en tête de
+// liste, n'est jamais archivé et se rouvre au démarrage.
 function actionOnglet(id: string, action: ActionOnglet) {
   const record = tabs.get(id)
   if (!record) return
@@ -1413,11 +1432,40 @@ function actionOnglet(id: string, action: ActionOnglet) {
   }
 }
 
+// Onglets du jour (ARB-64) : un onglet non épinglé, ni affiché ni sonore, laissé de côté plus longtemps que le délai choisi
+// est rangé dans l'archive puis fermé. Rien n'est fermé si l'écriture de l'archive échoue, ni une page hors du web (elle ne
+// se rouvrirait pas). Lancé peu après le démarrage, puis toutes les 10 minutes.
+function archiverAnciens() {
+  if (!base) return
+  const maintenant = Date.now()
+  const archivables = ongletsAArchiver([...tabs.values()].map(({ data, espace, activite }) => ({
+    id: data.id,
+    epingle: !!data.pinned,
+    affiche: data.id === (espace === espaceActif ? activeTabId : dernierActif.get(espace ?? null)),
+    sonore: !!data.audible,
+    activite
+  })), maintenant, reglages.archivageHeures).filter((id) => adresseWeb(tabs.get(id)!.data.url))
+    // Au plus ce que l'archive garde : le surplus attend la passe suivante au lieu d'être fermé puis purgé.
+    .slice(0, ARCHIVE_GARDEE_MAX)
+  if (!archivables.length) return
+  try {
+    archiver(base, archivables.map((id) => {
+      const { data, espace } = tabs.get(id)!
+      return { url: data.url, titre: data.title, espace }
+    }), maintenant)
+  } catch (erreur) {
+    console.error('Onglets non archivés :', erreur)
+    return
+  }
+  for (const id of archivables) closeTab(id, false)
+}
+
 // Passe à un autre espace (ARB-61) : les onglets de l'espace choisi remplacent ceux affichés et son dernier onglet actif
 // reprend la page ; faute d'onglet, un nouvel onglet s'y ouvre. Le choix est conservé au redémarrage.
 function changerEspace(id: number) {
   if (id === espaceActif || !espaces.some((espace) => espace.id === id)) return
   if (activeTabId) dernierActif.set(espaceActif, activeTabId)
+  toucher(activeTabId)
   espaceActif = id
   fermerSuggestions()
   if (base) {
@@ -1728,6 +1776,8 @@ app.whenReady().then(() => {
     // Copie de secours peu après le démarrage, si la dernière a plus de 24 h : une session qui ne se ferme jamais
     // normalement en a une, et la première fenêtre n'attend pas la copie.
     setTimeout(() => copieDeSecours({ seulementSiAncienne: true }), 30_000)
+    setTimeout(archiverAnciens, 30_000)
+    setInterval(archiverAnciens, 600_000).unref()
   }
 
   // ARB-15 : plein écran, caméra, micro, notifications et position se décident par site (hôte de la page de l'onglet, pas
@@ -1810,6 +1860,10 @@ app.whenReady().then(() => {
   traiter('browser:set-reduced-motion', (valeur) => {
     if (typeof valeur !== 'boolean') throw new Error('Argument IPC invalide : booléen attendu')
     appliquerReglages({ ...reglages, animationsReduites: valeur })
+  })
+  traiter('browser:set-archive-delay', (valeur) => {
+    if (!delaiArchivageValide(valeur)) throw new Error('Argument IPC invalide : délai inconnu')
+    appliquerReglages({ ...reglages, archivageHeures: valeur })
   })
   ipcMain.handle('browser:set-download-folder', async (event, action) => {
     exigerBarre(event)
@@ -1940,6 +1994,22 @@ app.whenReady().then(() => {
     if (typeof url !== 'string' || !adresseWeb(url) || !base || !lirePage(base, url)) return
     fermerOverlay()
     createTab(url)
+    activeRecord()?.view.webContents.focus()
+  })
+  // Archive des onglets (ARB-64) : lue par la vue de la barre seule, qui rouvre un onglet dans l'espace affiché ; un id absent
+  // (déjà rouvert) ne fait rien.
+  ipcMain.handle('browser:list-archive', (event) => {
+    exigerBarre(event)
+    try { return base ? listerArchive(base) : [] } catch (erreur) { console.error('Archive non lue :', erreur); return [] }
+  })
+  ipcMain.handle('browser:restore-archived', (event, id) => {
+    exigerBarre(event)
+    const entier = exigerEntier(id)
+    if (!base) return
+    const element = retirerDeLArchive(base, entier)
+    if (!element || !adresseWeb(element.url)) return
+    fermerOverlay()
+    createTab(element.url)
     activeRecord()?.view.webContents.focus()
   })
   // Panneau des favoris (ARB-48) : lu et modifié par la vue de la barre seule ; les arguments sont validés ici, une

@@ -69,7 +69,19 @@ export const MIGRATIONS: readonly string[] = [
     id INTEGER PRIMARY KEY,
     nom TEXT NOT NULL
   );
-  ALTER TABLE favori ADD COLUMN dossier INTEGER REFERENCES dossier_favori (id) ON DELETE SET NULL`
+  ALTER TABLE favori ADD COLUMN dossier INTEGER REFERENCES dossier_favori (id) ON DELETE SET NULL`,
+  // 8 — Onglets épinglés et archivage (ARB-64) : l'épinglage et le dernier usage (millisecondes depuis 1970, NULL : session
+  // d'avant, lu comme « maintenant ») de chaque onglet de la session ; l'archive garde les onglets fermés par le délai, avec
+  // leur espace (NULL : aucun, ou espace supprimé).
+  `ALTER TABLE onglet ADD COLUMN epingle INTEGER NOT NULL DEFAULT 0 CHECK (epingle IN (0, 1));
+  ALTER TABLE onglet ADD COLUMN activite INTEGER;
+  CREATE TABLE archive (
+    id INTEGER PRIMARY KEY,
+    url TEXT NOT NULL,
+    titre TEXT NOT NULL DEFAULT '',
+    espace INTEGER REFERENCES espace (id) ON DELETE SET NULL,
+    date INTEGER NOT NULL
+  )`
 ]
 
 export function versionDuSchema(db: DatabaseSync): number {

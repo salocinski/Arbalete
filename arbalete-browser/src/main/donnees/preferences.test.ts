@@ -1,7 +1,7 @@
 import { deepEqual, strictEqual } from 'node:assert/strict'
 import { test } from 'node:test'
 import { ouvrirBase } from './base.ts'
-import { ecrireBarre, ecrireMoteur, ecrirePreference, ecrireTheme, lireBarre, lireMoteur, lirePreference, lireTheme } from './preferences.ts'
+import { ecrireBarre, ecrireMoteur, ecrirePreference, ecrireReglages, ecrireTheme, lireBarre, lireMoteur, lirePreference, lireReglages, lireTheme } from './preferences.ts'
 import { noterFermetureNormale, noterOuverture } from './fermeture.ts'
 
 // Tests unitaires des préférences (ARB-59).
@@ -68,4 +68,19 @@ test('moteur de recherche (ARB-58) : Google par défaut, choix relu, valeur inva
   deepEqual(lireMoteur(db), { id: 'google', modele: '' })
   ecrirePreference(db, 'moteur', 'yahoo')
   deepEqual(lireMoteur(db), { id: 'google', modele: '' })
+})
+
+test('réglages (ARB-57) : valeurs par défaut, dernier choix relu, valeurs invalides ignorées', () => {
+  const db = ouvrirBase(':memory:')
+  deepEqual(lireReglages(db), { accueil: 'https://www.google.com', animationsReduites: false, dossierTelechargements: null })
+  const choisis = { accueil: 'https://exemple.org/', animationsReduites: true, dossierTelechargements: 'C:/Telechargements' }
+  ecrireReglages(db, choisis)
+  deepEqual(lireReglages(db), choisis)
+  ecrireReglages(db, { ...choisis, dossierTelechargements: null })
+  strictEqual(lireReglages(db).dossierTelechargements, null)
+  ecrirePreference(db, 'accueil', 'javascript:alert(1)')
+  ecrirePreference(db, 'telechargements.dossier', 'dossier/relatif')
+  const relus = lireReglages(db)
+  strictEqual(relus.accueil, 'https://www.google.com')
+  strictEqual(relus.dossierTelechargements, null)
 })

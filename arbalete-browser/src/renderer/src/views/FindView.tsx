@@ -3,12 +3,13 @@ import { useEffect, useRef, useState } from 'react'
 import type { FindResult } from '../../../shared/types'
 import { compteur } from '../../../shared/recherche'
 import { IconButton } from '../components/ui/IconButton'
-import { useTheme } from '../state'
+import { useSettings, useTheme } from '../state'
 
 // Document de la vue native de la recherche dans la page (?vue=recherche, ARB-70). Entrée / Maj+Entrée parcourent les
 // résultats, Échap ferme ; Ctrl+F est intercepté par le processus principal.
 export function FindView() {
   useTheme()
+  useSettings()
   const champ = useRef<HTMLInputElement>(null)
   const [texte, setTexte] = useState('')
   const [resultat, setResultat] = useState<FindResult | null>(null)

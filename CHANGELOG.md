@@ -2,6 +2,16 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.15] - 2026-11-15
+
+### Ajouté
+- Page Paramètres (ARB-57) : le bouton « Paramètres » de la barre latérale ouvre une modale à sections. Apparence (thème, mode de la barre latérale et sa largeur, réduction des animations), moteur de recherche, page d'accueil (http ou https, un domaine nu reçoit https://), dossier de téléchargement (boîte système, repli sur Téléchargements s'il est introuvable) et confidentialité (effacement des données).
+- Les réglages sont écrits en base avant d'être appliqués et reviennent au redémarrage ; la page d'accueil choisie ouvre les nouveaux onglets, et la réduction des animations coupe transitions et animations de la fenêtre et de la barre (`data-motion`).
+
+### Modifié
+- Le moteur de recherche (ARB-58) devient une section de la modale (`SearchEngineSection`), et le formulaire d'effacement est partagé avec le panneau Historique (`ClearDataForm`).
+- La carte ARB-57 de `kanban.html` passe à `done`.
+
 ## [0.12.44.14] - 2026-11-15
 
 ### Ajouté

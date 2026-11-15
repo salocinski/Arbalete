@@ -3794,3 +3794,45 @@ test('C87 : au plus 3 pop-ups ouvertes, la suivante s’ouvre en onglet', async 
     await restaurerHorloge()
   }
 })
+
+// Value: protects=ARB-57 : les réglages de la page Paramètres passent par le processus principal, qui valide chaque
+//   valeur : la page d'accueil choisie est celle d'un nouvel onglet, la réduction des animations pose data-motion dans
+//   les vues, et le dossier de téléchargement ne se choisit que depuis la vue de la barre, par une action de liste fermée;
+//   fails_when=set-home-page accepte un autre schéma que http(s), createTab ignore la page d'accueil, set-reduced-motion
+//   accepte autre chose qu'un booléen ou n'est pas diffusé aux vues, ou set-download-folder répond à la fenêtre;
+//   why_new=C56 ne couvre que le thème; seam=IPC réels sur l'app construite;
+//   no_claim=ne couvre ni la boîte de choix du dossier, ni l'enregistrement d'un téléchargement dans le dossier choisi
+//   (tests unitaires de preferences.test.ts), ni le rendu de la modale (aperçu web), ni le retour au redémarrage.
+test('C90 : page d’accueil, animations et dossier de téléchargement des Paramètres', async () => {
+  const defaut = { accueil: 'https://www.google.com', animationsReduites: false, dossierTelechargements: null }
+  expect(await ui.evaluate(() => window.arbalete.getSettings())).toEqual(defaut)
+
+  // Page d'accueil : http(s) seulement, normalisée ; un nouvel onglet l'ouvre.
+  const refus = await ui.evaluate(() => Promise.allSettled([
+    window.arbalete.setHomePage('javascript:alert(1)'), window.arbalete.setHomePage('file:///C:/secret.html'),
+    window.arbalete.setHomePage(''), window.arbalete.setHomePage(42 as unknown as string)
+  ]).then((reponses) => reponses.map((reponse) => reponse.status)))
+  expect(refus).toEqual(['rejected', 'rejected', 'rejected', 'rejected'])
+  await ui.evaluate((url) => window.arbalete.setHomePage(url), `${origine}/page-b.html`)
+  expect((await ui.evaluate(() => window.arbalete.getSettings())).accueil).toBe(`${origine}/page-b.html`)
+  const idNouveau = await ui.evaluate(() => window.arbalete.createTab())
+  await expect.poll(async () => (await etat()).tabs.find((tab) => tab.id === idNouveau)?.url).toBe(`${origine}/page-b.html`)
+  await ui.evaluate((id) => window.arbalete.closeTab(id), idNouveau)
+
+  // Réduction des animations : un booléen, diffusé à la fenêtre et à la barre.
+  await ui.evaluate(() => window.arbalete.setReducedMotion(true))
+  await expect(ui.locator('html')).toHaveAttribute('data-motion', 'reduit')
+  await expect(barreUi.locator('html')).toHaveAttribute('data-motion', 'reduit')
+  await ui.evaluate(() => window.arbalete.setReducedMotion(false))
+  await expect(ui.locator('html')).not.toHaveAttribute('data-motion', /.*/)
+  expect(await ui.evaluate(() => window.arbalete.setReducedMotion('oui' as unknown as boolean).then(() => 'ok', () => 'refuse'))).toBe('refuse')
+
+  // Dossier : la fenêtre ne l'atteint pas, la vue de la barre revient au défaut, toute autre action est refusée.
+  expect(await ui.evaluate(() => window.arbalete.setDownloadFolder('defaut').then(() => 'ok', () => 'refuse'))).toBe('refuse')
+  expect(await barreUi.evaluate(() => window.arbalete.setDownloadFolder('C:\Windows' as unknown as 'defaut').then(() => 'ok', () => 'refuse'))).toBe('refuse')
+  await barreUi.evaluate(() => window.arbalete.setDownloadFolder('defaut'))
+  expect((await ui.evaluate(() => window.arbalete.getSettings())).dossierTelechargements).toBeNull()
+
+  await ui.evaluate(() => window.arbalete.setHomePage('https://www.google.com'))
+  expect(await ui.evaluate(() => window.arbalete.getSettings())).toEqual({ ...defaut, accueil: 'https://www.google.com/' })
+})

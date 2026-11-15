@@ -10,7 +10,7 @@ import { FavoritesPanel } from './FavoritesPanel'
 import { HistoryPanel } from './HistoryPanel'
 import { MenuOverlay } from './Overlay'
 import { PinButton } from './PinButton'
-import { SearchEngineModal } from './SearchEngineModal'
+import { SettingsModal } from './SettingsModal'
 import { IconButton } from './ui/IconButton'
 import { TabList } from './TabList'
 import { WorkspaceSwitcher } from './WorkspaceSwitcher'
@@ -61,7 +61,7 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
   const espaceActif = state.workspaces.find((e) => e.id === state.activeWorkspaceId)
 
   useEffect(() => {
-    if (!overlay) { setMenuOnglet(null); setMenuEspace(null); setModaleEspace(null); setPanneauTelechargements(null); setPanneauHistorique(false); setPanneauFavoris(false); setPanneauMoteur(false) }
+    if (!overlay) { setMenuOnglet(null); setMenuEspace(null); setModaleEspace(null); setPanneauTelechargements(null); setPanneauHistorique(false); setPanneauFavoris(false); setPanneauParametres(false) }
   }, [overlay])
 
   // L'espace a été supprimé pendant que son menu ou sa modale était ouvert : ils n'ont plus d'objet.
@@ -109,12 +109,12 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
     void window.arbalete.setOverlay(true).then(() => window.arbalete.getOverlay())
       .then((ouvert) => { if (!ouvert) setPanneauFavoris(false) }, () => setPanneauFavoris(false))
   }
-  // Moteur de recherche (ARB-58) : modale ouverte par « Paramètres », seul réglage pour l'instant.
-  const [panneauMoteur, setPanneauMoteur] = useState(false)
-  const ouvrirMoteur = () => {
-    setPanneauMoteur(true)
+  // Page Paramètres (ARB-57) : modale centrée, comme l'historique ; elle reprend le moteur de recherche (ARB-58).
+  const [panneauParametres, setPanneauParametres] = useState(false)
+  const ouvrirParametres = () => {
+    setPanneauParametres(true)
     void window.arbalete.setOverlay(true).then(() => window.arbalete.getOverlay())
-      .then((ouvert) => { if (!ouvert) setPanneauMoteur(false) }, () => setPanneauMoteur(false))
+      .then((ouvert) => { if (!ouvert) setPanneauParametres(false) }, () => setPanneauParametres(false))
   }
   const fermerOverlay = () => void window.arbalete.setOverlay(false)
   const menuPage = usePageMenu()
@@ -180,7 +180,7 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
           <div className="sidebar-spacer" />
           <div className="sidebar-bottom">
             <button className="nav-item" title="Téléchargements" onClick={ouvrirTelechargements}><Download size={16}/><span>Téléchargements</span></button>
-            <button className="nav-item" title="Paramètres : moteur de recherche" onClick={ouvrirMoteur}><Settings2 size={16}/><span>Paramètres</span></button>
+            <button className="nav-item" title="Paramètres" onClick={ouvrirParametres}><Settings2 size={16}/><span>Paramètres</span></button>
             <div className="profile-row" title="Profil local"><div className="avatar">A</div><div className="profile-copy"><strong>Profil local</strong><span>Synchronisation inactive</span></div><ChevronDown size={14}/></div>
           </div>
           {sidebar.pinned && !compacte && <SidebarResizer width={sidebar.width} />}
@@ -211,7 +211,7 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
       )}
       {overlay && panneauFavoris && <FavoritesPanel onClose={fermerOverlay} />}
       {overlay && panneauHistorique && <HistoryPanel onClose={fermerOverlay} />}
-      {overlay && panneauMoteur && <SearchEngineModal onClose={fermerOverlay} />}
+      {overlay && panneauParametres && <SettingsModal sidebar={sidebar} onClose={fermerOverlay} />}
       {overlay && modaleEspace !== null && espaceDuMenu && (
         <ColorModal espace={espaceDuMenu} onClose={fermerOverlay}
           onChoisir={(couleur) => { void window.arbalete.setWorkspaceColor(espaceDuMenu.id, couleur); fermerOverlay() }} />

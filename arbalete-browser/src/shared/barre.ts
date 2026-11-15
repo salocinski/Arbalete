@@ -40,6 +40,22 @@ export function largeurBarre(etat: SidebarState): number {
   return barreCompacte(etat) ? LARGEUR_COMPACTE : etat.width
 }
 
+// Modes proposés par la page Paramètres (ARB-57) : ce que l'utilisateur voit, déduit de l'état de la barre.
+export type ModeBarre = 'etendue' | 'compacte' | 'masquee'
+export const MODES_BARRE: readonly ModeBarre[] = ['etendue', 'compacte', 'masquee']
+
+export function modeBarre(etat: SidebarState): ModeBarre {
+  if (!etat.pinned) return 'masquee'
+  return etat.compact ? 'compacte' : 'etendue'
+}
+
+// Actions à jouer, dans l'ordre, pour passer au mode voulu (aucune si la barre y est déjà).
+export function actionsVersMode(etat: SidebarState, mode: ModeBarre): SidebarAction[] {
+  if (modeBarre(etat) === mode) return []
+  if (mode === 'masquee') return ['toggle-pin']
+  return etat.pinned ? ['toggle-compact'] : ['toggle-pin', ...(etat.compact !== (mode === 'compacte') ? ['toggle-compact' as const] : [])]
+}
+
 // Masquer n'agit pas sur une barre épinglée ; désépingler la referme. Le choix compacte survit au masquage.
 export function transitionBarre(etat: SidebarState, action: SidebarAction): SidebarState {
   switch (action) {

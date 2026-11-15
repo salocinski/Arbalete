@@ -1,4 +1,5 @@
 import type { Espace } from './espaces'
+import type { ActionDossier, Reglages } from './reglages'
 import type { ChoixMoteur } from './moteurs'
 import type { Telechargement } from './telechargements'
 import type { EntreeMenuPage, MenuPage } from './menuPage'
@@ -189,6 +190,13 @@ export type BrowserAPI = {
   // Moteur de recherche de la barre d'adresse (ARB-58) ; un choix invalide est refusé par le processus principal.
   getSearchEngine: () => Promise<ChoixMoteur>
   setSearchEngine: (choix: ChoixMoteur) => Promise<void>
+  // Page Paramètres (ARB-57) : page d'accueil (adresse http(s), refusée sinon), réduction des animations et dossier de
+  // téléchargement, choisi dans une boîte système (`defaut` revient au dossier Téléchargements) ; `onSettings` suit les changements.
+  getSettings: () => Promise<Reglages>
+  setHomePage: (url: string) => Promise<void>
+  setReducedMotion: (reduced: boolean) => Promise<void>
+  setDownloadFolder: (action: ActionDossier) => Promise<void>
+  onSettings: (callback: (settings: Reglages) => void) => () => void
   // Ctrl+L pressé hors de la fenêtre (page, barre latérale) : la fenêtre sélectionne sa barre d'adresse.
   onFocusAddress: (callback: () => void) => () => void
   // Invite de restauration (ARB-46) : vraie tant qu'une session interrompue par un arrêt forcé attend une réponse.

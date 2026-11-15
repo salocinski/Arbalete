@@ -4,6 +4,7 @@ import type { Telechargement } from '../../shared/telechargements'
 import type { MenuPage } from '../../shared/menuPage'
 import type { EntreePalette } from '../../shared/palette'
 import type { DemandePermission } from '../../shared/permissions'
+import { REGLAGES_DEFAUT, type Reglages } from '../../shared/reglages'
 import type { BrowserState, DataIncident, SidebarState, SuggestionsState, ThemeChoice } from '../../shared/types'
 
 // État de l'interface : chaque hook lit sa part dans le processus principal, qui en reste la source de vérité,
@@ -114,6 +115,21 @@ export function usePermissionRequest(): DemandePermission | null {
     return window.arbalete.onPermissionRequest(setDemande)
   }, [])
   return demande
+}
+
+// Réglages de la page Paramètres (ARB-57). La réduction des animations s'applique par data-motion sur <html> (styles.css) :
+// chaque vue de l'interface l'appelle, comme useTheme.
+export function useSettings(): Reglages {
+  const [reglages, setReglages] = useState<Reglages>(REGLAGES_DEFAUT)
+  useEffect(() => {
+    void window.arbalete.getSettings().then(setReglages).catch(() => {})
+    return window.arbalete.onSettings(setReglages)
+  }, [])
+  useEffect(() => {
+    if (reglages.animationsReduites) document.documentElement.dataset.motion = 'reduit'
+    else delete document.documentElement.dataset.motion
+  }, [reglages.animationsReduites])
+  return reglages
 }
 
 // Choix de thème tenu par le processus principal, partagé par la fenêtre et la barre latérale.

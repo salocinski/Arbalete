@@ -7,13 +7,14 @@ import { StageFooter, WelcomeCard } from '../components/WelcomeCard'
 import { largeurBarre } from '../../../shared/barre'
 import { isPreviewMode } from '../previewApi'
 import { handleTabShortcut } from '../shortcuts'
-import { useBrowserState, useDataIncident, useRestoreOffer, useSidebar, useTheme } from '../state'
+import { useBrowserState, useDataIncident, useRestoreOffer, useSettings, useSidebar, useTheme } from '../state'
 
 // Document de la fenêtre : barre d'outils et emplacement de la page web (vue native alignée sur contentRef).
 export function MainView() {
   const state = useBrowserState()
   const sidebar = useSidebar()
   const theme = useTheme()
+  useSettings()
   const restoreOffer = useRestoreOffer()
   const dataIncident = useDataIncident()
   const [address, setAddress] = useState('https://www.google.com')

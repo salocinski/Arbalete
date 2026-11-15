@@ -1,6 +1,8 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { ETAT_BARRE_INITIAL, borneLargeurBarre } from '../../shared/barre.ts'
 import { MOTEUR_DEFAUT, choixMoteurValide, type ChoixMoteur } from '../../shared/moteurs.ts'
+import { isAbsolute } from 'node:path'
+import { ACCUEIL_DEFAUT, CHEMIN_LONGUEUR_MAX, accueilValide, type Reglages } from '../../shared/reglages.ts'
 import { enTransaction } from './transaction.ts'
 import type { SidebarState, ThemeChoice } from '../../shared/types.ts'
 
@@ -45,6 +47,25 @@ export function ecrireMoteur(db: DatabaseSync, choix: ChoixMoteur): void {
   enTransaction(db, () => {
     ecrirePreference(db, 'moteur', choix.id)
     ecrirePreference(db, 'moteur.modele', choix.modele)
+  })
+}
+
+// Réglages de la page Paramètres (ARB-57) : clés `accueil`, `animations.reduites` ('1') et `telechargements.dossier`. Une
+// valeur absente ou invalide redonne le défaut (page d'accueil Google, animations actives, dossier Téléchargements).
+export function lireReglages(db: DatabaseSync): Reglages {
+  const dossier = lirePreference(db, 'telechargements.dossier')
+  return {
+    accueil: accueilValide(lirePreference(db, 'accueil')) ?? ACCUEIL_DEFAUT,
+    animationsReduites: lirePreference(db, 'animations.reduites') === '1',
+    dossierTelechargements: dossier && dossier.length <= CHEMIN_LONGUEUR_MAX && isAbsolute(dossier) ? dossier : null
+  }
+}
+
+export function ecrireReglages(db: DatabaseSync, reglages: Reglages): void {
+  enTransaction(db, () => {
+    ecrirePreference(db, 'accueil', reglages.accueil)
+    ecrirePreference(db, 'animations.reduites', reglages.animationsReduites ? '1' : '0')
+    ecrirePreference(db, 'telechargements.dossier', reglages.dossierTelechargements ?? '')
   })
 }
 

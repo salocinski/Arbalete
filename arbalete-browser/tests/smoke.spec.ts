@@ -3504,15 +3504,16 @@ test('C80 : le menu d’un onglet duplique, épingle, copie l’adresse et ferme
     // Épingler : l'onglet visé porte l'état, l'entrée devient Désépingler ; une seconde fois le retire.
     await entree('Page A', 'Épingler')
     await expect.poll(async () => (await etat()).tabs.filter((tab) => tab.pinned).length).toBe(1)
-    await (await onglet('Page A')).click({ button: 'right' })
+    // Depuis ARB-64, les épinglés sont en tête de liste : l'onglet épinglé est le premier « Page A », le dernier est l'autre.
+    await (await onglet('Page A', (await barreUi.locator('.tab-item').filter({ hasText: 'Page A' }).count()) - 1)).click({ button: 'right' })
     await expect(menu.getByRole('menuitem', { name: 'Désépingler', exact: true })).toBeVisible()
     await barreUi.evaluate(() => window.arbalete.setOverlay(false))
     await expect.poll(overlay).toBe(false)
 
-    // Fermer les autres depuis l'avant-dernier (le premier de ce test) : ne restent que lui et l'onglet épinglé.
+    // Fermer les autres depuis le dernier « Page A » (le premier de ce test, l'épinglé étant en tête) : ne restent que lui et l'onglet épinglé.
     const epingle = (await etat()).tabs.find((tab) => tab.pinned)!
     const restant = (await etat()).tabs.filter((tab) => !tab.pinned && tab.url === pageA).pop()!
-    await entree('Page A', 'Fermer les autres onglets', 1)
+    await entree('Page A', 'Fermer les autres onglets')
     await expect.poll(async () => (await etat()).tabs.length).toBe(2)
     expect((await etat()).tabs.map((tab) => tab.id).sort()).toEqual([epingle.id, restant.id].sort())
 
@@ -3804,7 +3805,7 @@ test('C87 : au plus 3 pop-ups ouvertes, la suivante s’ouvre en onglet', async 
 //   no_claim=ne couvre ni la boîte de choix du dossier, ni l'enregistrement d'un téléchargement dans le dossier choisi
 //   (tests unitaires de preferences.test.ts), ni le rendu de la modale (aperçu web), ni le retour au redémarrage.
 test('C90 : page d’accueil, animations et dossier de téléchargement des Paramètres', async () => {
-  const defaut = { accueil: 'https://www.google.com', animationsReduites: false, dossierTelechargements: null }
+  const defaut = { accueil: 'https://www.google.com', animationsReduites: false, dossierTelechargements: null, archivageHeures: 12 }
   expect(await ui.evaluate(() => window.arbalete.getSettings())).toEqual(defaut)
 
   // Page d'accueil : http(s) seulement, normalisée ; un nouvel onglet l'ouvre.
@@ -3835,4 +3836,23 @@ test('C90 : page d’accueil, animations et dossier de téléchargement des Para
 
   await ui.evaluate(() => window.arbalete.setHomePage('https://www.google.com'))
   expect(await ui.evaluate(() => window.arbalete.getSettings())).toEqual({ ...defaut, accueil: 'https://www.google.com/' })
+})
+
+test('C91 : le délai d’archivage valide son argument ; la liste et la restauration de l’archive sont réservées à la barre', async () => {
+  const refuse = (promesse: Promise<unknown>) => promesse.then(() => 'ok', () => 'refuse')
+  // Délai : liste fermée (12, 24, 168, 720, 0), le reste est refusé et ne change rien.
+  expect(await ui.evaluate(() => Promise.all([5, -12, '12', null].map((v) => window.arbalete.setArchiveDelay(v as unknown as number).then(() => 'ok', () => 'refuse'))))).toEqual(['refuse', 'refuse', 'refuse', 'refuse'])
+  expect((await ui.evaluate(() => window.arbalete.getSettings())).archivageHeures).toBe(12)
+  await ui.evaluate(() => window.arbalete.setArchiveDelay(168))
+  expect((await ui.evaluate(() => window.arbalete.getSettings())).archivageHeures).toBe(168)
+  await ui.evaluate(() => window.arbalete.setArchiveDelay(12))
+
+  // Archive : la fenêtre n'y touche pas ; la barre lit une liste vide et refuse un identifiant aberrant ou inconnu.
+  expect(await refuse(ui.evaluate(() => window.arbalete.listArchive()))).toBe('refuse')
+  expect(await refuse(ui.evaluate(() => window.arbalete.restoreArchived(1)))).toBe('refuse')
+  expect(await barreUi.evaluate(() => window.arbalete.listArchive())).toEqual([])
+  expect(await barreUi.evaluate(() => Promise.all(['1', 1.5, NaN, null].map((v) => window.arbalete.restoreArchived(v as unknown as number).then(() => 'ok', () => 'refuse'))))).toEqual(['refuse', 'refuse', 'refuse', 'refuse'])
+  const avant = (await etat()).tabs.length
+  await barreUi.evaluate(() => window.arbalete.restoreArchived(999999)).catch(() => undefined)
+  expect((await etat()).tabs.length).toBe(avant)
 })

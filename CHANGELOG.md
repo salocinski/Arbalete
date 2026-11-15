@@ -2,6 +2,16 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.16] - 2026-11-15
+
+### Ajouté
+- Onglets épinglés et onglets du jour (ARB-64) : l'épinglage d'un onglet est écrit dans la session (migration 8) et revient au redémarrage ; la barre latérale range les épinglés sous « Épinglés », en tête, et les autres sous « Aujourd’hui ».
+- Archivage : un onglet non épinglé, ni affiché dans son espace ni sonore, laissé de côté plus longtemps que le délai de Paramètres (12 h par défaut, 24 h, 7 jours, 30 jours ou jamais) est rangé dans l'archive puis fermé, 200 éléments au plus et 200 par passe ; rien n'est fermé si l'écriture échoue, et une page hors du web n'est jamais archivée. Le temps où Arbalète est fermée ne compte pas.
+- Bouton « Archive » de la barre latérale : liste les onglets archivés, un clic rouvre la page dans l'espace affiché.
+
+### Modifié
+- La carte ARB-64 de `kanban.html` passe à `done` ; tests C80 adapté (l'épinglé passe en tête) et C91 (canaux de l'archive).
+
 ## [0.12.44.15] - 2026-11-15
 
 ### Ajouté

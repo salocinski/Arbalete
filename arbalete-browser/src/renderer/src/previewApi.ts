@@ -2,6 +2,7 @@ import { ETAT_BARRE_INITIAL, borneLargeurBarre, transitionBarre } from '../../sh
 import { COULEURS_ESPACE, ESPACES_INITIAUX, LONGUEUR_MAX_NOM_ESPACE, champsNouvelEspace, ordreApresDeplacement, type CouleurEspace, type Espace } from '../../shared/espaces'
 import { MOTEUR_DEFAUT, modeleDe, urlRecherche, type ChoixMoteur } from '../../shared/moteurs'
 import { REGLAGES_DEFAUT, accueilValide, type Reglages } from '../../shared/reglages'
+import { delaiArchivageValide, type ElementArchive } from '../../shared/archivage'
 import { estActif, type Telechargement } from '../../shared/telechargements'
 import type { BrowserAPI, BrowserState, BrowserTab, SidebarState, ThemeChoice } from '../../shared/types'
 
@@ -102,7 +103,16 @@ export function installPreviewApi(): boolean {
   let activeWorkspaceId = workspaces[0].id
   const lastActive = new Map<number, string>()
   const spaceOf = new Map<string, number>()
-  const visible = () => tabs.filter((tab) => spaceOf.get(tab.id) === activeWorkspaceId)
+  // Les épinglés d'abord (ARB-64), comme dans le processus principal.
+  const visible = () => {
+    const ici = tabs.filter((tab) => spaceOf.get(tab.id) === activeWorkspaceId)
+    return [...ici.filter((tab) => tab.pinned), ...ici.filter((tab) => !tab.pinned)]
+  }
+  // Archive de l'aperçu (ARB-64) : deux éléments d'exemple, sans archivage automatique (pas de minuterie d'onglets).
+  let archive: ElementArchive[] = [
+    { id: 1, url: 'https://example.com/', titre: 'Exemple', date: Date.now() - 3_600_000 },
+    { id: 2, url: 'https://fr.wikipedia.org/', titre: 'Wikipédia', date: Date.now() - 86_400_000 }
+  ]
   // Favoris de l'aperçu (ARB-47) : en mémoire, perdus au rechargement de la page.
   const favorites = new Set<string>()
   const snapshot = (): BrowserState => ({
@@ -362,6 +372,17 @@ export function installPreviewApi(): boolean {
       changerReglages({ ...reglages, accueil })
     },
     setReducedMotion: async (animationsReduites) => changerReglages({ ...reglages, animationsReduites }),
+    setArchiveDelay: async (heures) => {
+      if (!delaiArchivageValide(heures)) throw new Error('Délai inconnu')
+      changerReglages({ ...reglages, archivageHeures: heures })
+    },
+    listArchive: async () => archive.map((element) => ({ ...element })),
+    restoreArchived: async (id) => {
+      const element = archive.find((autre) => autre.id === id)
+      if (!element) return
+      archive = archive.filter((autre) => autre !== element)
+      createTab(element.url)
+    },
     setDownloadFolder: async (action) => changerReglages({ ...reglages, dossierTelechargements: action === 'choisir' ? 'C:/Users/Aperçu/Téléchargements' : null }),
     onSettings: (callback) => {
       reglagesListeners.add(callback)

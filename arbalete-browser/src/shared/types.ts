@@ -7,6 +7,7 @@ import type { ActionOnglet } from './menuOnglet'
 import type { EntreePalette } from './palette'
 import type { ListeFavoris } from './favoris'
 import type { DemandePermission, ReponsePermission } from './permissions'
+import type { ElementArchive } from './archivage'
 import type { PeriodeEffacement, TypeEffacement, VisiteHistorique } from './historique'
 
 export type BrowserTab = {
@@ -18,7 +19,7 @@ export type BrowserTab = {
   canGoForward: boolean
   favicon?: string
   // États visuels de l'onglet (ARB-124). 
-  pinned?: boolean // épinglé par le menu de l'onglet (ARB-41)
+  pinned?: boolean // épinglé par le menu de l'onglet (ARB-41), écrit dans la session et gardé en tête de liste (ARB-64)
   audible?: boolean
   muted?: boolean
   error?: boolean
@@ -196,6 +197,12 @@ export type BrowserAPI = {
   setHomePage: (url: string) => Promise<void>
   setReducedMotion: (reduced: boolean) => Promise<void>
   setDownloadFolder: (action: ActionDossier) => Promise<void>
+  // Onglets du jour (ARB-64) : délai en heures avant l'archivage d'un onglet non épinglé (liste fermée, 0 : jamais) ;
+  // `listArchive` rend l'archive, les plus récents d'abord, et `restoreArchived` rouvre un élément dans un nouvel onglet de
+  // l'espace affiché et ferme l'overlay (id absent : rien). Seule la vue de la barre lit et rouvre.
+  setArchiveDelay: (heures: number) => Promise<void>
+  listArchive: () => Promise<ElementArchive[]>
+  restoreArchived: (id: number) => Promise<void>
   onSettings: (callback: (settings: Reglages) => void) => () => void
   // Ctrl+L pressé hors de la fenêtre (page, barre latérale) : la fenêtre sélectionne sa barre d'adresse.
   onFocusAddress: (callback: () => void) => () => void

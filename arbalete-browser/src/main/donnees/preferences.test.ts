@@ -72,8 +72,8 @@ test('moteur de recherche (ARB-58) : Google par défaut, choix relu, valeur inva
 
 test('réglages (ARB-57) : valeurs par défaut, dernier choix relu, valeurs invalides ignorées', () => {
   const db = ouvrirBase(':memory:')
-  deepEqual(lireReglages(db), { accueil: 'https://www.google.com', animationsReduites: false, dossierTelechargements: null })
-  const choisis = { accueil: 'https://exemple.org/', animationsReduites: true, dossierTelechargements: 'C:/Telechargements' }
+  deepEqual(lireReglages(db), { accueil: 'https://www.google.com', animationsReduites: false, dossierTelechargements: null, archivageHeures: 12 })
+  const choisis = { accueil: 'https://exemple.org/', animationsReduites: true, dossierTelechargements: 'C:/Telechargements', archivageHeures: 24 }
   ecrireReglages(db, choisis)
   deepEqual(lireReglages(db), choisis)
   ecrireReglages(db, { ...choisis, dossierTelechargements: null })

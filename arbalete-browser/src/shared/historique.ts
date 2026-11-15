@@ -1,6 +1,6 @@
 // Panneau Historique (ARB-52) : regroupement des visites par jour, sans accès à Electron ni à la base.
 export type VisiteHistorique = { url: string, titre: string, date: number }
-export type JourHistorique = { jour: string, visites: VisiteHistorique[] }
+export type JourHistorique<T extends VisiteHistorique = VisiteHistorique> = { jour: string, visites: T[] }
 
 const MS_PAR_JOUR = 86_400_000
 const debutDuJour = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate())
@@ -33,8 +33,8 @@ export function debutEffacement(periode: PeriodeEffacement, maintenant = Date.no
 }
 
 // Les visites arrivent de la plus récente à la plus ancienne : les jours se suivent dans le même ordre.
-export function grouperParJour(visites: VisiteHistorique[], maintenant = Date.now()): JourHistorique[] {
-  const jours: JourHistorique[] = []
+export function grouperParJour<T extends VisiteHistorique>(visites: T[], maintenant = Date.now()): JourHistorique<T>[] {
+  const jours: JourHistorique<T>[] = []
   for (const visite of visites) {
     const jour = libelleJour(visite.date, maintenant)
     const dernier = jours.at(-1)

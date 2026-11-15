@@ -11,6 +11,7 @@ import { numeroDOnglet, ongletNumero, ongletRelatif, pasDOnglet, rechargement } 
 import { ongletVoisin } from './voisin.ts'
 import { depiler, empiler } from './ongletsFermes.ts'
 import { borner } from './bornes.ts'
+import { adresseFichierLocal, navigationAutorisee } from './fichierLocal.ts'
 import { AVIS_DUREE_MS, estGeste, estPopup, gesteRecent, placerAvisPopup, POPUPS_MAX, tailleDePopup } from './popup.ts'
 import { autoriserPopups, popupsAutorises } from './donnees/popupsSites.ts'
 import { palierZoom, sensDuZoom, type SensZoom } from './zoom.ts'
@@ -179,7 +180,9 @@ if (!instancePrincipale) app.quit()
 function normalizeUrl(input: string): string {
   const value = input.trim()
   if (!value) return 'https://www.google.com'
-  if (/^(https?:\/\/|file:\/\/)/i.test(value)) return value
+  if (/^https?:\/\//i.test(value)) return value
+  // file: (ARB-17) : disque local seulement ; un chemin réseau renvoie à la page d'accueil, sans l'envoyer au moteur.
+  if (/^file:/i.test(value)) return adresseFichierLocal(value) ?? 'https://www.google.com'
   if (/^(localhost|127\.0\.0\.1)(:\d+)?(\/.*)?$/i.test(value)) return `http://${value}`
   if (!value.includes(' ') && value.includes('.') && !value.startsWith('about:')) return `https://${value}`
   return urlRecherche(modeleDe(moteur), value)
@@ -1271,7 +1274,7 @@ function createTab(initialUrl = 'https://www.google.com', restaure?: { titre: st
   })
   view.webContents.on('did-create-window', suivrePopup)
   view.webContents.on('will-navigate', (event, url) => {
-    if (!/^https?:\/\//i.test(url) && !/^file:\/\//i.test(url)) event.preventDefault()
+    if (!navigationAutorisee(view.webContents.getURL(), url)) event.preventDefault()
   })
   view.webContents.on('context-menu', (_event, params) => ouvrirMenuPage(id, params))
   brancherF12(view.webContents)

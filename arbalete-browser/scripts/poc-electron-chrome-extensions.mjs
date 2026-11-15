@@ -24,11 +24,19 @@ const PRELOAD_HOTE = join(RACINE, 'preload-hote.cjs')
 writeFileSync(PRELOAD_HOTE, `${sourceBrowserAction}\nmodule.exports.injectBrowserAction()\n`)
 
 const PUB = 'https://googleads.g.doubleclick.net/pagead/id'
+const echapperHtml = (v) => String(v)
+  .replaceAll('&', '&amp;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;')
+  .replaceAll("'", '&#39;')
 const serveur = createServer((req, res) => {
   res.setHeader('content-type', 'text/html; charset=utf-8')
   if (req.url.startsWith('/hote')) {
     const [, partition, tab] = decodeURIComponent(req.url).match(/^\/hote\/([^/]+)\/(\d+)/)
-    res.end(`<!doctype html><title>hote</title><body><browser-action-list partition="${partition}" tab="${tab}"></browser-action-list>`)
+    const partitionEchappee = echapperHtml(partition)
+    const tabEchappe = echapperHtml(tab)
+    res.end(`<!doctype html><title>hote</title><body><browser-action-list partition="${partitionEchappee}" tab="${tabEchappe}"></browser-action-list>`)
     return
   }
   res.end(`<!doctype html><title>poc</title><body><h1>Page de test</h1><p>texte</p>

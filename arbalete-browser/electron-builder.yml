@@ -1,0 +1,34 @@
+# Installeur Windows (ARB-75, NSIS). Ni signature ni mises à jour automatiques : EP-14.
+appId: Arbalete
+productName: Arbalète
+copyright: Arbalète, GPL-3.0-or-later
+directories:
+  output: release
+files:
+  - out/**
+  - "!out/web/**"
+  - package.json
+asar: true
+# L'icône et les licences OFL des polices restent hors d'app.asar : la fenêtre lit l'icône sur disque (CHEMIN_ICONE).
+extraResources:
+  - from: resources/icone.ico
+    to: icone.ico
+  - from: src/renderer/src/design-system/licences-polices
+    to: licences-polices
+  - from: ../LICENSE
+    to: LICENSE.txt
+win:
+  executableName: Arbalete
+  icon: resources/icone.ico
+  target:
+    - target: nsis
+      arch: x64
+  artifactName: Arbalete-Setup-${version}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  # Les données de l'utilisateur (%APPDATA%) survivent à la désinstallation, comme chez les autres navigateurs.
+  deleteAppDataOnUninstall: false

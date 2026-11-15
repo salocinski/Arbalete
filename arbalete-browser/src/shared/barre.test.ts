@@ -1,6 +1,6 @@
 import { deepEqual, strictEqual } from 'node:assert/strict'
 import { test } from 'node:test'
-import { ETAT_BARRE_INITIAL, LARGEUR_BANDE, LARGEUR_COMPACTE, borneLargeurBarre, largeurApresTouche, largeurBarre, transitionBarre } from './barre.ts'
+import { ETAT_BARRE_INITIAL, LARGEUR_BANDE, LARGEUR_COMPACTE, borneLargeurBarre, largeurApresTouche, largeurBarre, transitionBarre, MODES_BARRE, actionsVersMode, modeBarre } from './barre.ts'
 
 // Tests unitaires de la barre latérale en trois états (ARB-123).
 
@@ -48,4 +48,14 @@ test('largeur de la vue : bande masquée, largeur réglée étendue, 68 px compa
   strictEqual(largeurBarre(ETAT_BARRE_INITIAL), LARGEUR_BANDE)
   strictEqual(largeurBarre({ open: true, pinned: true, compact: false, width: 320 }), 320)
   strictEqual(largeurBarre({ open: true, pinned: true, compact: true, width: 320 }), LARGEUR_COMPACTE)
+})
+
+test('actionsVersMode (ARB-57) mène de tout état à chacun des trois modes, sans action inutile', () => {
+  for (const pinned of [false, true]) for (const compact of [false, true]) for (const mode of MODES_BARRE) {
+    const depart = { ...ETAT_BARRE_INITIAL, open: pinned, pinned, compact }
+    const actions = actionsVersMode(depart, mode)
+    const arrivee = actions.reduce(transitionBarre, depart)
+    strictEqual(modeBarre(arrivee), mode, `${JSON.stringify(depart)} → ${mode}`)
+    strictEqual(actions.length === 0, modeBarre(depart) === mode)
+  }
 })

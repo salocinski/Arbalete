@@ -1,6 +1,7 @@
 import { ETAT_BARRE_INITIAL, borneLargeurBarre, transitionBarre } from '../../shared/barre'
 import { COULEURS_ESPACE, ESPACES_INITIAUX, LONGUEUR_MAX_NOM_ESPACE, champsNouvelEspace, ordreApresDeplacement, type CouleurEspace, type Espace } from '../../shared/espaces'
 import { MOTEUR_DEFAUT, modeleDe, urlRecherche, type ChoixMoteur } from '../../shared/moteurs'
+import { REGLAGES_DEFAUT, accueilValide, type Reglages } from '../../shared/reglages'
 import { estActif, type Telechargement } from '../../shared/telechargements'
 import type { BrowserAPI, BrowserState, BrowserTab, SidebarState, ThemeChoice } from '../../shared/types'
 
@@ -83,6 +84,12 @@ export function installPreviewApi(): boolean {
     setDownload(item.id, { recu, etat: recu >= item.total ? 'termine' : 'en-cours' })
   }, 500)
   let theme: ThemeChoice = 'system'
+  let reglages: Reglages = { ...REGLAGES_DEFAUT }
+  const reglagesListeners = new Set<(reglages: Reglages) => void>()
+  const changerReglages = (suivants: Reglages) => {
+    reglages = suivants
+    reglagesListeners.forEach((fn) => fn({ ...reglages }))
+  }
   const themeChoiceListeners = new Set<(choice: ThemeChoice) => void>()
   const media = window.matchMedia('(prefers-color-scheme: dark)')
   const systemTheme = (): 'dark' | 'light' => (media.matches ? 'dark' : 'light')
@@ -346,6 +353,19 @@ export function installPreviewApi(): boolean {
       if (!item || estActif(item.etat)) return
       downloads = downloads.filter((candidate) => candidate.id !== id)
       downloadListeners.forEach((fn) => fn(downloads))
+    },
+    // Paramètres (ARB-57) : gardés en mémoire ; pas de boîte système dans l'aperçu, « Choisir » pose un dossier fictif.
+    getSettings: async () => ({ ...reglages }),
+    setHomePage: async (url) => {
+      const accueil = accueilValide(url)
+      if (!accueil) throw new Error('Adresse http(s) attendue')
+      changerReglages({ ...reglages, accueil })
+    },
+    setReducedMotion: async (animationsReduites) => changerReglages({ ...reglages, animationsReduites }),
+    setDownloadFolder: async (action) => changerReglages({ ...reglages, dossierTelechargements: action === 'choisir' ? 'C:/Users/Aperçu/Téléchargements' : null }),
+    onSettings: (callback) => {
+      reglagesListeners.add(callback)
+      return () => reglagesListeners.delete(callback)
     },
     getSearchEngine: async () => ({ ...moteur }),
     setSearchEngine: async (choix) => { moteur = choix },

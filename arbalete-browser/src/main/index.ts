@@ -36,7 +36,8 @@ import { basculerFavori, creerDossier, deplacerFavori, estFavori, favorisGrille,
 import { adresseHistorique, ajouterVisite, effacerHistorique, lirePage, listerHistorique, nommerPage, rechercherPages } from './donnees/historique.ts'
 import { PERIODES_EFFACEMENT, TYPES_EFFACEMENT, debutEffacement, type PeriodeEffacement, type TypeEffacement } from '../shared/historique.ts'
 import { ETAT_BARRE_INITIAL, borneLargeurBarre, largeurBarre, transitionBarre } from '../shared/barre.ts'
-import { THEMES, ecrireBarre, ecrireMoteur, ecrireTheme, lireBarre, lireMoteur, lireTheme } from './donnees/preferences.ts'
+import { THEMES, ecrireBarre, ecrireMoteur, ecrireReglages, ecrireTheme, lireBarre, lireMoteur, lireReglages, lireTheme } from './donnees/preferences.ts'
+import { CHEMIN_LONGUEUR_MAX, REGLAGES_DEFAUT, accueilValide, type Reglages } from '../shared/reglages.ts'
 import { actifsParEspace, lireSession, ongletsARestaurer, rattacherAuxEspaces, sauverSession, type OngletSauve } from './donnees/session.ts'
 import { creerEspace, ecrireEspaceActif, lireEspaceActif, lireEspaces, modifierEspace, ordonnerEspaces, semerEspaces, supprimerEspace } from './donnees/espaces.ts'
 import { champsNouvelEspace, ordreApresDeplacement, type CouleurEspace, type Espace } from '../shared/espaces.ts'
@@ -95,6 +96,8 @@ let fenetreDejaPleinEcran = false
 let choixTheme: ThemeChoice = 'system'
 // Moteur de la barre d'adresse (ARB-58) : relu de la base au démarrage, changé par set-search-engine.
 let moteur: ChoixMoteur = MOTEUR_DEFAUT
+// Réglages de la page Paramètres (ARB-57) : page d'accueil, animations, dossier de téléchargement ; relus au démarrage.
+let reglages: Reglages = { ...REGLAGES_DEFAUT }
 // Fond natif de la fenêtre, visible avant le rendu de l'interface et au redimensionnement : jumeau de
 // --color-background dans src/renderer/src/design-system/tokens.css (ARB-34), à changer ensemble.
 const FOND_FENETRE = { dark: '#111820', light: '#F3F5F7' } as const
@@ -179,13 +182,20 @@ if (!instancePrincipale) app.quit()
 
 function normalizeUrl(input: string): string {
   const value = input.trim()
-  if (!value) return 'https://www.google.com'
+  if (!value) return reglages.accueil
   if (/^https?:\/\//i.test(value)) return value
   // file: (ARB-17) : disque local seulement ; un chemin réseau renvoie à la page d'accueil, sans l'envoyer au moteur.
-  if (/^file:/i.test(value)) return adresseFichierLocal(value) ?? 'https://www.google.com'
+  if (/^file:/i.test(value)) return adresseFichierLocal(value) ?? reglages.accueil
   if (/^(localhost|127\.0\.0\.1)(:\d+)?(\/.*)?$/i.test(value)) return `http://${value}`
   if (!value.includes(' ') && value.includes('.') && !value.startsWith('about:')) return `https://${value}`
   return urlRecherche(modeleDe(moteur), value)
+}
+
+// Écrit d'abord (comme le moteur) : un échec remonte à la modale au lieu d'un choix perdu au redémarrage.
+function appliquerReglages(suivants: Reglages) {
+  if (base) ecrireReglages(base, suivants)
+  reglages = suivants
+  envoyerAuxInterfaces('browser:settings', { ...reglages })
 }
 
 function appliquerMoteur(choix: ChoixMoteur) {
@@ -273,6 +283,13 @@ function envoyerAuxInterfaces(canal: string, valeur: unknown) {
 // Téléchargements (ARB-55) : enregistrés sans invite dans le dossier Téléchargements de l'utilisateur (créé au besoin).
 const telechargements = creerGestionnaire({
   dossier: () => {
+    // Dossier choisi dans les Paramètres (ARB-57) ; disque ou dossier devenu introuvable : retour au dossier Téléchargements.
+    if (reglages.dossierTelechargements) {
+      try {
+        mkdirSync(reglages.dossierTelechargements, { recursive: true })
+        return reglages.dossierTelechargements
+      } catch { /* repli ci-dessous */ }
+    }
     const dossier = app.getPath('downloads')
     mkdirSync(dossier, { recursive: true })
     return dossier
@@ -1138,7 +1155,7 @@ function chargerOnglet(record: TabRecord) {
 
 // Un onglet restauré (ARB-45) s'ouvre en arrière-plan avec son titre enregistré ; sa page attend d'être affichée.
 // Un onglet s'ouvre dans l'espace affiché ; un onglet restauré garde le sien (ARB-61).
-function createTab(initialUrl = 'https://www.google.com', restaure?: { titre: string, espace?: number }): string {
+function createTab(initialUrl = reglages.accueil, restaure?: { titre: string, espace?: number }): string {
   const id = `tab-${nextTabNumber++}`
   const view = new WebContentsView({
     webPreferences: {
@@ -1684,6 +1701,11 @@ app.whenReady().then(() => {
     } catch (erreur) {
       console.error('Moteur de recherche non relu :', erreur)
     }
+    try {
+      reglages = lireReglages(base)
+    } catch (erreur) {
+      console.error('Réglages non relus :', erreur)
+    }
     // Espaces (ARB-61) : créés au premier lancement, espace affiché relu avant la restauration de la session.
     try {
       semerEspaces(base)
@@ -1777,6 +1799,33 @@ app.whenReady().then(() => {
   traiter('browser:set-theme', (valeur) => appliquerTheme(exigerChoix(valeur, THEMES)))
   traiter('browser:get-search-engine', () => ({ ...moteur }))
   traiter('browser:set-search-engine', (valeur) => appliquerMoteur(choixMoteurValide(valeur)))
+  // Page Paramètres (ARB-57) : chaque réglage est validé ici ; le dossier se choisit dans une boîte système, jamais par un chemin
+  // venu de l'interface.
+  traiter('browser:get-settings', () => ({ ...reglages }))
+  traiter('browser:set-home-page', (valeur) => {
+    const accueil = accueilValide(valeur)
+    if (!accueil) throw new Error('Argument IPC invalide : adresse http(s) attendue')
+    appliquerReglages({ ...reglages, accueil })
+  })
+  traiter('browser:set-reduced-motion', (valeur) => {
+    if (typeof valeur !== 'boolean') throw new Error('Argument IPC invalide : booléen attendu')
+    appliquerReglages({ ...reglages, animationsReduites: valeur })
+  })
+  ipcMain.handle('browser:set-download-folder', async (event, action) => {
+    exigerBarre(event)
+    if (exigerChoix(action, ['choisir', 'defaut'] as const) === 'defaut') return appliquerReglages({ ...reglages, dossierTelechargements: null })
+    if (boiteFichierOuverte) return
+    boiteFichierOuverte = true // la boîte prend le focus : sans ce drapeau, le blur de la fenêtre fermerait la modale sous elle
+    let choix
+    try {
+      const options = { title: 'Dossier de téléchargement', defaultPath: reglages.dossierTelechargements ?? app.getPath('downloads'), properties: ['openDirectory' as const, 'createDirectory' as const] }
+      choix = await (mainWindow ? dialog.showOpenDialog(mainWindow, options) : dialog.showOpenDialog(options))
+    } finally { boiteFichierOuverte = false }
+    const dossier = choix.filePaths[0]
+    if (choix.canceled || !dossier) return
+    if (dossier.length > CHEMIN_LONGUEUR_MAX) throw new Error('Chemin trop long')
+    appliquerReglages({ ...reglages, dossierTelechargements: dossier })
+  })
   traiter('browser:get-sidebar', () => ({ ...barre }))
   traiter('browser:set-sidebar', (valeur) => agirSurBarre(exigerChoix(valeur, ['open', 'hide', 'toggle-pin', 'toggle-compact'] as const)))
   traiter('browser:set-sidebar-width', (valeur) => {

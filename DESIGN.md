@@ -367,7 +367,7 @@ ils existent. Ne jamais reproduire les icônes propriétaires d'autres navigateu
 
 Courbes : standard `ease-out`, entrée `cubic-bezier(0.16, 1, 0.3, 1)`, sortie `ease-in`, déplacement
 `cubic-bezier(0.2, 0.8, 0.2, 1)`. Respecter `prefers-reduced-motion` et permettre de réduire les animations
-dans les paramètres (ARB-57). Aucune animation n'est indispensable à la compréhension d'une action.
+dans les paramètres (ARB-57 : réglage « Réduire les animations », `data-motion="reduit"` sur `<html>`). Aucune animation n'est indispensable à la compréhension d'une action.
 
 ## Themes
 

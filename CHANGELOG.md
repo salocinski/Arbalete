@@ -2,6 +2,11 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.11] - 2026-11-14
+
+### Modifié
+- La carte ARB-95 de `kanban.html` passe à `done` avec le résultat du premier audit de sécurité (profil rapide, aucune faille confirmée, 2 pistes à vérifier) ; le rapport reste hors du dépôt.
+
 ## [0.12.44.10] - 2026-11-14
 
 ### Modifié

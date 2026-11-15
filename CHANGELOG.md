@@ -2,6 +2,15 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.12] - 2026-11-14
+
+### Ajouté
+- Politique des adresses `file:` (ARB-17, décision `docs/decisions/0005-adresses-file.md`) : un fichier du disque local (`file:///C:/…`) saisi dans la barre d'adresse s'ouvre toujours ; un chemin réseau (`file://serveur/partage`, quatre barres, antislashs) est refusé et ouvre la page d'accueil, sans être envoyé au moteur de recherche, ce qui évite d'exposer le hachage NTLM du compte Windows à un serveur SMB.
+- Une page web (`http` ou `https`) ne peut plus naviguer vers `file:` : la garde du processus principal double celle de Chromium, qui bloque déjà ce passage (essai noté dans la décision).
+
+### Modifié
+- La carte ARB-17 de `kanban.html` passe à `done`.
+
 ## [0.12.44.11] - 2026-11-14
 
 ### Modifié

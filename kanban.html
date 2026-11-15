@@ -1578,11 +1578,11 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "epic": "phase-1-valider-le-socle",
       "kind": "spike",
       "milestone": "EP-02",
-      "note": "À lancer après les correctifs d'EP-02 et avant le passage en public (ARB-91). Sortie dans ~/security-audit-skill/arbalete/ (jamais dans le dépôt). Une faille confirmée = un avis de sécurité privé GitHub + un ticket.\nCritère : Rapport produit\nChaque faille confirmée a un ticket et un avis privé",
+      "note": "À lancer après les correctifs d'EP-02 et avant le passage en public (ARB-91). Sortie dans ~/security-audit-skill/arbalete/ (jamais dans le dépôt). Une faille confirmée = un avis de sécurité privé GitHub + un ticket.\nCritère : Rapport produit\nChaque faille confirmée a un ticket et un avis privé\nRésultat (2026-11-15) : audit de profil quick, en source seule (aucun bac à sable sur le poste), couverture partielle : 11 unités, 4 reportées. Aucune faille confirmée ; 2 pistes à vérifier sous Windows dans npm run dev (navigation vers file: depuis une page web, portée des permissions mémorisées) ; 2 candidats rejetés ; une liste de durcissements. Rapport dans ~/security-audit-skill/arbalete/run-1 (hors dépôt). Suite possible : tickets pour les 2 pistes, puis audit plus profond avant ARB-91.",
       "num": 95,
       "prio": "P1",
       "size": "M",
-      "status": "todo",
+      "status": "done",
       "title": "Premier audit de sécurité complet (security-audit)"
     },
     {

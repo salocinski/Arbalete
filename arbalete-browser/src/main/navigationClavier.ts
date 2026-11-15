@@ -30,8 +30,17 @@ export function rechargement(t: Touche, lettre: string): 'normal' | 'sans-cache'
   return undefined
 }
 
-// Onglet atteint en avançant de `pas` dans l'ordre affiché, en boucle. Renvoie null s'il n'y en a pas d'autre.
-export function ongletRelatif(ids: string[], actif: string | null, pas: 1 | -1): string | null {
+// Ctrl+Alt+→ passe à l'espace suivant, Ctrl+Alt+← au précédent (ARB-66). Ctrl+Alt+1…9 n'est pas pris : sur un AZERTY
+// c'est AltGr+chiffre (~ # { [ | ` \ ^ @), indiscernable ici. Les flèches ne produisent aucun caractère avec AltGr.
+export function pasDEspace(t: Touche): 1 | -1 | undefined {
+  if (!t.control || !t.alt || t.meta || t.shift) return undefined
+  if (t.key === 'ArrowRight') return 1
+  if (t.key === 'ArrowLeft') return -1
+  return undefined
+}
+
+// Élément atteint en avançant de `pas` dans l'ordre affiché, en boucle (onglets ou espaces). Renvoie null s'il n'y en a pas d'autre.
+export function ongletRelatif<T extends string | number>(ids: T[], actif: T | null, pas: 1 | -1): T | null {
   if (ids.length < 2) return null
   const index = actif === null ? -1 : ids.indexOf(actif)
   if (index === -1) return ids[0]

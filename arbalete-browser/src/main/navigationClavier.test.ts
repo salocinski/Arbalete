@@ -1,6 +1,6 @@
 import { strictEqual } from 'node:assert/strict'
 import { test } from 'node:test'
-import { numeroDOnglet, ongletNumero, ongletRelatif, pasDOnglet, rechargement } from './navigationClavier.ts'
+import { numeroDOnglet, ongletNumero, ongletRelatif, pasDEspace, pasDOnglet, rechargement } from './navigationClavier.ts'
 
 // Changement d'onglet au clavier (ARB-19) et rechargement (ARB-21).
 
@@ -49,6 +49,21 @@ test('Alt+F5, Meta, R sans Ctrl ou une autre lettre ne rechargent pas', () => {
   strictEqual(rechargement(touche('r'), 'r'), undefined)
   strictEqual(rechargement(ctrl('t'), 't'), undefined)
   strictEqual(rechargement(ctrl('r', { alt: true }), 'r'), undefined)
+})
+
+test('pasDEspace : Ctrl+Alt+flèche seulement, ni Maj ni Alt seul ni Ctrl seul', () => {
+  const plus = { control: true, alt: true }
+  strictEqual(pasDEspace(touche('ArrowRight', plus)), 1)
+  strictEqual(pasDEspace(touche('ArrowLeft', plus)), -1)
+  strictEqual(pasDEspace(touche('ArrowRight', { ...plus, shift: true })), undefined)
+  strictEqual(pasDEspace(touche('ArrowRight', { control: true })), undefined)
+  strictEqual(pasDEspace(touche('ArrowRight', { alt: true })), undefined)
+  strictEqual(pasDEspace(touche('1', { ...plus, code: 'Digit1' })), undefined)
+})
+
+test('ongletRelatif boucle aussi sur des numéros d\'espace', () => {
+  strictEqual(ongletRelatif([3, 7, 9], 9, 1), 3)
+  strictEqual(ongletRelatif([3, 7, 9], 3, -1), 9)
 })
 
 test('ongletRelatif boucle dans l\'ordre affiché et ne fait rien avec un seul onglet', () => {

@@ -2,6 +2,11 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.13] - 2026-11-15
+
+### Modifié
+- La carte ARB-17 du tableau `kanban.html` note la fusion de la politique des adresses `file:` (PR 109) et les pistes de suivi non ticketées.
+
 ## [0.12.44.12] - 2026-11-14
 
 ### Ajouté

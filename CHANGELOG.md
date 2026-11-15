@@ -2,6 +2,11 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.19] - 2026-11-15
+
+### Modifié
+- L'import des favoris ne retire plus deux fois les balises du nom de dossier et du titre : la lecture n'en laissait déjà passer aucune. Cela ferme deux alertes d'analyse de code, sans changer ce que l'on importe.
+
 ## [0.12.44.18] - 2026-11-15
 
 ### Ajouté

@@ -20,6 +20,7 @@ const decoder = (texte: string) => texte.replace(/&(?:#(\d+)|#x([0-9a-f]+)|(\w+)
 
 // Parcours linéaire des balises <H3> (nom de dossier), <DL> / </DL> (niveau) et <A HREF> (favori). Le HTML n'est jamais
 // interprété : seules les adresses web passées par adresseHistorique sont gardées (javascript:, data:, file: écartés).
+// Nom et titre viennent de `[^<]` : ils ne contiennent jamais de balise, donc aucun nettoyage de balises (CodeQL, alertes 1 et 2).
 export function lireFavorisHtml(html: string): FavoriImporte[] {
   const resultat: FavoriImporte[] = []
   const pile: (string | null)[] = []
@@ -30,7 +31,7 @@ export function lireFavorisHtml(html: string): FavoriImporte[] {
   for (const [, nomDossier, fermeture, attributs, texte] of html.matchAll(jetons)) {
     if (resultat.length >= FAVORIS_MAX_IMPORT) break
     if (nomDossier !== undefined) {
-      dossierEnAttente = decoder(nomDossier.replace(/<[^>]*>/g, '')).trim().slice(0, LONGUEUR_MAX_NOM_DOSSIER) || null
+      dossierEnAttente = decoder(nomDossier).trim().slice(0, LONGUEUR_MAX_NOM_DOSSIER) || null
     } else if (attributs === undefined) {
       if (fermeture) pile.pop()
       else { pile.push(dossierEnAttente); dossierEnAttente = null }
@@ -39,7 +40,7 @@ export function lireFavorisHtml(html: string): FavoriImporte[] {
       const url = href ? adresseHistorique(decoder((href[1] ?? href[2]).trim())) : null
       if (!url) continue
       const dossier = pile.slice().reverse().find((nom) => nom !== null) ?? null
-      resultat.push({ url, titre: decoder(texte.replace(/<[^>]*>/g, '')).trim().slice(0, LONGUEUR_MAX_TITRE), dossier })
+      resultat.push({ url, titre: decoder(texte).trim().slice(0, LONGUEUR_MAX_TITRE), dossier })
     }
   }
   return resultat

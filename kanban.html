@@ -750,11 +750,11 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "epic": "phase-5-avancee-go-no-go",
       "kind": "spike",
       "milestone": "EP-04",
-      "note": "Téléchargement et installation d'un .crx depuis le store.\nCritère : Une extension s'installe depuis son lien store",
+      "note": "Téléchargement et installation d'un .crx depuis le store.\nCritère : Une extension s'installe depuis son lien store\nRésultat (docs/extensions/arb-26-poc-crx-chrome-web-store.md) : téléchargement par le serveur de mises à jour du Store, décompression et chargement faits à la main pour 1Password et Immersive Translate ; Immersive Translate fonctionne (service worker, action, popup), 1Password plante (espace de noms chrome.* indéfini, et nativeMessaging absent) ; aucune installation dans Arbalète, signature du .crx non vérifiée.",
       "num": 26,
       "prio": "P2",
       "size": "M",
-      "status": "todo",
+      "status": "done",
       "title": "POC : installer depuis le Chrome Web Store (CRX)"
     },
     {
@@ -762,11 +762,11 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "epic": "phase-5-avancee-go-no-go",
       "kind": "tache",
       "milestone": "EP-04",
-      "note": "Comparer Electron avec les alternatives (CEF, fork Chromium) si nécessaire.\nCritère : Décision Go/No-Go écrite dans le projet",
+      "note": "Comparer Electron avec les alternatives (CEF, fork Chromium) si nécessaire.\nCritère : Décision Go/No-Go écrite dans le projet\nRésultat (docs/decisions/0004-extensions-chrome.md) : Go conditionnel avec Electron et electron-chrome-extensions, sans CEF ni fork de Chromium ; uBlock Origin Lite à réévaluer (chrome.commands factice, puis declarativeNetRequest) ; 1Password No-Go tant que nativeMessaging manque ; rien d'activé avant l'audit ARB-95.",
       "num": 27,
       "prio": "P1",
       "size": "S",
-      "status": "todo",
+      "status": "done",
       "title": "Rédiger le rapport de compatibilité et la décision"
     },
     {

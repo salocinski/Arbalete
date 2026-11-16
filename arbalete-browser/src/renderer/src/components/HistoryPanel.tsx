@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Clock, Search } from 'lucide-react'
 import { grouperParJour, type VisiteHistorique } from '../../../shared/historique'
-import { Overlay } from './Overlay'
+import { Modal } from './ui/Modal'
 import { ClearDataForm } from './ClearDataForm'
 import { Input } from './ui/Input'
 
@@ -26,8 +26,7 @@ export function HistoryPanel({ onClose }: { onClose: () => void }) {
   const jours = useMemo(() => grouperParJour(visites ?? []), [visites])
   const ouvrir = (url: string) => void window.arbalete.openHistoryPage(url)
   return (
-    <Overlay centre onClose={onClose}>
-      <div className="palette history" role="dialog" aria-label="Historique">
+    <Modal className="palette history" label="Historique" onClose={onClose}>
         <Input autoFocus value={texte} onChange={(event) => setTexte(event.target.value)} placeholder="Rechercher dans l’historique"
           aria-label="Rechercher dans l’historique" leading={<Search size={14} className="muted-icon" aria-hidden="true" />}
           onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && visites?.[0]) { event.preventDefault(); ouvrir(visites[0].url) } }} />
@@ -48,7 +47,6 @@ export function HistoryPanel({ onClose }: { onClose: () => void }) {
           ))}
         </div>
         <ClearDataForm onCleared={() => setRafraichir((n) => n + 1)} />
-      </div>
-    </Overlay>
+      </Modal>
   )
 }

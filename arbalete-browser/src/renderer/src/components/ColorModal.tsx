@@ -1,5 +1,5 @@
 import { COULEURS_ESPACE, NOMS_COULEUR_ESPACE, type CouleurEspace, type Espace } from '../../../shared/espaces'
-import { Overlay } from './Overlay'
+import { Modal } from './ui/Modal'
 
 const PAR_LIGNE = 7
 
@@ -17,8 +17,7 @@ export function ColorModal({ espace, onChoisir, onClose }: { espace: Espace; onC
   }
 
   return (
-    <Overlay centre onClose={onClose}>
-      <div className="color-modal" role="dialog" aria-modal="true" aria-label={`Couleur de l’espace ${espace.nom}`}>
+    <Modal className="color-modal" label={`Couleur de l’espace ${espace.nom}`} onClose={onClose}>
         <div className="color-modal-title">Couleur de l’espace</div>
         <div className="color-modal-card" data-testid="color-modal-card">
           <span className="workspace-dot" style={{ background: `var(--color-workspace-${espace.couleur})` }} />
@@ -32,7 +31,6 @@ export function ColorModal({ espace, onChoisir, onClose }: { espace: Espace; onC
               onClick={() => onChoisir(couleur)} />
           ))}
         </div>
-      </div>
-    </Overlay>
+      </Modal>
   )
 }

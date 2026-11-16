@@ -50,10 +50,43 @@ export function pageApercu(): string {
 html,body{margin:0;height:100%;overflow:hidden;background:transparent}
 body{box-sizing:border-box;display:flex;align-items:center;padding:0 12px;border:1px solid;border-radius:${RAYON_APERCU}px;
 font:12px 'Segoe UI',sans-serif;user-select:none;cursor:default}
+@media (prefers-reduced-motion:reduce){body{transition:none!important}}
 span{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 ${theme('dark')}${theme('light')}
 </style><body class="dark"><span id="t"></span></body>`
   return 'data:text/html;charset=utf-8,' + encodeURIComponent(html)
+}
+
+// Infobulle (ARB-126) : la même vue sert l'aperçu d'adresse et l'infobulle d'un bouton. Durées jumelles de
+// --duration-panel-open / --duration-panel-close et courbes de --ease-enter / --ease-exit (tokens.css), à changer ensemble.
+export const DUREE_OUVERTURE = 180
+export const DUREE_FERMETURE = 150
+export const COURBE_OUVERTURE = 'cubic-bezier(0.16, 1, 0.3, 1)'
+export const COURBE_FERMETURE = 'ease-in'
+const ECART_INFOBULLE = 6
+const LONGUEUR_MAX_INFOBULLE = 120
+
+// Texte d'une infobulle : même nettoyage qu'une adresse, mais court (un libellé de bouton, pas une page).
+export function texteInfobulle(texte: unknown): string {
+  return texteApercu(texte).slice(0, LONGUEUR_MAX_INFOBULLE)
+}
+
+// Emplacement : sous l'ancre, centrée sur elle, ou au-dessus si le bas de la fenêtre manque ; jamais hors de la fenêtre.
+// L'infobulle ne recouvre pas l'ancre, donc jamais la souris qui la survole. shortcut: largeur estimée comme l'aperçu.
+export function placerInfobulle(ancre: Rectangle, fenetre: Rectangle, texte: string): Rectangle {
+  const largeur = Math.min(Math.max(LARGEUR_MIN, texte.length * 7 + 26), fenetre.width)
+  const centre = ancre.x + ancre.width / 2 - largeur / 2
+  const x = Math.min(Math.max(centre, fenetre.x), fenetre.x + fenetre.width - largeur)
+  const dessous = ancre.y + ancre.height + ECART_INFOBULLE
+  const y = dessous + HAUTEUR_APERCU > fenetre.y + fenetre.height ? ancre.y - ECART_INFOBULLE - HAUTEUR_APERCU : dessous
+  return { x: Math.round(x), y: Math.round(Math.max(fenetre.y, y)), width: Math.round(largeur), height: HAUTEUR_APERCU }
+}
+
+// Fondu d'ouverture ou de fermeture ; `ms` vaut 0 sous prefers-reduced-motion / animations réduites (affichage direct).
+export function scriptOuverture(ouvert: boolean, ms: number): string {
+  const courbe = ouvert ? COURBE_OUVERTURE : COURBE_FERMETURE
+  const depart = ouvert ? "b.style.transition='none';b.style.opacity='0';void b.offsetWidth;" : ''
+  return `(()=>{const b=document.body;${depart}b.style.transition='opacity ${ms}ms ${courbe}';b.style.opacity='${ouvert ? 1 : 0}'})()`
 }
 
 // Instruction exécutée dans la vue pour y mettre le texte et le thème ; JSON.stringify échappe le texte.

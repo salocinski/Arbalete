@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Folder, FolderPlus, Import, Pencil, Star, Trash2, X } from 'lucide-react'
 import { LONGUEUR_MAX_NOM_DOSSIER, type FavoriListe, type ListeFavoris } from '../../../shared/favoris'
-import { Overlay } from './Overlay'
+import { Modal } from './ui/Modal'
 import { Button } from './ui/Button'
 import { IconButton } from './ui/IconButton'
 import { Input } from './ui/Input'
@@ -58,8 +58,7 @@ export function FavoritesPanel({ onClose }: { onClose: () => void }) {
 
   const racine = liste?.favoris.filter((favori) => favori.dossier === null) ?? []
   return (
-    <Overlay centre onClose={onClose}>
-      <div className="palette favorites" role="dialog" aria-label="Favoris">
+    <Modal className="palette favorites" label="Favoris" onClose={onClose}>
         <Input value={nouveau} maxLength={LONGUEUR_MAX_NOM_DOSSIER} onChange={(event) => setNouveau(event.target.value)} placeholder="Nouveau dossier"
           aria-label="Nom du nouveau dossier" leading={<FolderPlus size={14} className="muted-icon" aria-hidden="true" />}
           trailing={<IconButton size="sm" title="Créer le dossier" disabled={!nouveau.trim()} onClick={creer}><FolderPlus size={14} /></IconButton>}
@@ -92,7 +91,6 @@ export function FavoritesPanel({ onClose }: { onClose: () => void }) {
             </section>
           )}
         </div>
-      </div>
-    </Overlay>
+      </Modal>
   )
 }

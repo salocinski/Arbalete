@@ -1,5 +1,8 @@
+import { spawnSync } from 'node:child_process'
 import { ok, strictEqual } from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { copyFileSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
 
@@ -62,4 +65,43 @@ test('la clé du cache d’Electron de release.yml porte aussi la version éping
   const cles = [...release.matchAll(/CLE_CACHE_ELECTRON: (\S+)/g)].map((m) => m[1])
   strictEqual(cles.length, 1)
   ok(cles[0].endsWith(`-${version}`), `clé ${cles[0]} sans la version ${version}`)
+})
+
+// ARB-96 : le binaire d'Electron se télécharge après npm install ; en CI le workflow s'en charge (cache), le crochet
+// ne doit donc rien faire (sinon il téléchargerait avant la restauration du cache).
+test('postinstall télécharge Electron hors CI et ne fait rien en CI', () => {
+  const scripts = JSON.parse(readFileSync(racine + 'arbalete-browser/package.json', 'utf8')).scripts
+  strictEqual(scripts.postinstall, 'node scripts/postinstall.mjs')
+  const resultat = spawnSync(process.execPath, [racine + 'arbalete-browser/scripts/postinstall.mjs'], {
+    env: { ...process.env, CI: 'true' },
+    encoding: 'utf8'
+  })
+  strictEqual(resultat.status, 0)
+  strictEqual(resultat.stdout + resultat.stderr, '', 'aucune sortie : aucun téléchargement tenté')
+})
+
+// Value: protects=hors CI le crochet appelle l'installeur d'Electron et sort 0 sans bruit; fails_when=garde CI inversée, résolution ou lancement d'install.js cassés; why_new=le test précédent n'exerce que la branche CI; seam=none; no_claim=téléchargement réseau réel (le binaire est déjà là : les tests tournent sous Electron)
+test('postinstall hors CI laisse un binaire déjà installé tel quel', () => {
+  const { CI: _ci, ...sansCI } = process.env
+  const resultat = spawnSync(process.execPath, [racine + 'arbalete-browser/scripts/postinstall.mjs'], {
+    env: sansCI,
+    encoding: 'utf8'
+  })
+  strictEqual(resultat.status, 0)
+  strictEqual(resultat.stdout + resultat.stderr, '')
+})
+
+// Value: protects=sans electron installé le crochet avertit et sort 0 (npm install ne casse pas); fails_when=resolve ou spawn sort du try/catch ou l'avertissement disparaît; why_new=les autres tests n'exercent que la branche CI et le binaire présent; seam=none; no_claim=échec réel d'un téléchargement réseau (electron absent simulé par une copie du script hors de node_modules)
+test('postinstall avertit sans échouer quand electron est introuvable', () => {
+  const dossier = mkdtempSync(join(tmpdir(), 'arbalete-postinstall-'))
+  try {
+    const copie = join(dossier, 'postinstall.mjs')
+    copyFileSync(racine + 'arbalete-browser/scripts/postinstall.mjs', copie)
+    const { CI: _ci, ...sansCI } = process.env
+    const resultat = spawnSync(process.execPath, [copie], { env: sansCI, encoding: 'utf8' })
+    strictEqual(resultat.status, 0)
+    ok(resultat.stderr.includes('npx install-electron'), 'avertissement attendu')
+  } finally {
+    rmSync(dossier, { recursive: true, force: true })
+  }
 })

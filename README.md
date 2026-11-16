@@ -27,12 +27,11 @@ Prérequis : Windows 10/11, [Node.js LTS](https://nodejs.org), Git.
 git clone https://github.com/salocinski/arbalete.git
 cd arbalete\arbalete-browser
 npm install
-npx install-electron   # télécharge le binaire Electron, que npm install ne récupère plus
 npm run dev
 ```
 
-`npx install-electron` est à relancer après chaque `npm ci` ou mise à jour d'Electron : sans le binaire,
-`npm run dev` échoue.
+Le binaire d'Electron est téléchargé par `npm install` / `npm ci` (crochet `postinstall`, sans effet en CI). Si le
+téléchargement a échoué (hors ligne), lancer `npx install-electron` : sans le binaire, `npm run dev` échoue.
 
 | Commande | Rôle |
 |---|---|

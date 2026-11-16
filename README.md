@@ -60,6 +60,8 @@ Arbalète est un logiciel libre distribué sous licence **GNU GPL v3.0 ou ultér
 Vous pouvez l'utiliser, l'étudier, le modifier et le redistribuer. Toute version modifiée distribuée doit
 rester sous la même licence, avec son code source.
 
+Exceptions : le logo et les icônes (dossier `branding/` et `arbalete-browser/resources/icone.ico`) ne sont pas couverts par la GPL, voir [`branding/README.md`](branding/README.md#droits).
+
 ## Signature du code
 
 Les installeurs publiés dans les Releases sont signés : signature de code gratuite fournie par [SignPath.io](https://signpath.io),

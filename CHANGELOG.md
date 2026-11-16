@@ -2,6 +2,14 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.28] - 2026-11-16
+
+### Modifié
+- Installation (ARB-96) : `npm install` et `npm ci` téléchargent maintenant le binaire d’Electron (crochet `postinstall`, `scripts/postinstall.mjs`), donc `npm run dev` démarre sur un clone neuf sans `npx install-electron`. Sans effet en CI, où le workflow le prend dans son cache. Un échec (hors ligne) avertit sans faire échouer l’installation.
+
+### Limites
+- Pas de délai maximal sur le téléchargement. Le crochet ne s’exécute pas avec `--ignore-scripts` : lancer alors `npx install-electron`. Le vrai téléchargement sur clone neuf reste à vérifier à la main.
+
 ## [0.12.44.27] - 2026-11-16
 
 ### Ajouté

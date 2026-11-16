@@ -91,7 +91,7 @@ Toutes les commandes se lancent dans `arbalete-browser/`.
 | Commande | Rôle |
 |---|---|
 | `npm install` | Installer les dépendances |
-| `npx install-electron` | Télécharger le binaire Electron : depuis Electron 42, `npm install` ne le fait plus. À relancer après chaque `npm ci` ou mise à jour d'Electron (réinstallation de `node_modules/electron`). Sans lui, `dev` et `preview` échouent avec « Electron uninstall » et `test:smoke` avec une erreur d'installation d'Electron |
+| `npx install-electron` | Télécharger le binaire Electron : depuis Electron 42, `npm install` ne le fait plus, mais le crochet `postinstall` (`scripts/postinstall.mjs`, ARB-96, sans effet quand `CI` est défini) le lance ; à relancer à la main seulement si ce téléchargement a échoué, ou après une mise à jour d'Electron faite sans `npm install` (réinstallation de `node_modules/electron`). Sans lui, `dev` et `preview` échouent avec « Electron uninstall » et `test:smoke` avec une erreur d'installation d'Electron |
 | `npm run dev` | Lancer l'application Electron en développement |
 | `npm run dev:web` | **Aperçu navigateur** de l'interface sur http://localhost:5180 (API simulée) |
 | `npm run typecheck` | Vérification TypeScript |

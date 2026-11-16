@@ -558,11 +558,11 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "epic": "phase-1-valider-le-socle",
       "kind": "tache",
       "milestone": "EP-01",
-      "note": "[Bug]\ncontentBounds initial ne correspond pas à la hauteur de la barre d'outils.\nCritère : Aucun décalage visible au premier affichage",
+      "note": "[Bug]\ncontentBounds initial ne correspond pas à la hauteur de la barre d'outils.\nCritère : Aucun décalage visible au premier affichage\nConstaté le 2026-11-16 : `contentBounds` démarre à y: 48 (barre de contrôle de 48 px, `--size-control-bar`), plus à 106 ; la page suit ensuite `.web-content` (ARB-32, ARB-104).",
       "num": 10,
       "prio": "P3",
       "size": "S",
-      "status": "todo",
+      "status": "done",
       "title": "Corriger la zone de contenu initiale (y: 106 au lieu de 64)"
     },
     {
@@ -1314,23 +1314,23 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "epic": "phase-6-usage-quotidien",
       "kind": "tache",
       "milestone": "EP-14",
-      "note": "Commencer par normalizeUrl, la gestion des onglets et la couche de données.\nCritère : Tests lancés en CI",
+      "note": "Commencer par normalizeUrl, la gestion des onglets et la couche de données.\nCritère : Tests lancés en CI\nConstaté le 2026-11-16 : la couche de données, `normalizeUrl` et les modules du processus principal ont des tests unitaires lancés en CI (job « Typecheck, tests unitaires, build »), avec `node:test` sous le Node d'Electron (`npm run test:unit`) et non Vitest : aucune dépendance de plus.",
       "num": 73,
       "prio": "P2",
       "size": "M",
-      "status": "todo",
-      "title": "Tests unitaires (Vitest)"
+      "status": "done",
+      "title": "Tests unitaires (node:test)"
     },
     {
       "deps": [],
       "epic": "phase-6-usage-quotidien",
       "kind": "tache",
       "milestone": "EP-14",
-      "note": "Scénarios : ouvrir/fermer un onglet, naviguer, restaurer la session.\nCritère : 3 scénarios automatisés en CI",
+      "note": "Scénarios : ouvrir/fermer un onglet, naviguer, restaurer la session.\nCritère : 3 scénarios automatisés en CI\nConstaté le 2026-11-16 : les tests Playwright pour Electron (`tests/smoke.spec.ts`, `tests/developpement.spec.ts`) tournent en CI (job « Smoke test (Electron) », exigé par `PR-Rule`) et couvrent ouverture et fermeture d'onglet, navigation et restauration de la session (C41, C42).",
       "num": 74,
       "prio": "P2",
       "size": "M",
-      "status": "todo",
+      "status": "done",
       "title": "Tests de bout en bout (Playwright pour Electron)"
     },
     {
@@ -1530,11 +1530,11 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "epic": "transverse-projet-open-source",
       "kind": "tache",
       "milestone": "EP-15",
-      "note": "Après ARB-86, 87, 88 et 90. Vérifier qu'aucun secret ni donnée personnelle n'est dans l'historique avant de basculer.\nCritère : Dépôt public\nAucun secret détecté",
+      "note": "Après ARB-86, 87, 88 et 90. Vérifier qu'aucun secret ni donnée personnelle n'est dans l'historique avant de basculer.\nCritère : Dépôt public\nAucun secret détecté\nConstaté le 2026-11-16 : le dépôt GitHub est public. Les prérequis ARB-87 (modèles .github) et ARB-90 (backlog dans Issues) restent à faire (ARB-130, droits du logo, est clos). Contrôle des secrets dans l'historique non tracé ici : la carte reste en cours jusqu'à ce contrôle.",
       "num": 91,
       "prio": "P2",
       "size": "S",
-      "status": "todo",
+      "status": "doing",
       "title": "Passer le dépôt en public"
     },
     {
@@ -1998,11 +1998,11 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "epic": "transverse-projet-open-source",
       "kind": "tache",
       "milestone": "EP-15",
-      "note": "Le logo et les icônes de branding/ ont été générés avec Gemini (ARB-127). La licence GPL-3.0-or-later du dépôt couvre le code, pas ces images. Vérifier ce que permettent les conditions du service pour une distribution publique et commerciale, puis écrire le régime retenu (mention dans branding/README.md, CONTRIBUTING.md ou LICENSE selon le cas). À faire avant ARB-91.\nCritère : Le régime de droits du logo et des icônes est écrit dans le dépôt\nbranding/README.md ne dit plus que la question est ouverte\nTraiter avant ARB-91 (dépôt public)",
+      "note": "Le logo et les icônes de branding/ ont été générés avec Gemini (ARB-127). La licence GPL-3.0-or-later du dépôt couvre le code, pas ces images. Vérifier ce que permettent les conditions du service pour une distribution publique et commerciale, puis écrire le régime retenu (mention dans branding/README.md, CONTRIBUTING.md ou LICENSE selon le cas). À faire avant ARB-91.\nCritère : Le régime de droits du logo et des icônes est écrit dans le dépôt\nbranding/README.md ne dit plus que la question est ouverte\nTraiter avant ARB-91 (dépôt public)\nRégime décidé le 2026-11-16 : images hors GPL, aucun droit d'auteur revendiqué (images brutes de Gemini), redistribution avec Arbalète permise, usage pour un autre produit refusé ; sources et réserves dans branding/README.md.",
       "num": 130,
       "prio": "P2",
       "size": "S",
-      "status": "todo",
+      "status": "done",
       "title": "Trancher les droits du logo et des icônes générés par IA"
     },
     {

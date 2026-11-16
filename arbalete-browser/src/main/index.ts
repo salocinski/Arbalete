@@ -26,6 +26,7 @@ import { placerRecherche, texteRecherche } from './recherche.ts'
 import { entreeMenuPageValide, type EntreeMenuPage, type MenuPage } from '../shared/menuPage.ts'
 import { adresseWeb, entreesMenuPage } from './menuPage.ts'
 import { reordonnerOnglets } from '../shared/ordreOnglets.ts'
+import { basculerPartage, dansPartage, scinder, type Partage } from '../shared/vuePartagee.ts'
 import { construirePalette, type ActionPalette, type EntreePalette } from '../shared/palette.ts'
 import { estActionOnglet, ongletsAFermer, type ActionOnglet } from '../shared/menuOnglet.ts'
 import { MOTEUR_DEFAUT, choixMoteurValide, modeleDe, urlRecherche, type ChoixMoteur } from '../shared/moteurs.ts'
@@ -163,6 +164,15 @@ function ongletsVisibles(): string[] {
 // Bornes de la vue web avant que l'interface envoie les siennes : pleine largeur sous la barre de contrôle (48 px, --size-control-bar),
 // la barre latérale étant masquée à l'ouverture (ARB-33).
 let contentBounds = { x: 8, y: 48, width: 884, height: 544 }
+// Vue partagée (ARB-72) : deux onglets de l'espace affiché côte à côte, dont l'actif.
+// shortcut: non écrite dans la session, la vue partagée ne survit pas au redémarrage ; à écrire (clé `pref.*` ou colonne d'onglet) si l'usage la réclame.
+let partage: Partage | null = null
+// Zone de la page de l'onglet actif : sa moitié en vue partagée, sinon tout le cadre. Les petites vues natives (recherche, avis, aperçu) s'y placent.
+function rectanglePage() {
+  if (!partage || !dansPartage(partage, activeTabId)) return contentBounds
+  const moities = scinder(contentBounds)
+  return activeTabId === partage.gauche ? moities.gauche : moities.droite
+}
 
 // Une seule instance d'Arbalète (ARB-117) : deux instances partageraient arbalete.db et écraseraient la session l'une
 // de l'autre. Un second lancement transmet ses adresses à la première instance, puis se ferme sans ouvrir la base.
@@ -226,7 +236,8 @@ function stateSnapshot(): BrowserState {
     favorite: pageActiveEstFavorite(),
     favorites: grilleFavoris(),
     popupsBloquees: activeRecord()?.popupsBloquees ?? 0,
-    folders: dossiersOnglets.filter((dossier) => dossier.espace === espaceActif).map(({ id, nom, replie }) => ({ id, nom, replie }))
+    folders: dossiersOnglets.filter((dossier) => dossier.espace === espaceActif).map(({ id, nom, replie }) => ({ id, nom, replie })),
+    split: partage ? [partage.gauche, partage.droite] : null
   }
 }
 
@@ -368,6 +379,10 @@ function placerPage() {
   if (pleinEcranPage) {
     const { width, height } = mainWindow.getContentBounds()
     pleinEcranPage.setBounds({ x: 0, y: 0, width, height })
+  } else if (partage) {
+    const moities = scinder(contentBounds)
+    tabs.get(partage.gauche)?.view.setBounds(moities.gauche)
+    tabs.get(partage.droite)?.view.setBounds(moities.droite)
   } else activeRecord()?.view.setBounds(contentBounds)
 }
 
@@ -402,6 +417,13 @@ function sortirPleinEcranPage(view: WebContentsView) {
 function setActiveView() {
   if (!mainWindow || mainWindow.isDestroyed()) return
   if (pleinEcranPage && pleinEcranPage !== activeRecord()?.view) sortirPleinEcranPage(pleinEcranPage)
+  // Activer un onglet hors des deux pages met fin à la vue partagée.
+  if (partage && !dansPartage(partage, activeTabId)) {
+    // Les deux pages viennent d'être affichées : pas de mise en veille immédiate de celle qu'on n'a pas activée.
+    toucher(partage.gauche)
+    toucher(partage.droite)
+    partage = null
+  }
   retirerApercu()
   // L'avis de pop-up bloquée est celui de l'onglet affiché : un autre onglet le retire (réactiver l'actif ne le touche pas).
   if (avisOnglet !== activeTabId) retirerAvis()
@@ -413,12 +435,15 @@ function setActiveView() {
     } catch {
       // La vue peut déjà être détachée.
     }
-    if (id === activeTabId) {
+    if (id === activeTabId || dansPartage(partage, id)) {
       mainWindow.contentView.addChildView(record.view)
       placerPage()
       chargerOnglet(record)
     }
   }
+  // La zone de page a pu changer (vue partagée formée ou quittée) : les petites vues suivent.
+  placerRechercheVue()
+  placerAvisVue()
   // Réajouter une vue déjà présente la remet au premier plan : la recherche ouverte, puis la barre, restent au-dessus de
   // l'onglet affiché (réactiver l'onglet actif le remet lui aussi au premier plan).
   if (rechercheView && rechercheVisible) mainWindow.contentView.addChildView(rechercheView)
@@ -736,7 +761,7 @@ function dessinerApercu() {
 
 function placerApercuVue() {
   if (!apercuView || !apercuVisible) return
-  apercuView.setBounds(apercuMode === 'infobulle' && apercuEmplacement ? apercuEmplacement : placerApercu(contentBounds, apercuTexte, apercuCote))
+  apercuView.setBounds(apercuMode === 'infobulle' && apercuEmplacement ? apercuEmplacement : placerApercu(rectanglePage(), apercuTexte, apercuCote))
 }
 
 function retirerApercu() {
@@ -837,7 +862,7 @@ function creerRecherche(): WebContentsView {
 }
 
 function placerRechercheVue() {
-  if (rechercheView && rechercheVisible) rechercheView.setBounds(placerRecherche(contentBounds))
+  if (rechercheView && rechercheVisible) rechercheView.setBounds(placerRecherche(rectanglePage()))
 }
 
 // Le clavier va au champ, dont le texte est sélectionné (Ctrl+F sur une recherche ouverte). `nouvelle` : la recherche vient
@@ -900,7 +925,7 @@ function creerAvis(): WebContentsView {
 }
 
 function placerAvisVue() {
-  if (avisView && avisVisible) avisView.setBounds(placerAvisPopup(contentBounds))
+  if (avisView && avisVisible) avisView.setBounds(placerAvisPopup(rectanglePage()))
 }
 
 function retirerAvis() {
@@ -1381,6 +1406,9 @@ function brancherOnglet(id: string, record: TabRecord) {
   let dernierGeste: number | undefined
   view.webContents.on('input-event', (_event, entree) => {
     if (estGeste(entree.type)) dernierGeste = performance.now()
+    // Vue partagée (ARB-72) : un clic dans l'autre page la rend active (elle a déjà le clavier).
+    // shortcut: pas d'activation pendant le plein écran d'une page (elle quitterait le plein écran), l'autre moitié reste attachée, à revoir si la vidéo en vue partagée gêne.
+    if (entree.type === 'mouseDown' && !pleinEcranPage && id !== activeTabId && dansPartage(partage, id)) activerAutreOnglet(id)
   })
   view.webContents.setWindowOpenHandler(({ url, features, disposition }) => {
     // Une page d'un espace masqué n'ouvre rien : l'onglet surgirait dans l'espace affiché (ARB-61).
@@ -1493,8 +1521,11 @@ function closeTab(id: string, memoriser = true) {
   const ordre = ongletsVisibles()
   tabs.delete(id)
   ouvertures.delete(id)
+  // Fermer l'une des deux pages met fin à la vue partagée ; l'autre garde la place.
+  const autrePage = partage?.gauche === id ? partage.droite : partage?.droite === id ? partage.gauche : null
+  if (dansPartage(partage, id)) partage = null
 
-  if (activeTabId === id) activeTabId = ongletVoisin(ordre, id)
+  if (activeTabId === id) activeTabId = autrePage && tabs.has(autrePage) ? autrePage : ongletVoisin(ordre, id)
   // Le dernier onglet de l'espace affiché ferme : un nouvel onglet l'y remplace (les autres espaces gardent les leurs).
   if (!ongletsVisibles().length) createTab()
   else {
@@ -1518,6 +1549,14 @@ function actionOnglet(id: string, action: ActionOnglet) {
     // Un onglet épinglé quitte son dossier : les épinglés ont leur propre groupe (ARB-69).
     if (record.data.pinned) delete record.data.folder
     broadcastState()
+  } else if (action === 'vue-partagee') {
+    // Seul un onglet de l'espace affiché (celui du menu) se partage ; l'actif est l'autre page.
+    if (record.espace !== espaceActif) return
+    const suivant = basculerPartage(partage, activeTabId, id)
+    if (suivant === partage) return
+    partage = suivant
+    setActiveView()
+    broadcastState()
   } else {
     for (const autre of ongletsAFermer([...tabs.values()].filter((t) => t.espace === record.espace).map((t) => t.data), id)) closeTab(autre)
     activerOnglet(id)
@@ -1533,7 +1572,7 @@ function archiverAnciens() {
   const archivables = ongletsAArchiver([...tabs.values()].map(({ data, espace, activite }) => ({
     id: data.id,
     epingle: !!data.pinned,
-    affiche: data.id === (espace === espaceActif ? activeTabId : dernierActif.get(espace ?? null)),
+    affiche: data.id === (espace === espaceActif ? activeTabId : dernierActif.get(espace ?? null)) || dansPartage(partage, data.id),
     sonore: !!data.audible,
     activite
   })), maintenant, reglages.archivageHeures).filter((id) => adresseWeb(tabs.get(id)!.data.url))
@@ -1561,7 +1600,7 @@ function archiverAnciens() {
 // pop-up de connexion ouverte par la page sont coupés aussi : exclure les onglets qui capturent un média si cela arrive.
 function endormir(id: string) {
   const record = tabs.get(id)
-  if (!record || id === activeTabId) return
+  if (!record || id === activeTabId || dansPartage(partage, id)) return
   record.view.webContents.close()
   record.view = nouvelleVue()
   record.chargee = false
@@ -1574,7 +1613,7 @@ function endormir(id: string) {
 function endormirAnciens() {
   const aEndormir = ongletsAEndormir([...tabs.values()].map(({ data, activite, chargee }) => ({
     id: data.id,
-    affiche: data.id === activeTabId,
+    affiche: data.id === activeTabId || dansPartage(partage, data.id),
     // Un onglet rendu muet par l'utilisateur joue peut-être encore : la vue neuve perdrait son réglage.
     sonore: !!data.audible || !!data.muted,
     enVeille: !chargee,
@@ -1603,6 +1642,8 @@ function changerEspace(id: number) {
   if (id === espaceActif || !espaces.some((espace) => espace.id === id)) return
   if (activeTabId) dernierActif.set(espaceActif, activeTabId)
   toucher(activeTabId)
+  // La vue partagée appartient à l'espace affiché : en changer la termine.
+  partage = null
   espaceActif = id
   fermerSuggestions()
   if (base) {

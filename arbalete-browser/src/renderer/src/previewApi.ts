@@ -4,6 +4,7 @@ import { MOTEUR_DEFAUT, modeleDe, urlRecherche, type ChoixMoteur } from '../../s
 import { REGLAGES_DEFAUT, accueilValide, type Reglages } from '../../shared/reglages'
 import { delaiArchivageValide, type ElementArchive } from '../../shared/archivage'
 import { delaiVeilleValide } from '../../shared/veille'
+import { basculerPartage, dansPartage, type Partage } from '../../shared/vuePartagee'
 import { estActif, type Telechargement } from '../../shared/telechargements'
 import type { BrowserAPI, BrowserState, BrowserTab, SidebarState, ThemeChoice } from '../../shared/types'
 
@@ -118,6 +119,8 @@ export function installPreviewApi(): boolean {
   // Dossiers d'onglets de l'aperçu (ARB-69) : en mémoire, chacun dans l'espace où il a été créé.
   const folders: (DossierOnglet & { espace: number })[] = []
   let nextFolderId = 1
+  // Vue partagée de l'aperçu (ARB-72) : seule la liste de la barre la reflète, la zone de page reste un cadre unique.
+  let split: Partage | null = null
   // Favoris de l'aperçu (ARB-47) : en mémoire, perdus au rechargement de la page.
   const favorites = new Set<string>()
   const snapshot = (): BrowserState => ({
@@ -128,7 +131,9 @@ export function installPreviewApi(): boolean {
     favorite: favorites.has(active()?.url ?? ''),
     favorites: [...favorites].slice(0, 8).map((url) => ({ url, title: titleFor(url) })),
     popupsBloquees: 0,
-    folders: folders.filter((dossier) => dossier.espace === activeWorkspaceId).map(({ id, nom, replie }) => ({ id, nom, replie }))
+    folders: folders.filter((dossier) => dossier.espace === activeWorkspaceId).map(({ id, nom, replie }) => ({ id, nom, replie })),
+    // Un onglet actif hors des deux pages met fin à la vue partagée, comme dans le processus principal.
+    split: split && dansPartage(split, activeTabId) ? [split.gauche, split.droite] : null
   })
   const emit = () => {
     const state = snapshot()
@@ -244,6 +249,10 @@ export function installPreviewApi(): boolean {
       if (action === 'dupliquer') createTab(tab.url)
       else if (action === 'copier-adresse') await navigator.clipboard?.writeText(tab.url).catch(() => {})
       else if (action === 'epingler') { tab.pinned = !tab.pinned; if (tab.pinned) delete tab.folder; emit() }
+      else if (action === 'vue-partagee') {
+        const suivant = basculerPartage(split, activeTabId, id)
+        if (suivant !== split) { split = suivant; emit() }
+      }
       else {
         for (const autre of ongletsAFermer(visible(), id)) {
           tabs.splice(tabs.findIndex((item) => item.id === autre), 1)

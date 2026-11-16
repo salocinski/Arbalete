@@ -3994,3 +3994,64 @@ test('C99 : l’infobulle refuse une ancre aberrante, se place sous l’ancre da
     await barreUi.evaluate(() => window.arbalete.setOverlay(false))
   }
 })
+
+// C100 (ARB-72) : vue partagée, deux onglets côte à côte.
+//   risque=le placement des deux pages, l'onglet actif au clic dans l'autre page et la fin de la vue à la fermeture;
+//   why_new=aucun test ne regarde plus d'une vue de page à la fois; seam=none; no_claim=ni glisser-déposer, ni clavier réel, ni rendu.
+test('C100 : la vue partagée met deux onglets côte à côte, un clic active l’autre page, fermer une page la termine', async () => {
+  const pages = () => app.evaluate(({ BrowserWindow, WebContentsView }) => BrowserWindow.getAllWindows()[0].contentView.children
+    .filter((e) => e instanceof WebContentsView && e.webContents.getURL().startsWith('http'))
+    .map((e) => ({ url: (e as InstanceType<typeof WebContentsView>).webContents.getURL(), ...e.getBounds() })))
+  const premier = (await etat()).activeTabId!
+  const second = await ui.evaluate((url) => window.arbalete.createTab(url), `${origine}/page-survol.html`)
+  await attendreUrlActive(`${origine}/page-survol.html`)
+  try {
+    // Sur l'onglet actif, l'entrée n'a pas de voisin : rien ne change.
+    await ui.evaluate((id) => window.arbalete.tabAction(id, 'vue-partagee'), second)
+    expect((await etat()).split).toBeNull()
+    // Sur l'autre onglet : les deux pages se partagent la zone, l'actif à gauche.
+    await ui.evaluate((id) => window.arbalete.tabAction(id, 'vue-partagee'), premier)
+    expect((await etat()).split).toEqual([second, premier])
+    const zone = await rectangleZoneContenu()
+    await expect.poll(async () => (await pages()).length).toBe(2)
+    const [gauche, droite] = (await pages()).sort((a, b) => a.x - b.x)
+    expect(gauche.x).toBe(zone.x)
+    expect(droite.x).toBe(gauche.x + gauche.width + 8)
+    expect(droite.x + droite.width).toBe(zone.x + zone.width)
+    expect([gauche.y, gauche.height]).toEqual([droite.y, droite.height])
+    // Un clic dans la page de droite la rend active, sans mettre fin à la vue.
+    await app.evaluate(({ BrowserWindow, WebContentsView }) => {
+      const droite = BrowserWindow.getAllWindows()[0].contentView.children
+        .filter((e) => e instanceof WebContentsView && e.webContents.getURL().startsWith('http'))
+        .sort((a, b) => b.getBounds().x - a.getBounds().x)[0] as InstanceType<typeof WebContentsView>
+      droite.webContents.sendInputEvent({ type: 'mouseDown', x: 20, y: 20, button: 'left', clickCount: 1 })
+      droite.webContents.sendInputEvent({ type: 'mouseUp', x: 20, y: 20, button: 'left', clickCount: 1 })
+    })
+    await expect.poll(async () => (await etat()).activeTabId).toBe(premier)
+    expect((await etat()).split).toEqual([second, premier])
+    // Activer un onglet hors des deux pages termine la vue.
+    const troisieme = await ui.evaluate((url) => window.arbalete.createTab(url), `${origine}/page-a.html`)
+    await expect.poll(async () => (await etat()).split).toBeNull()
+    // Changer d'espace la termine aussi.
+    const refaire = async () => {
+      await ui.evaluate((id) => window.arbalete.activateTab(id), premier)
+      await ui.evaluate((id) => window.arbalete.tabAction(id, 'vue-partagee'), second)
+      expect((await etat()).split).toEqual([premier, second])
+    }
+    await refaire()
+    const espaces = (await etat()).workspaces.map((e) => e.id)
+    await ui.evaluate((id) => window.arbalete.setWorkspace(id), espaces[1])
+    await expect.poll(async () => (await etat()).split).toBeNull()
+    await ui.evaluate((id) => window.arbalete.setWorkspace(id), espaces[0])
+    await expect.poll(async () => (await etat()).activeWorkspaceId).toBe(espaces[0])
+    // Fermer l'une des deux pages termine la vue : l'autre reste affichée seule, sur toute la zone.
+    await refaire()
+    await ui.evaluate((id) => window.arbalete.closeTab(id), troisieme)
+    await ui.evaluate((id) => window.arbalete.closeTab(id), second)
+    await expect.poll(async () => (await etat()).split).toBeNull()
+    expect((await etat()).activeTabId).toBe(premier)
+    await attendreVueAlignee()
+  } finally {
+    await ui.evaluate((id) => window.arbalete.tabAction(id, 'vue-partagee'), premier).catch(() => {})
+  }
+})

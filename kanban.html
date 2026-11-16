@@ -2125,6 +2125,18 @@ Terminé (2026-11-16) : `build/installer.nsh` déclare Arbalète à Windows (HKC
       "size": "S",
       "status": "backlog",
       "title": "Poser un refus par défaut sur tout nouveau contenu web (web-contents-created)"
+    },
+    {
+      "deps": [],
+      "epic": "phase-6-usage-quotidien",
+      "kind": "tache",
+      "milestone": "EP-14",
+      "note": "Mise en service de la signature du code (suite d'ARB-76, décision docs/decisions/0006-signature-code.md). Sans elle, release.yml s'arrête dès sa première étape : aucune Release signée n'est possible. Étapes à faire par le propriétaire (je ne peux ni demander le certificat ni créer le compte) :\n1. Prérequis : dépôt public (ARB-91) et section « Signature du code » du README en place. Lire les conditions du programme SignPath Foundation (projet open source, GPL-3.0-or-later) sur signpath.org et demander le certificat gratuit.\n2. Dans SignPath : projet de slug `arbalete` ; politique de signature `release-signing` (approbation manuelle) ; deux configurations d'artefact de slugs `application` et `installeur`, dont le XML est dans `.signpath/` ; connecteur GitHub (« trusted build system ») du dépôt.\n3. Dans GitHub (Settings, Secrets and variables, Actions) : variable `SIGNPATH_ORGANIZATION_ID`, secret `SIGNPATH_API_TOKEN` (jamais dans le dépôt ni dans un message).\n4. Lancer release.yml (onglet Actions, sur main), approuver les deux demandes dans SignPath (application, installeur), puis vérifier à la main : onglet Signatures numériques de l'installeur téléchargé, sujet réel du certificat.\n5. Si le sujet n'est pas `CN=SignPath Foundation` : corriger `publisherName` (electron-builder.yml) et le contrôle de release.yml, qui le supposent.\n6. Publier deux Releases signées et vérifier une mise à jour entre elles (ARB-77). Noter que les installeurs publiés avant ARB-76 se mettent à jour vers le premier installeur signé.\nLimites connues (ARB-76) : désinstalleur NSIS et DLL d'Electron non signés ; pas de blockmap (mise à jour de ~115 Mo en entier) ; la réputation SmartScreen se construit avec les téléchargements, l'alerte peut rester les premiers jours ; le nom d'éditeur affiché est « SignPath Foundation ».\nCritère : Une Release signée est publiée ; l'installeur affiche une signature valide ; une mise à jour entre deux Releases signées réussit",
+      "num": 141,
+      "prio": "P2",
+      "size": "S",
+      "status": "todo",
+      "title": "Ouvrir le compte SignPath et publier la première Release signée"
     }
   ]
 }

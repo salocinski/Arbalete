@@ -2,6 +2,16 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.24] - 2026-11-16
+
+### Ajouté
+- Signature du code (ARB-76, décision 0006) : `release.yml` fait signer par SignPath (certificat gratuit de la SignPath Foundation) `Arbalete.exe`, refait l’installeur depuis l’application signée, fait signer l’installeur, contrôle les deux signatures (`CN=SignPath Foundation`) puis remet `latest.yml` d’accord (sha512 et taille, `scripts/apres-signature.mjs`). Rien n’est publié si une signature manque.
+- `publisherName` (SignPath Foundation) est écrit dans `app-update.yml` : une mise à jour dont la signature n’est pas celle-là est refusée, en plus du sha512.
+
+### Limites
+- Il reste à ouvrir le compte SignPath et à régler la variable `SIGNPATH_ORGANIZATION_ID` et le secret `SIGNPATH_API_TOKEN` du dépôt (voir `docs/decisions/0006-signature-code.md`) ; chaque Release demande deux approbations manuelles. La signature réelle n’est pas vérifiée : premier essai à faire.
+- Le désinstalleur et les DLL d’Electron ne sont pas signés ; sans blockmap, les mises à jour se téléchargent en entier (environ 115 Mo). Un build local, non signé, ne peut pas se mettre à jour.
+
 ## [0.12.44.23] - 2026-11-16
 
 ### Ajouté
@@ -12,7 +22,7 @@ Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MIN
 - `electron-builder.yml` déclare la publication GitHub ; `scripts/dist.mjs` donne la version repliée à l’installeur.
 
 ### Limites
-- L’installeur n’est pas signé (ARB-76) : seul le sha512 protège la mise à jour, donc le compte GitHub qui publie ; `publisherName` à ajouter après signature. Le dépôt doit être public (ARB-91) pour que l’application lise les Releases, et les installeurs publiés avant ARB-77 ne se mettent pas à jour. Le téléchargement et l’installation réels d’une Release restent manuels (deux versions publiées).
+- L’installeur n’est pas signé (corrigé en 0.12.44.24, ARB-76) : seul le sha512 protège la mise à jour. Le dépôt doit être public (ARB-91) pour que l’application lise les Releases, et les installeurs publiés avant ARB-77 ne se mettent pas à jour. Le téléchargement et l’installation réels d’une Release restent manuels (deux versions publiées).
 
 ## [0.12.44.22] - 2026-11-16
 

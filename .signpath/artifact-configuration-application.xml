@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ARB-76 : à recopier dans SignPath (projet Arbalete, configuration d'artefact « application »). L'archive reçue de
+     .github/workflows/release.yml ne contient que l'exécutable de l'application, signé avant d'être mis dans l'installeur. -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="Arbalete.exe">
+      <authenticode-sign />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

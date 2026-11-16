@@ -1,4 +1,4 @@
-# Installeur Windows (ARB-75, NSIS). Mises à jour automatiques par GitHub Releases (ARB-77) ; pas de signature (ARB-76).
+# Installeur Windows (ARB-75, NSIS). Mises à jour automatiques par GitHub Releases (ARB-77) ; signature par SignPath dans release.yml (ARB-76).
 appId: Arbalete
 productName: Arbalète
 copyright: Arbalète, GPL-3.0-or-later
@@ -15,6 +15,11 @@ publish:
   owner: salocinski
   repo: Arbalete
   releaseType: release
+  # ARB-76 : écrit dans app-update.yml, electron-updater refuse alors une mise à jour dont la signature n'est pas celle de ce
+  # certificat. La signature elle-même est faite par SignPath dans release.yml (aucun certificat ici). Un build local, non signé,
+  # ne peut donc pas se mettre à jour : seule l'application publiée par release.yml le peut.
+  publisherName:
+    - SignPath Foundation
 # L'icône et les licences OFL des polices restent hors d'app.asar : la fenêtre lit l'icône sur disque (CHEMIN_ICONE).
 extraResources:
   - from: resources/icone.ico

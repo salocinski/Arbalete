@@ -12,5 +12,6 @@ if (!/^\d+\.\d+\.\d+\.\d+$/.test(version)) {
 }
 // ARB-77 : electron-updater compare des versions semver à 3 segments, le 4e segment est replié dans le patch (0.12.44.22 -> 0.12.44022).
 // `--publish never` : la publication est faite par .github/workflows/release.yml, jamais par un build local.
-const r = spawnSync('npx', ['electron-builder', '--publish', 'never', `-c.extraMetadata.version=${versionSemver(version)}`], { cwd: racine, stdio: 'inherit', shell: true })
+// ARB-76 : release.yml relance ce script avec `--prepackaged release/win-unpacked` pour refaire l'installeur de l'application signée.
+const r = spawnSync('npx', ['electron-builder', '--publish', 'never', `-c.extraMetadata.version=${versionSemver(version)}`, ...process.argv.slice(2)], { cwd: racine, stdio: 'inherit', shell: true })
 process.exit(r.status ?? 1)

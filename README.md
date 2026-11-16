@@ -60,6 +60,15 @@ Arbalète est un logiciel libre distribué sous licence **GNU GPL v3.0 ou ultér
 Vous pouvez l'utiliser, l'étudier, le modifier et le redistribuer. Toute version modifiée distribuée doit
 rester sous la même licence, avec son code source.
 
+## Signature du code
+
+Les installeurs publiés dans les Releases sont signés : signature de code gratuite fournie par [SignPath.io](https://signpath.io),
+certificat de la [SignPath Foundation](https://signpath.org). Seuls les installeurs construits par le workflow
+`.github/workflows/release.yml` à partir de `main` sont signés, après approbation d'un mainteneur.
+
+Vie privée : Arbalète n'envoie rien de vos données à ce service. L'application installée contacte GitHub (les Releases du dépôt)
+pour chercher une mise à jour, et vérifie la signature de l'installeur avant de l'installer. Détails : `docs/decisions/0006-signature-code.md`.
+
 ## Mention
 
 Arbalète est un projet indépendant. Il n'est ni affilié, ni approuvé par The Browser Company ;

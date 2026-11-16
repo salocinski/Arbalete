@@ -3,8 +3,8 @@ import { versionAffichee } from '../shared/version.ts'
 
 // Mises à jour automatiques (ARB-77) : electron-updater lit `latest.yml` dans la dernière Release GitHub, télécharge
 // l'installeur en arrière-plan (sha512 vérifié) et l'installe à la fermeture ; `installer` le fait tout de suite.
-// shortcut: installeur non signé (ARB-76 à faire) : seul le sha512 du `latest.yml` protège la mise à jour, donc le compte
-// GitHub qui publie ; ajouter `publisherName` à electron-builder.yml (win) dès que le code est signé.
+// ARB-76 : l'installeur est signé (release.yml) et `publisherName` d'electron-builder.yml est écrit dans app-update.yml :
+// electron-updater refuse un installeur dont la signature n'est pas celle de ce certificat, en plus du sha512.
 
 // Ce que ce module utilise d'`autoUpdater`, pour le remplacer dans les tests.
 export interface MiseAJourUpdater {

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ARB-76 : à recopier dans SignPath (projet Arbalete, configuration d'artefact « installeur »). L'archive reçue de
+     .github/workflows/release.yml ne contient que l'installeur NSIS. -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="Arbalete-Setup-*.exe">
+      <authenticode-sign />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

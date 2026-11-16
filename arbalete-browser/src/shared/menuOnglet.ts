@@ -1,5 +1,5 @@
 // Menu contextuel des onglets (ARB-41) : les actions possibles sont une liste fermée, validée par le processus principal.
-export const ACTIONS_ONGLET = ['dupliquer', 'epingler', 'fermer-autres', 'copier-adresse'] as const
+export const ACTIONS_ONGLET = ['dupliquer', 'epingler', 'fermer-autres', 'copier-adresse', 'vue-partagee'] as const
 export type ActionOnglet = (typeof ACTIONS_ONGLET)[number]
 
 export const estActionOnglet = (valeur: unknown): valeur is ActionOnglet =>

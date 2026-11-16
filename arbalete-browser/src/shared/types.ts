@@ -44,6 +44,8 @@ export type BrowserState = {
   popupsBloquees: number
   // Dossiers d'onglets de l'espace affiché (ARB-69), dans l'ordre de création.
   folders: DossierOnglet[]
+  // Vue partagée (ARB-72) : ids des deux onglets côte à côte (gauche, droite) dans l'espace affiché, sinon null.
+  split: [string, string] | null
 }
 
 // Barre latérale (ARB-33, ARB-123) : masquée par défaut, ouverte par-dessus la page au survol du bord gauche ;

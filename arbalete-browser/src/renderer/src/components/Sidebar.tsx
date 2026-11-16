@@ -217,6 +217,11 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
           { label: 'Dupliquer', action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'dupliquer') },
           { label: ongletDuMenu.pinned ? 'Désépingler' : 'Épingler', action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'epingler') },
           { label: 'Copier l’adresse', action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'copier-adresse') },
+          ...(state.split?.includes(ongletDuMenu.id)
+            ? [{ label: 'Quitter la vue partagée', action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'vue-partagee') }]
+            : ongletDuMenu.id !== state.activeTabId
+              ? [{ label: 'Vue partagée avec l’onglet actif', action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'vue-partagee') }]
+              : []),
           { label: 'Fermer les autres onglets', action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'fermer-autres') },
           { label: 'Fermer l’onglet', action: () => void window.arbalete.closeTab(ongletDuMenu.id) }
         ]} />

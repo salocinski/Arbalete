@@ -32,3 +32,5 @@ nsis:
   createStartMenuShortcut: true
   # Les données de l'utilisateur (%APPDATA%) survivent à la désinstallation, comme chez les autres navigateurs.
   deleteAppDataOnUninstall: false
+  # Déclaration à Windows comme navigateur possible (ARB-80).
+  include: build/installer.nsh

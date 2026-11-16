@@ -175,6 +175,10 @@ export type BrowserAPI = {
   // Importe les favoris d'un fichier HTML exporté de Chrome ou Edge, choisi dans une boîte système (ARB-50) : nombre de
   // favoris ajoutés, null si annulé.
   importFavorites: () => Promise<number | null>
+  // Navigateur par défaut (ARB-80) : `getDefaultBrowser` rend le nom du navigateur que Windows ouvre pour https (null si
+  // inconnu) ; `openDefaultApps` ouvre les paramètres Windows où l'utilisateur choisit Arbalète. Vue de la barre seule.
+  getDefaultBrowser: () => Promise<string | null>
+  openDefaultApps: () => Promise<void>
   // Sauvegarde des données (ARB-79) : `exportData` écrit favoris, historique, espaces et réglages dans un fichier JSON choisi
   // dans une boîte système (nombre de favoris et de pages écrits, null si annulé) ; `importData` ajoute à la base ce qu'un tel
   // fichier contient, sans rien supprimer (null si annulé). Vue de la barre seule.

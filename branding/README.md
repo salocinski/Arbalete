@@ -21,7 +21,7 @@ Régime retenu (ARB-130, décidé le 2026-11-16) : le logo et les icônes de ce 
 - **Origine** : images générées par Gemini (application grand public de Google), brutes, sans retouche humaine. Elles ne sont pas présentées comme dessinées à la main (la politique d'usage de Google interdit de faire croire qu'un contenu généré a été créé par un humain).
 - **Aucun droit d'auteur n'est revendiqué** sur ces images : la protection d'une image générée par IA est incertaine selon les pays. Le projet ne s'en prévaut que pour son identité visuelle.
 - **Permis** : copier, redistribuer et empaqueter Arbalète avec ce logo et cette icône, y compris dans un fork qui garde le nom Arbalète, et en parler (articles, captures).
-- **Non permis** : utiliser ce logo ou cette icône pour nommer, représenter ou faire passer pour Arbalète un autre produit ou une version modifiée sans l'avoir signalé. Un fork qui change de nom change aussi de logo.
+- **Demandé** (politique d'usage de l'identité d'Arbalète, pas un droit d'auteur : le nom et la ressemblance prêtant à confusion relèvent d'autres règles selon les pays) : ne pas utiliser ce logo ou cette icône pour nommer, représenter ou faire passer pour Arbalète un autre produit ou une version modifiée sans l'avoir signalé. Un fork qui change de nom change aussi de logo.
 - **Contributions** : un nouveau logo proposé par un tiers doit venir avec le régime de ses droits.
 
 Ce que disent les conditions de Google (lues le 2026-11-16, texte grand public, pas un avis juridique) :

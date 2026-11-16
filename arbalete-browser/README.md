@@ -108,4 +108,4 @@ Arbalète est en développement, pas encore un navigateur prêt à être utilis�
 
 1. Tester le démarrage sur Windows et corriger les éventuels écarts de configuration.
 2. Réaliser un prototype de compatibilité des extensions avant de figer l'architecture.
-3. Signer l'installeur (ARB-76) : packaging et mises à jour automatiques sont faits, mais sans signature seul le sha512 de `latest.yml` protège une mise à jour.
+3. Mettre en service la signature de l'installeur (ARB-76) : le workflow est câblé, il reste le compte SignPath, la variable `SIGNPATH_ORGANIZATION_ID` et le secret `SIGNPATH_API_TOKEN` du dépôt (voir `docs/decisions/0006-signature-code.md`).

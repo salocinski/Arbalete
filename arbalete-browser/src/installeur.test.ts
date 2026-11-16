@@ -61,3 +61,28 @@ test('mises à jour automatiques (ARB-77) : publication GitHub, version semver, 
   assert.ok(!release.includes('pull_request'))
   for (const ligne of release.split('\n').filter((l) => /^\s*-?\s*uses:/.test(l))) assert.match(ligne, /@[0-9a-f]{40}(\s|$)/, ligne)
 })
+
+test('signature du code (ARB-76) : publisherName, application puis installeur signés par SignPath, latest.yml remis d\'accord', () => {
+  assert.match(config, /^ {2}publisherName:\r?\n {4}- SignPath Foundation\r?$/m)
+  const release = readFileSync(resolve(racine, '..', '.github/workflows/release.yml'), 'utf8')
+  // Ordre : build non signé (écrit app-update.yml), signature de l'application, installeur refait depuis elle, signature de l'installeur, latest.yml, Release.
+  const etapes = ['run: npm run dist\n', 'artifact-configuration-slug: application', '--prepackaged release/win-unpacked', 'artifact-configuration-slug: installeur', 'node scripts/apres-signature.mjs', 'gh release create']
+  const places = etapes.map((e) => release.indexOf(e))
+  assert.ok(places.every((p) => p > 0), `étape absente : ${etapes.filter((_, i) => places[i] < 0)}`)
+  assert.deepEqual(places, [...places].sort((a, b) => a - b), 'étapes dans le désordre')
+  assert.equal((release.match(/SignPath\/github-action-submit-signing-request@/g) ?? []).length, 2)
+  assert.equal((release.match(/Get-AuthenticodeSignature/g) ?? []).length, 2, 'contrôle de l\'application et de l\'installeur')
+  const sujets = [...release.matchAll(/CN=([A-Za-z ]+)'/g)].map((m) => m[1])
+  assert.deepEqual(sujets, ['SignPath Foundation', 'SignPath Foundation'])
+  assert.ok(config.includes(`- ${sujets[0]}`), 'le sujet contrôlé est le publisherName d\'electron-updater')
+  assert.match(readFileSync(resolve(racine, 'scripts/dist.mjs'), 'utf8'), /\.\.\.process\.argv\.slice\(2\)/)
+  assert.match(release, /^ {6}- name: Vérifier la configuration de signature\r?\n(?: {8}.*\r?\n)*? {8}working-directory: \./m)
+  assert.ok(!release.includes('.blockmap'), 'le blockmap de l\'installeur non signé ne se publie pas')
+  assert.equal((release.match(/secrets\.SIGNPATH_API_TOKEN/g) ?? []).length, 3, 'le jeton ne sert qu\'au contrôle de présence et aux deux signatures')
+  const script = readFileSync(resolve(racine, '..', 'arbalete-browser/scripts/apres-signature.mjs'), 'utf8')
+  assert.match(script, /import \{ majLatest \} from '\.\.\/src\/shared\/signature\.ts'/)
+  const application = readFileSync(resolve(racine, '..', '.signpath/artifact-configuration-application.xml'), 'utf8')
+  const installeur = readFileSync(resolve(racine, '..', '.signpath/artifact-configuration-installeur.xml'), 'utf8')
+  assert.match(application, /<pe-file path="Arbalete\.exe">\s*<authenticode-sign \/>/)
+  assert.match(installeur, /<pe-file path="Arbalete-Setup-\*\.exe">\s*<authenticode-sign \/>/)
+})

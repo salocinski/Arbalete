@@ -18,13 +18,12 @@ Prérequis : Windows 10/11, Node.js LTS, Git.
 ```powershell
 git clone https://github.com/<ton-compte>/arbalete.git   # ton fork
 cd arbalete\arbalete-browser
-npm install
-npx install-electron   # télécharge le binaire Electron, que npm install ne récupère plus
+npm install          # télécharge aussi le binaire Electron (crochet postinstall)
 npm run dev
 ```
 
-`npx install-electron` est à relancer après chaque `npm ci` ou mise à jour d'Electron (par exemple après avoir
-récupéré une PR Dependabot) : sans le binaire, `npm run dev` et `npm run test:smoke` échouent.
+Si ce téléchargement a échoué (hors ligne, `--ignore-scripts`), lance `npx install-electron` : sans le binaire,
+`npm run dev` et `npm run test:smoke` échouent.
 
 `npm run dev:web` lance l'interface seule dans un navigateur (API Electron simulée) : pratique pour
 travailler sur l'interface sans redémarrer Electron.

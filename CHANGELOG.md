@@ -2,7 +2,7 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
-## [0.12.44.19] - 2026-11-16
+## [0.12.44.20] - 2026-11-16
 
 ### Ajouté
 - Mise en veille des onglets (ARB-78) : la page d’un onglet non affiché, ni sonore ni muet, laissé de côté plus longtemps que le délai de Paramètres (30 min par défaut, 15 min, 1 h, 4 h ou jamais ; épinglés compris) est fermée pour libérer sa mémoire. L’onglet reste dans la barre avec son titre, son adresse et son favicon, et recharge sa page quand on l’affiche. Sont perdus : Précédent / Suivant, le défilement, les formulaires non envoyés, un appel micro / caméra sans son, un envoi en cours et une pop-up de connexion ouverte par la page.
@@ -11,6 +11,11 @@ Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MIN
 ### Modifié
 - `createTab` : les écouteurs d’un onglet passent dans `brancherOnglet`, réutilisé pour la vue neuve d’un onglet endormi.
 - La carte ARB-78 de `kanban.html` passe à `done` ; test C94 (validation des canaux `set-sleep-delay` et `get-memory`), C90 adapté ; la fermeture réelle de la page et la mesure restent manuelles.
+
+## [0.12.44.19] - 2026-11-15
+
+### Modifié
+- L'import des favoris ne retire plus deux fois les balises du nom de dossier et du titre : la lecture n'en laissait déjà passer aucune. Cela ferme deux alertes d'analyse de code, sans changer ce que l'on importe.
 
 ## [0.12.44.18] - 2026-11-15
 

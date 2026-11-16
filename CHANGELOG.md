@@ -2,6 +2,15 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.26] - 2026-11-16
+
+### Modifié
+- Droits du logo et des icônes (ARB-130) : le logo et les icônes, générés par Gemini sans retouche, sont déclarés hors GPL dans `branding/README.md` (aucun droit d’auteur revendiqué, redistribution avec Arbalète permise, usage de l’identité pour un autre produit déconseillé) et signalés dans le `README.md`.
+- Tableau de suivi remis d’accord avec le dépôt : ARB-10, 73, 74 et 130 passent à `done`, ARB-91 (dépôt public, contrôle des secrets restant) à `doing`.
+
+### Limites
+- Régime non validé par un juriste ; les conditions de Google lues le 2026-11-16 ne disent rien d’explicite sur l’usage commercial des images. Images à remplacer en cas de contestation.
+
 ## [0.12.44.25] - 2026-11-16
 
 ### Ajouté

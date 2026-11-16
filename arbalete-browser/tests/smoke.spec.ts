@@ -3910,3 +3910,14 @@ test('C95 : le navigateur par défaut ne se lit ni ne s’ouvre que depuis la vu
   const nom = await barreUi.evaluate(() => window.arbalete.getDefaultBrowser())
   expect(nom === null || typeof nom === 'string').toBe(true)
 })
+
+test('C96 : les mises à jour ne se lisent ni ne se lancent que depuis la vue de la barre, inactives hors app empaquetée', async () => {
+  const refuse = (promesse: Promise<unknown>) => promesse.then(() => 'ok', () => 'refuse')
+  expect(await refuse(ui.evaluate(() => window.arbalete.getUpdateState()))).toBe('refuse')
+  expect(await refuse(ui.evaluate(() => window.arbalete.checkForUpdates()))).toBe('refuse')
+  expect(await refuse(ui.evaluate(() => window.arbalete.installUpdate()))).toBe('refuse')
+  // Non empaquetée : inactive, une recherche et une installation n'ont aucun effet.
+  await barreUi.evaluate(() => window.arbalete.checkForUpdates())
+  await barreUi.evaluate(() => window.arbalete.installUpdate())
+  expect((await barreUi.evaluate(() => window.arbalete.getUpdateState())).etat).toBe('inactive')
+})

@@ -6,6 +6,7 @@ import type { EntreeMenuPage, MenuPage } from './menuPage'
 import type { ActionOnglet } from './menuOnglet'
 import type { EntreePalette } from './palette'
 import type { ListeFavoris } from './favoris'
+import type { EtatMiseAJour } from './miseAJour'
 import type { DossierOnglet } from './dossiersOnglets'
 import type { DemandePermission, ReponsePermission } from './permissions'
 import type { ElementArchive } from './archivage'
@@ -179,6 +180,13 @@ export type BrowserAPI = {
   // inconnu) ; `openDefaultApps` ouvre les paramètres Windows où l'utilisateur choisit Arbalète. Vue de la barre seule.
   getDefaultBrowser: () => Promise<string | null>
   openDefaultApps: () => Promise<void>
+  // Mises à jour automatiques (ARB-77), vue de la barre seule : `getUpdateState` rend l'état, `checkForUpdates` lance une
+  // recherche (sans effet pendant une recherche ou un téléchargement, ni hors app empaquetée), `installUpdate` ferme
+  // l'application pour installer la version téléchargée et la relancer ; `onUpdateState` suit les changements.
+  getUpdateState: () => Promise<EtatMiseAJour>
+  checkForUpdates: () => Promise<void>
+  installUpdate: () => Promise<void>
+  onUpdateState: (callback: (state: EtatMiseAJour) => void) => () => void
   // Sauvegarde des données (ARB-79) : `exportData` écrit favoris, historique, espaces et réglages dans un fichier JSON choisi
   // dans une boîte système (nombre de favoris et de pages écrits, null si annulé) ; `importData` ajoute à la base ce qu'un tel
   // fichier contient, sans rien supprimer (null si annulé). Vue de la barre seule.

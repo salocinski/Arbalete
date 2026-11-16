@@ -3,6 +3,8 @@ import { mkdirSync, statSync, readFileSync } from 'node:fs'
 import { isAbsolute, join } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
 import { pathToFileURL } from 'node:url'
+import { autoUpdater } from 'electron-updater'
+import { creerMiseAJour } from './miseAJour.ts'
 import type { BrowserState, BrowserTab, DataIncident, RestoreAnswer, SidebarAction, SidebarState, SuggestionsState, ThemeChoice } from '../shared/types'
 import { importerFavoris, lireFavorisHtml, TAILLE_MAX_IMPORT } from './donnees/importFavoris.ts'
 import { TAILLE_MAX_FICHIER, construireExport, ecrireExport, importerExport, lireExport } from './donnees/exportDonnees.ts'
@@ -291,6 +293,14 @@ function contenusInterface(): WebContents[] {
 function envoyerAuxInterfaces(canal: string, valeur: unknown) {
   for (const contenu of contenusInterface()) contenu.send(canal, valeur)
 }
+
+// Mises à jour automatiques (ARB-77) : actives dans l'application empaquetée seulement (ni `npm run dev` ni les tests).
+const miseAJour = creerMiseAJour({
+  updater: autoUpdater,
+  versionSemver: app.getVersion(),
+  actif: app.isPackaged,
+  diffuser: (etat) => envoyerAuxInterfaces('browser:update-state', etat)
+})
 
 // Téléchargements (ARB-55) : enregistrés sans invite dans le dossier Téléchargements de l'utilisateur (créé au besoin).
 const telechargements = creerGestionnaire({
@@ -1895,6 +1905,8 @@ app.whenReady().then(() => {
   }
   // Mise en veille (ARB-78) : ne dépend pas de la base, les onglets se rechargent depuis leur adresse.
   setInterval(endormirAnciens, 60_000).unref()
+  // Mises à jour (ARB-77) : ne dépendent pas de la base.
+  miseAJour.planifier()
 
   // ARB-15 : plein écran, caméra, micro, notifications et position se décident par site (hôte de la page de l'onglet, pas
   // celui d'un sous-cadre) ; tout le reste, et toute vue qui n'est pas la page de l'onglet actif, reste refusé.
@@ -2229,6 +2241,19 @@ app.whenReady().then(() => {
   ipcMain.handle('browser:open-default-apps', async (event) => {
     exigerBarre(event)
     await shell.openExternal('ms-settings:defaultapps?registeredAppUser=Arbalete')
+  })
+  // Mises à jour automatiques (ARB-77) : aucun argument venu de l'interface, seule la vue de la barre agit.
+  ipcMain.handle('browser:get-update-state', (event) => {
+    exigerBarre(event)
+    return miseAJour.etat()
+  })
+  ipcMain.handle('browser:check-updates', (event) => {
+    exigerBarre(event)
+    return miseAJour.verifier()
+  })
+  ipcMain.handle('browser:install-update', (event) => {
+    exigerBarre(event)
+    miseAJour.installer()
   })
   // Effacer les données de navigation (ARB-54) : période et types viennent de listes fermées, validés ici.
   // shortcut: Electron ne date pas les cookies ni le cache, ils sont effacés en entier quelle que soit la période ; à revoir

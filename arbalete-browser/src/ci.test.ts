@@ -55,3 +55,11 @@ test('la clé du cache du binaire d’Electron porte la version épinglée dans 
   strictEqual(cles.length, 2, 'une clé par job')
   for (const cle of cles) ok(cle.endsWith(`-${version}`), `clé ${cle} sans la version ${version}`)
 })
+
+test('la clé du cache d’Electron de release.yml porte aussi la version épinglée', () => {
+  const version = JSON.parse(readFileSync(racine + 'arbalete-browser/package.json', 'utf8')).devDependencies.electron
+  const release = readFileSync(racine + '.github/workflows/release.yml', 'utf8')
+  const cles = [...release.matchAll(/CLE_CACHE_ELECTRON: (\S+)/g)].map((m) => m[1])
+  strictEqual(cles.length, 1)
+  ok(cles[0].endsWith(`-${version}`), `clé ${cles[0]} sans la version ${version}`)
+})

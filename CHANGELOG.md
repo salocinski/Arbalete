@@ -2,6 +2,18 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.23] - 2026-11-16
+
+### Ajouté
+- Mises à jour automatiques (ARB-77) : l’application installée cherche une nouvelle version dans la dernière Release GitHub 30 s après le démarrage puis toutes les 6 h, la télécharge en arrière-plan (sha512 de `latest.yml` vérifié) et l’installe à la fermeture, ou tout de suite par « Redémarrer et installer ». La section « Mises à jour » de Paramètres montre l’état et la progression. Hors application empaquetée (`npm run dev`, tests), rien ne se vérifie.
+- `.github/workflows/release.yml` (lancé à la main sur `main`) construit l’installeur et publie la Release `v<semver>` avec `latest.yml`. La version à 4 segments est repliée en semver (0.12.44.22 → 0.12.44022, `src/shared/version.ts`, 999 révisions au plus par patch).
+
+### Modifié
+- `electron-builder.yml` déclare la publication GitHub ; `scripts/dist.mjs` donne la version repliée à l’installeur.
+
+### Limites
+- L’installeur n’est pas signé (ARB-76) : seul le sha512 protège la mise à jour, donc le compte GitHub qui publie ; `publisherName` à ajouter après signature. Le dépôt doit être public (ARB-91) pour que l’application lise les Releases, et les installeurs publiés avant ARB-77 ne se mettent pas à jour. Le téléchargement et l’installation réels d’une Release restent manuels (deux versions publiées).
+
 ## [0.12.44.22] - 2026-11-16
 
 ### Ajouté

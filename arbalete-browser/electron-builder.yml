@@ -1,4 +1,4 @@
-# Installeur Windows (ARB-75, NSIS). Ni signature ni mises à jour automatiques : EP-14.
+# Installeur Windows (ARB-75, NSIS). Mises à jour automatiques par GitHub Releases (ARB-77) ; pas de signature (ARB-76).
 appId: Arbalete
 productName: Arbalète
 copyright: Arbalète, GPL-3.0-or-later
@@ -9,6 +9,12 @@ files:
   - "!out/web/**"
   - package.json
 asar: true
+# Écrit app-update.yml dans l'application et latest.yml à côté de l'installeur (lus par electron-updater, ARB-77).
+publish:
+  provider: github
+  owner: salocinski
+  repo: Arbalete
+  releaseType: release
 # L'icône et les licences OFL des polices restent hors d'app.asar : la fenêtre lit l'icône sur disque (CHEMIN_ICONE).
 extraResources:
   - from: resources/icone.ico

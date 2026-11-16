@@ -52,6 +52,14 @@ export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onC
   const accueilEnregistre = accueilNormalise === accueilValide(reglages.accueil)
   const enregistrerAccueil = () => { if (accueilNormalise) void window.arbalete.setHomePage(accueilNormalise).catch(() => {}) }
 
+  // Export et import des données (ARB-79) : un seul à la fois ; l'annulation de la boîte ne laisse aucun message.
+  const [donnees, setDonnees] = useState({ enCours: false, message: '' })
+  const lancerDonnees = (action: () => Promise<string | null | undefined | false | 0>) => {
+    setDonnees({ enCours: true, message: '' })
+    action().then((message) => setDonnees({ enCours: false, message: message || '' }),
+      (erreur: unknown) => setDonnees({ enCours: false, message: `Échec : ${erreur instanceof Error ? erreur.message.replace(/^Error invoking remote method '[^']*': (Error: )?/, '') : 'erreur inconnue'}` }))
+  }
+
   // Les actions de barre se jouent l'une après l'autre : chacune part de l'état laissé par la précédente.
   const choisirMode = async (mode: ModeBarre) => {
     for (const action of actionsVersMode(sidebar, mode)) await window.arbalete.setSidebar(action)
@@ -102,6 +110,17 @@ export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onC
             <Button variant="secondary" size="sm" onClick={() => void window.arbalete.setDownloadFolder('choisir').catch(() => {})}>Choisir un dossier…</Button>
             <Button variant="secondary" size="sm" disabled={!reglages.dossierTelechargements} onClick={() => void window.arbalete.setDownloadFolder('defaut').catch(() => {})}>Par défaut</Button>
           </div>
+        </Section>
+
+        <Section titre="Sauvegarde des données">
+          <div className="settings-actions">
+            <Button variant="secondary" size="sm" disabled={donnees.enCours} onClick={() => lancerDonnees(() => window.arbalete.exportData().then((n) =>
+              n && `Exporté : ${n.favoris} favori(s), ${n.pages} page(s) d’historique.`))}>Exporter…</Button>
+            <Button variant="secondary" size="sm" disabled={donnees.enCours} onClick={() => lancerDonnees(() => window.arbalete.importData().then((b) =>
+              b && `Importé : ${b.favoris} favori(s), ${b.pages} page(s), ${b.espaces} espace(s)${b.reglages ? ', réglages' : ''}.`))}>Importer…</Button>
+          </div>
+          <p className="settings-help">Favoris, historique, espaces et réglages dans un fichier JSON non chiffré, à garder en lieu sûr. L’import ajoute sans rien supprimer ni remplacer, sauf les réglages du fichier.</p>
+          <p className="settings-help" role="status" aria-live="polite">{donnees.message}</p>
         </Section>
 
         <Section titre="Confidentialité"><ClearDataForm /></Section>

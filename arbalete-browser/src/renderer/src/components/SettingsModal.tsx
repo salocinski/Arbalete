@@ -3,6 +3,7 @@ import { LARGEUR_ETENDUE_MAX, LARGEUR_ETENDUE_MIN, MODES_BARRE, actionsVersMode,
 import { DELAIS_ARCHIVAGE, LIBELLES_DELAI } from '../../../shared/archivage'
 import { DELAIS_VEILLE, LIBELLES_VEILLE, type MemoireOnglets } from '../../../shared/veille'
 import { accueilValide } from '../../../shared/reglages'
+import type { EtatMiseAJour } from '../../../shared/miseAJour'
 import type { SidebarState, ThemeChoice } from '../../../shared/types'
 import { useSettings, useTheme } from '../state'
 import { ClearDataForm } from './ClearDataForm'
@@ -53,6 +54,15 @@ export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onC
     void lire()
     window.addEventListener('focus', lire)
     return () => { perime = true; window.removeEventListener('focus', lire) }
+  }, [])
+
+  // Mises à jour (ARB-77) : état lu à l'ouverture, puis suivi par le processus principal.
+  const [maj, setMaj] = useState<EtatMiseAJour | null>(null)
+  useEffect(() => {
+    let perime = false
+    void window.arbalete.getUpdateState().then((etat) => { if (!perime) setMaj(etat) }, () => {})
+    const retirer = window.arbalete.onUpdateState(setMaj)
+    return () => { perime = true; retirer() }
   }, [])
 
   // Page d'accueil : champ libre, enregistré par Entrée ou le bouton ; relu quand le processus principal la change.
@@ -128,6 +138,17 @@ export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onC
           <p className="settings-help">Windows laisse ce choix à l’utilisateur : choisissez Arbalète pour http et https. Les liens des autres applications s’ouvriront alors dans un onglet.</p>
         </Section>
 
+        <Section titre="Mises à jour">
+          <p className="settings-help" aria-live="polite">{maj ? libelleMiseAJour(maj) : 'État inconnu.'}</p>
+          <div className="settings-actions">
+            {maj?.etat === 'prete'
+              ? <Button variant="secondary" size="sm" onClick={() => void window.arbalete.installUpdate().catch(() => {})}>Redémarrer et installer</Button>
+              : <Button variant="secondary" size="sm" disabled={!maj || maj.etat === 'inactive' || maj.etat === 'recherche' || maj.etat === 'telechargement'}
+                  onClick={() => void window.arbalete.checkForUpdates().catch(() => {})}>Rechercher une mise à jour</Button>}
+          </div>
+          <p className="settings-help">Arbalète cherche une nouvelle version au démarrage puis toutes les 6 heures, la télécharge en arrière-plan et l’installe à la fermeture.</p>
+        </Section>
+
         <Section titre="Sauvegarde des données">
           <div className="settings-actions">
             <Button variant="secondary" size="sm" disabled={donnees.enCours} onClick={() => lancerDonnees(() => window.arbalete.exportData().then((n) =>
@@ -143,4 +164,16 @@ export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onC
       </div>
     </Overlay>
   )
+}
+
+function libelleMiseAJour(maj: EtatMiseAJour): string {
+  const version = `Version installée : ${maj.version}.`
+  switch (maj.etat) {
+    case 'inactive': return `${version} Les mises à jour ne sont actives que dans l’application installée.`
+    case 'recherche': return `${version} Recherche en cours…`
+    case 'telechargement': return `${version} Téléchargement de la version ${maj.nouvelle} : ${maj.pourcent ?? 0} %.`
+    case 'prete': return `${version} La version ${maj.nouvelle} est prête : elle s’installe à la fermeture, ou tout de suite.`
+    case 'erreur': return `${version} La recherche a échoué (réseau ou serveur indisponible) ; nouvel essai dans 6 heures.`
+    default: return `${version} Arbalète est à jour.`
+  }
 }

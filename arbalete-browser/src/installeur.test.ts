@@ -48,3 +48,16 @@ test('l\'installeur déclare Arbalète à Windows pour http et https, et retire 
   assert.ok(desinstallation.includes('DeleteRegKey HKCU "Software\\Clients\\StartMenuInternet\\Arbalete"'))
   assert.ok(desinstallation.includes('DeleteRegKey HKCU "Software\\Classes\\ArbaleteURL"'))
 })
+
+test('mises à jour automatiques (ARB-77) : publication GitHub, version semver, workflow de release', () => {
+  assert.match(config, /^publish:\r?\n\s+provider: github\r?\n\s+owner: salocinski\r?\n\s+repo: Arbalete\r?$/m)
+  const script = readFileSync(resolve(racine, 'scripts/dist.mjs'), 'utf8')
+  assert.match(script, /extraMetadata\.version=\$\{versionSemver\(version\)\}/)
+  assert.match(script, /'--publish', 'never'/)
+  const release = readFileSync(resolve(racine, '..', '.github/workflows/release.yml'), 'utf8')
+  assert.match(release, /^ {4}if: github\.ref == 'refs\/heads\/main'\r?$/m)
+  assert.match(release, /^permissions:\r?\n {2}contents: read\r?$/m)
+  assert.equal((release.match(/contents: write/g) ?? []).length, 1, 'une seule écriture, au niveau du job')
+  assert.ok(!release.includes('pull_request'))
+  for (const ligne of release.split('\n').filter((l) => /^\s*-?\s*uses:/.test(l))) assert.match(ligne, /@[0-9a-f]{40}(\s|$)/, ligne)
+})

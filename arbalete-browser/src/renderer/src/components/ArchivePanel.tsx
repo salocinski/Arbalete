@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Archive } from 'lucide-react'
 import { grouperParJour } from '../../../shared/historique'
 import type { ElementArchive } from '../../../shared/archivage'
-import { Overlay } from './Overlay'
+import { Modal } from './ui/Modal'
 
 // Panneau Archive (ARB-64) : modale de la couche d'overlays, sur le modèle de l'historique. Les onglets rangés par le délai
 // de l'archivage, les plus récents d'abord, regroupés par jour ; un clic rouvre la page dans un nouvel onglet et l'en sort.
@@ -16,8 +16,7 @@ export function ArchivePanel({ onClose }: { onClose: () => void }) {
   }, [])
   const jours = useMemo(() => grouperParJour(elements ?? []), [elements])
   return (
-    <Overlay centre onClose={onClose}>
-      <div className="palette history" role="dialog" aria-label="Onglets archivés">
+    <Modal className="palette history" label="Onglets archivés" onClose={onClose}>
         <div className="palette-liste">
           {elements?.length === 0 && <p className="palette-vide">Aucun onglet archivé</p>}
           {jours.map(({ jour, visites }) => (
@@ -33,7 +32,6 @@ export function ArchivePanel({ onClose }: { onClose: () => void }) {
             </section>
           ))}
         </div>
-      </div>
-    </Overlay>
+      </Modal>
   )
 }

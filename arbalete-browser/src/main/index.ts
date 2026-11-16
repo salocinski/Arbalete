@@ -21,7 +21,7 @@ import { palierZoom, sensDuZoom, type SensZoom } from './zoom.ts'
 import { ecrireZoomSite, hoteZoom, lireZoomSite } from './donnees/zoomSites.ts'
 import { ecrirePermissionSite, lirePermissionSite } from './donnees/permissionsSites.ts'
 import { REPONSES_PERMISSION, decisionPermissions, permissionsDemandees, type DemandePermission, type PermissionSite, type ReponsePermission } from '../shared/permissions.ts'
-import { RAYON_APERCU, pageApercu, placerApercu, scriptApercu, texteApercu, type CoteApercu } from './apercuUrl.ts'
+import { DUREE_FERMETURE, DUREE_OUVERTURE, RAYON_APERCU, pageApercu, placerApercu, placerInfobulle, scriptApercu, scriptOuverture, texteApercu, texteInfobulle, type CoteApercu } from './apercuUrl.ts'
 import { placerRecherche, texteRecherche } from './recherche.ts'
 import { entreeMenuPageValide, type EntreeMenuPage, type MenuPage } from '../shared/menuPage.ts'
 import { adresseWeb, entreesMenuPage } from './menuPage.ts'
@@ -466,6 +466,7 @@ function agirSurBarre(action: SidebarAction) {
 function ouvrirOverlay() {
   if (overlayOuvert || !mainWindow || mainWindow.isDestroyed() || !barreView) return
   overlayOuvert = true
+  retirerInfobulle(true)
   // Réajoutée, la vue repasse au-dessus de tout, page comprise.
   mainWindow.contentView.addChildView(barreView)
   placerBarre()
@@ -697,6 +698,13 @@ let apercuCharge = false
 let apercuVisible = false
 let apercuTexte = ''
 let apercuCote: CoteApercu = 'gauche'
+// ARB-126 : la même vue sert d'infobulle (ancrée à un bouton, au-dessus de la barre) ; `apercuEmplacement` est alors son rectangle.
+let apercuMode: 'url' | 'infobulle' = 'url'
+let apercuEmplacement: { x: number; y: number; width: number; height: number } | null = null
+let apercuRetrait: ReturnType<typeof setTimeout> | null = null
+// Minuteur de sécurité : une infobulle dont le retrait n'est jamais venu (souris perdue) disparaît seule.
+let infobulleSecours: ReturnType<typeof setTimeout> | null = null
+const DELAI_SECOURS_INFOBULLE = 10_000
 
 function creerApercu(): WebContentsView {
   const vue = new WebContentsView({
@@ -713,7 +721,7 @@ function creerApercu(): WebContentsView {
   })
   // La bulle gêne le lien qu'elle recouvre : sous la souris, elle passe de l'autre côté de la page (comme Chrome).
   contenu.on('before-mouse-event', (_event, souris) => {
-    if (souris.type !== 'mouseMove' || !apercuVisible) return
+    if (souris.type !== 'mouseMove' || !apercuVisible || apercuMode !== 'url') return
     apercuCote = apercuCote === 'gauche' ? 'droite' : 'gauche'
     placerApercuVue()
   })
@@ -727,12 +735,16 @@ function dessinerApercu() {
 }
 
 function placerApercuVue() {
-  if (apercuView && apercuVisible) apercuView.setBounds(placerApercu(contentBounds, apercuTexte, apercuCote))
+  if (!apercuView || !apercuVisible) return
+  apercuView.setBounds(apercuMode === 'infobulle' && apercuEmplacement ? apercuEmplacement : placerApercu(contentBounds, apercuTexte, apercuCote))
 }
 
 function retirerApercu() {
+  if (apercuRetrait) { clearTimeout(apercuRetrait); apercuRetrait = null }
+  if (infobulleSecours) { clearTimeout(infobulleSecours); infobulleSecours = null }
   apercuTexte = ''
   apercuCote = 'gauche'
+  apercuEmplacement = null
   if (!apercuVisible || !apercuView) return
   apercuVisible = false
   dessinerApercu()
@@ -743,16 +755,56 @@ function retirerApercu() {
   }
 }
 
+// Durée d'un fondu : nulle quand l'utilisateur a réduit les animations (le système aussi, la vue étant une page data:).
+const dureeFondu = (ms: number) => (reglages.animationsReduites ? 0 : ms)
+
+function afficherInfobulle(texte: unknown, ancre: unknown, origine: { x: number; y: number }) {
+  if (!mainWindow || mainWindow.isDestroyed() || !barreView || overlayOuvert) return
+  const fenetre = mainWindow.getContentBounds()
+  const brut = ancre as Partial<{ x: number; y: number; width: number; height: number }> | undefined
+  const rect = borner(brut, fenetre.width, fenetre.height)
+  const libelle = texteInfobulle(texte)
+  if (!rect || !libelle) return retirerInfobulle()
+  if (apercuRetrait) { clearTimeout(apercuRetrait); apercuRetrait = null }
+  apercuView ??= creerApercu()
+  apercuMode = 'infobulle'
+  apercuTexte = libelle
+  apercuEmplacement = placerInfobulle({ ...rect, x: rect.x + origine.x, y: rect.y + origine.y }, { x: 0, y: 0, width: fenetre.width, height: fenetre.height }, libelle)
+  apercuVisible = true
+  dessinerApercu()
+  apercuView.setBounds(apercuEmplacement)
+  // Ajoutée en dernier, la bulle passe au-dessus de la barre : c'est dans la barre que se trouve l'ancre.
+  mainWindow.contentView.addChildView(apercuView)
+  apercuView.webContents.executeJavaScript(scriptOuverture(true, dureeFondu(DUREE_OUVERTURE))).catch(() => {})
+  if (infobulleSecours) clearTimeout(infobulleSecours)
+  infobulleSecours = setTimeout(() => { infobulleSecours = null; retirerInfobulle() }, DELAI_SECOURS_INFOBULLE)
+}
+
+// Fermeture en fondu (150 ms) puis retrait de la vue ; `immediat` quand la barre ou un overlay va la recouvrir.
+function retirerInfobulle(immediat = false) {
+  if (apercuMode !== 'infobulle' || !apercuVisible || !apercuView) return
+  const vue = apercuView
+  if (immediat || reglages.animationsReduites) return retirerApercu()
+  if (apercuRetrait) return
+  vue.webContents.executeJavaScript(scriptOuverture(false, DUREE_FERMETURE)).catch(() => {})
+  apercuRetrait = setTimeout(() => { apercuRetrait = null; retirerApercu() }, DUREE_FERMETURE)
+}
+
 function afficherApercu(url: unknown) {
   if (!mainWindow || mainWindow.isDestroyed()) return
-  apercuTexte = texteApercu(url)
-  if (!apercuTexte) return retirerApercu()
+  const texte = texteApercu(url)
+  if (!texte) return retirerApercu()
+  if (apercuRetrait) { clearTimeout(apercuRetrait); apercuRetrait = null }
+  // Venant d'une infobulle, la vue est déjà affichée mais pas au rang de l'aperçu : la barre doit repasser au-dessus.
+  const dejaEnUrl = apercuVisible && apercuMode === 'url'
+  apercuMode = 'url'
+  apercuTexte = texte
   apercuView ??= creerApercu()
+  apercuView.webContents.executeJavaScript(scriptOuverture(true, 0)).catch(() => {})
   dessinerApercu()
-  const etaitVisible = apercuVisible
   apercuVisible = true
   placerApercuVue()
-  if (etaitVisible) return
+  if (dejaEnUrl) return
   mainWindow.contentView.addChildView(apercuView)
   // La barre et ses overlays restent au-dessus de la bulle.
   if (barreView) mainWindow.contentView.addChildView(barreView)
@@ -2109,6 +2161,14 @@ app.whenReady().then(() => {
   const exigerBarre = (event: IpcMainInvokeEvent) => {
     if (!emetteurAutorise(event) || event.sender !== barreView?.webContents) throw new Error('Émetteur IPC non autorisé')
   }
+  // Infobulle (ARB-126) : texte nettoyé et rectangle borné par le processus principal.
+  // La barre de contrôle (fenêtre) et la barre latérale ont des boutons-icônes : les deux émettent, les autres vues non.
+  const exigerBoutons = (event: IpcMainInvokeEvent) => {
+    if (!emetteurAutorise(event) || (event.sender !== barreView?.webContents && event.sender !== mainWindow?.webContents)) throw new Error('Émetteur IPC non autorisé')
+    return event.sender === barreView?.webContents ? barreView.getBounds() : { x: 0, y: 0 }
+  }
+  ipcMain.handle('browser:show-tooltip', (event, texte, ancre) => afficherInfobulle(texte, ancre, exigerBoutons(event)))
+  ipcMain.handle('browser:hide-tooltip', (event) => { exigerBoutons(event); retirerInfobulle() })
   traiter('browser:get-palette', () => palette)
   ipcMain.handle('browser:open-palette', (event) => { exigerBarre(event); ouvrirPalette() })
   ipcMain.handle('browser:palette-search', (event, texte) => {

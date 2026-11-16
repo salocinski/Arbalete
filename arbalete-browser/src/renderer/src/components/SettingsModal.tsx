@@ -7,7 +7,7 @@ import type { EtatMiseAJour } from '../../../shared/miseAJour'
 import type { SidebarState, ThemeChoice } from '../../../shared/types'
 import { useSettings, useTheme } from '../state'
 import { ClearDataForm } from './ClearDataForm'
-import { Overlay } from './Overlay'
+import { Modal } from './ui/Modal'
 import { SearchEngineSection } from './SearchEngineSection'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
@@ -86,8 +86,7 @@ export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onC
   }
 
   return (
-    <Overlay centre onClose={onClose}>
-      <div className="color-modal settings" role="dialog" aria-modal="true" aria-label="Paramètres">
+    <Modal className="color-modal settings" label="Paramètres" onClose={onClose}>
         <div className="color-modal-title">Paramètres</div>
 
         <Section titre="Apparence">
@@ -161,8 +160,7 @@ export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onC
         </Section>
 
         <Section titre="Confidentialité"><ClearDataForm /></Section>
-      </div>
-    </Overlay>
+      </Modal>
   )
 }
 

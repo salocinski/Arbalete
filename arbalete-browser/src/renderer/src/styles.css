@@ -59,13 +59,16 @@ html.vue-barre .sidebar-zone { right: 0; }
 .workspace-choice { flex: 1; min-width: 0; }
 .workspace-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .workspace-add { width: 100%; color: var(--color-text-secondary); }
+/* Surface flottante commune (ARB-126) : modales (Modal), menus, téléchargements et suggestions partagent bordure, fond, ombre et rayon. */
+.floating-panel, .overlay-menu, .downloads, .suggestions { border: 1px solid var(--color-border); background: var(--color-surface); box-shadow: var(--shadow-floating); border-radius: var(--radius-floating); color: var(--color-text-primary); }
+.floating-panel:focus { outline: none; }
 /* Couche d'overlays (ARB-39) : la couche couvre la vue de la barre, agrandie à la fenêtre ; seul le contenu se voit. */
 .overlay-layer { position: fixed; inset: 0; z-index: var(--z-overlay); }
 .overlay-content { position: fixed; }
 .overlay-layer--centre { display: flex; align-items: center; justify-content: center; }
 .overlay-layer--centre .overlay-content { position: static; }
 /* Modale de la couleur d'un espace (ARB-134). */
-.color-modal { width: 300px; padding: var(--space-4); border: 1px solid var(--color-border); background: var(--color-surface); box-shadow: var(--shadow-floating); border-radius: var(--radius-floating); color: var(--color-text-primary); display: flex; flex-direction: column; gap: var(--space-3); }
+.color-modal { width: 300px; padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
 .engine-list { display: flex; flex-direction: column; gap: var(--space-1); }
 .engine-option { height: 32px; padding: 0 10px; text-align: left; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: transparent; color: var(--color-text-primary); font: inherit; font-size: 12px; cursor: pointer; }
 .engine-option:hover { background: var(--color-sidebar); }
@@ -82,7 +85,7 @@ html.vue-barre .sidebar-zone { right: 0; }
 .settings-help { margin: 0; color: var(--color-text-secondary); font-size: 11px; }
 .settings-path { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .settings-actions { display: flex; gap: var(--space-2); }
-.permission-modal { width: 340px; padding: var(--space-4); border: 1px solid var(--color-border); background: var(--color-surface); box-shadow: var(--shadow-floating); border-radius: var(--radius-floating); color: var(--color-text-primary); display: flex; flex-direction: column; gap: var(--space-3); font-size: 13px; }
+.permission-modal { width: 340px; padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); font-size: 13px; }
 .permission-modal-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
 .color-modal-title { font-size: 12px; font-weight: 600; }
 .color-modal-card { display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 10px; border: 1px solid var(--color-border); background: var(--color-sidebar); border-radius: var(--radius-md); font-size: 12px; font-weight: 600; }
@@ -91,11 +94,11 @@ html.vue-barre .sidebar-zone { right: 0; }
 .color-swatch:hover { box-shadow: 0 0 0 2px var(--color-surface-hover), 0 0 0 4px var(--color-border); }
 .color-swatch[aria-checked='true'] { box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-text-primary); }
 .color-swatch:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
-.overlay-menu { min-width: 200px; padding: 5px; border: 1px solid var(--color-border); background: var(--color-surface); box-shadow: var(--shadow-floating); border-radius: var(--radius-floating); color: var(--color-text-primary); }
+.overlay-menu { min-width: 200px; padding: 5px; }
 .overlay-menu button { display: flex; align-items: center; width: 100%; padding: 8px 10px; border: 0; background: transparent; border-radius: var(--radius-sm); font-size: 12px; text-align: left; }
 .overlay-menu button:hover, .overlay-menu button:focus-visible { background: var(--color-surface-hover); outline: none; }
 /* Liste des téléchargements (ARB-55) : panneau de la couche d'overlays, ouvert au-dessus du bouton de la barre latérale. */
-.downloads { box-sizing: border-box; width: 340px; max-width: calc(100vw - 16px); max-height: min(420px, 70vh); display: flex; flex-direction: column; padding: var(--space-3); gap: var(--space-2); border: 1px solid var(--color-border); background: var(--color-surface); box-shadow: var(--shadow-floating); border-radius: var(--radius-floating); color: var(--color-text-primary); }
+.downloads { box-sizing: border-box; width: 340px; max-width: calc(100vw - 16px); max-height: min(420px, 70vh); display: flex; flex-direction: column; padding: var(--space-3); gap: var(--space-2); }
 .downloads-title { font-size: 12px; font-weight: 600; }
 .downloads-empty { margin: 0; padding: var(--space-3) 0; color: var(--color-text-secondary); font-size: 12px; }
 .downloads-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; display: grid; gap: 2px; }
@@ -109,13 +112,13 @@ html.vue-barre .sidebar-zone { right: 0; }
 .download-bar span { display: block; height: 100%; background: var(--color-accent); }
 .download-item[data-etat='en-pause'] .download-bar span { background: var(--color-text-secondary); }
 /* Suggestions de la barre d'adresse (ARB-53) : liste dans la couche d'overlays, sous le champ. */
-.suggestions { box-sizing: border-box; display: grid; padding: var(--space-1); border: 1px solid var(--color-border); background: var(--color-surface); box-shadow: var(--shadow-floating); border-radius: var(--radius-floating); color: var(--color-text-primary); }
+.suggestions { box-sizing: border-box; display: grid; padding: var(--space-1); }
 .suggestion { display: flex; align-items: center; gap: var(--space-2); min-width: 0; padding: 8px 10px; border: 0; background: transparent; border-radius: var(--radius-sm); font-size: 13px; text-align: left; }
 .suggestion:hover, .suggestion[aria-selected="true"] { background: var(--color-surface-hover); }
 .suggestion-title { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .suggestion-url { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text-secondary); font-size: 12px; }
 /* Palette de commandes (ARB-67) : modale centrée, champ puis liste défilante. */
-.palette { box-sizing: border-box; width: 560px; max-width: calc(100vw - 32px); display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--color-border); background: var(--color-surface); box-shadow: var(--shadow-floating); border-radius: var(--radius-floating); color: var(--color-text-primary); }
+.palette { box-sizing: border-box; width: 560px; max-width: calc(100vw - 32px); display: grid; gap: var(--space-2); padding: var(--space-3); }
 .palette-liste { display: grid; max-height: min(360px, 60vh); overflow-y: auto; }
 .history-day { margin: 0; padding: var(--space-2) 10px 4px; color: var(--color-text-secondary); font-size: 11px; font-weight: 600; }
 .history-time { margin-left: auto; padding-left: var(--space-2); color: var(--color-text-secondary); font-size: 11px; font-variant-numeric: tabular-nums; }
@@ -137,9 +140,10 @@ html.vue-recherche, html.vue-recherche body { background: transparent; min-width
 .find-bar { box-sizing: border-box; display: flex; align-items: center; gap: var(--space-1); height: 100vh; padding: 0 var(--space-2) 0 var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text-primary); }
 /* Avis « pop-up bloquée » (ARB-108) : vue native en bas à gauche de la page, mêmes plans que la recherche. */
 html.vue-popup, html.vue-popup body { background: transparent; min-width: 0; min-height: 0; overflow: hidden; }
-.popup-notice { box-sizing: border-box; display: flex; align-items: center; gap: var(--space-2); height: 100vh; padding: 0 var(--space-2) 0 var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-floating); background: var(--color-surface); color: var(--color-text-primary); box-shadow: var(--shadow-floating); font-size: 13px; }
-.popup-notice-icon { color: var(--color-warning); flex: none; }
-.popup-notice-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.toast { box-sizing: border-box; display: flex; align-items: center; gap: var(--space-2); height: 100vh; padding: 0 var(--space-2) 0 var(--space-3); font-size: 13px; animation: toast-ouverture var(--duration-panel-open) var(--ease-enter); }
+.toast-icon { display: flex; color: var(--color-warning); flex: none; }
+.toast-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@keyframes toast-ouverture { from { opacity: 0; } }
 .find-input { flex: 1; min-width: 0; border: 0; background: transparent; color: inherit; font-size: 13px; outline: none; }
 .find-input::placeholder { color: var(--color-text-secondary); }
 .find-count { color: var(--color-text-secondary); font-size: 12px; white-space: nowrap; }

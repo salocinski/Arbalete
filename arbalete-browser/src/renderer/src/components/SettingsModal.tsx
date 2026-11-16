@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { LARGEUR_ETENDUE_MAX, LARGEUR_ETENDUE_MIN, MODES_BARRE, actionsVersMode, modeBarre, type ModeBarre } from '../../../shared/barre'
 import { DELAIS_ARCHIVAGE, LIBELLES_DELAI } from '../../../shared/archivage'
+import { DELAIS_VEILLE, LIBELLES_VEILLE, type MemoireOnglets } from '../../../shared/veille'
 import { accueilValide } from '../../../shared/reglages'
 import type { SidebarState, ThemeChoice } from '../../../shared/types'
 import { useSettings, useTheme } from '../state'
@@ -33,6 +34,16 @@ function Choix<T extends string>({ label, options, valeur, onChoisir }: { label:
 export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onClose: () => void }) {
   const { choice } = useTheme()
   const reglages = useSettings()
+
+  // Mémoire des pages (ARB-78) : mesurée à l'ouverture puis toutes les 3 s, pour voir l'effet d'une mise en veille.
+  const [memoire, setMemoire] = useState<MemoireOnglets | null>(null)
+  useEffect(() => {
+    let perime = false
+    const mesurer = () => window.arbalete.getMemory().then((mesure) => { if (!perime) setMemoire(mesure) }, () => {})
+    void mesurer()
+    const minuteur = setInterval(() => void mesurer(), 3000)
+    return () => { perime = true; clearInterval(minuteur) }
+  }, [])
 
   // Page d'accueil : champ libre, enregistré par Entrée ou le bouton ; relu quand le processus principal la change.
   const [accueil, setAccueil] = useState('')
@@ -71,6 +82,10 @@ export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onC
           <Choix label="Archiver les onglets non épinglés après" options={DELAIS_ARCHIVAGE.map((heures): [string, string] => [String(heures), LIBELLES_DELAI[heures]])}
             valeur={String(reglages.archivageHeures)} onChoisir={(heures) => void window.arbalete.setArchiveDelay(Number(heures)).catch(() => {})} />
           <p className="settings-help">Un onglet épinglé, affiché ou qui joue du son n’est jamais archivé. Les onglets archivés se rouvrent depuis « Archive ».</p>
+          <Choix label="Mettre en veille les onglets laissés de côté après" options={DELAIS_VEILLE.map((minutes): [string, string] => [String(minutes), LIBELLES_VEILLE[minutes]])}
+            valeur={String(reglages.veilleMinutes)} onChoisir={(minutes) => void window.arbalete.setSleepDelay(Number(minutes)).catch(() => {})} />
+          <p className="settings-help">Un onglet en veille libère sa mémoire et recharge sa page quand on l’affiche (Précédent et le défilement sont perdus). L’onglet affiché ou qui joue du son reste éveillé.</p>
+          <p className="settings-help" aria-live="polite">{memoire ? `Mémoire des pages : ${memoire.mo} Mo, ${memoire.enVeille} onglet(s) sans page chargée.` : 'Mémoire des pages : mesure en cours…'}</p>
         </Section>
 
         <Section titre="Démarrage">

@@ -9,6 +9,7 @@ import type { ListeFavoris } from './favoris'
 import type { DossierOnglet } from './dossiersOnglets'
 import type { DemandePermission, ReponsePermission } from './permissions'
 import type { ElementArchive } from './archivage'
+import type { MemoireOnglets } from './veille'
 import type { PeriodeEffacement, TypeEffacement, VisiteHistorique } from './historique'
 
 export type BrowserTab = {
@@ -214,6 +215,10 @@ export type BrowserAPI = {
   setArchiveDelay: (heures: number) => Promise<void>
   listArchive: () => Promise<ElementArchive[]>
   restoreArchived: (id: number) => Promise<void>
+  // Mise en veille (ARB-78) : délai en minutes avant que la page d'un onglet laissé de côté soit fermée (liste fermée,
+  // 0 : jamais) ; `getMemory` rend la mémoire des pages chargées (Mo) et le nombre d'onglets sans page.
+  setSleepDelay: (minutes: number) => Promise<void>
+  getMemory: () => Promise<MemoireOnglets>
   onSettings: (callback: (settings: Reglages) => void) => () => void
   // Ctrl+L pressé hors de la fenêtre (page, barre latérale) : la fenêtre sélectionne sa barre d'adresse.
   onFocusAddress: (callback: () => void) => () => void

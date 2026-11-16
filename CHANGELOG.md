@@ -2,6 +2,15 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.21] - 2026-11-16
+
+### Ajouté
+- Sauvegarde des données (ARB-79) : la section « Sauvegarde des données » de Paramètres exporte les favoris (avec leurs dossiers), l’historique (50 dates par page, 20 000 pages au plus), les espaces et les réglages dans un fichier JSON, et les réimporte. L’import ajoute sans rien supprimer ni remplacer (favoris, pages, visites et espaces déjà présents sont gardés, rejouer un import ne change rien) ; seuls les réglages du fichier remplacent les actuels. Le dossier de téléchargement n’est pas exporté, il est propre à chaque PC.
+- Garanties : un fichier étranger, illisible ou d’une version plus récente est refusé en entier, une entrée invalide n’empêche pas les autres (adresses web seulement, dates futures écartées, BOM toléré), l’import tient en une seule transaction (un échec n’écrit rien), et l’export est écrit à côté, relu puis renommé : un échec laisse l’ancien fichier intact.
+
+### Modifié
+- La carte ARB-79 de `kanban.html` passe à `done` ; `CLAUDE.md` décrit `exportDonnees.ts`. Fichier JSON en clair, hors onglets ouverts, archive, téléchargements et permissions de site ; les boîtes de fichier restent manuelles (tests unitaires seuls, sans test Playwright) ; la modale Paramètres garde l’ancien moteur affiché jusqu’à sa réouverture après un import.
+
 ## [0.12.44.20] - 2026-11-16
 
 ### Ajouté

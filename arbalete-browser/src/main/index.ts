@@ -5,6 +5,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import { pathToFileURL } from 'node:url'
 import type { BrowserState, BrowserTab, DataIncident, RestoreAnswer, SidebarAction, SidebarState, SuggestionsState, ThemeChoice } from '../shared/types'
 import { importerFavoris, lireFavorisHtml, TAILLE_MAX_IMPORT } from './donnees/importFavoris.ts'
+import { TAILLE_MAX_FICHIER, construireExport, ecrireExport, importerExport, lireExport } from './donnees/exportDonnees.ts'
 import { ouvrirBaseOuRecuperer, type IncidentBase } from './donnees/base.ts'
 import { estAboutBlank, retourPermis } from './aboutBlank.ts'
 import { numeroDOnglet, ongletNumero, ongletRelatif, pasDEspace, pasDOnglet, rechargement } from './navigationClavier.ts'
@@ -2180,6 +2181,43 @@ app.whenReady().then(() => {
     const ajoutes = favorisBase((db) => importerFavoris(db, lireFavorisHtml(readFileSync(chemin, 'utf8'))))
     broadcastState()
     return ajoutes
+  })
+  // Sauvegarde des données (ARB-79) : fichier JSON choisi dans une boîte système (le chemin ne vient jamais de l'interface).
+  // L'export est écrit puis relu avant de remplacer le fichier ; l'import valide tout le fichier avant d'écrire et tient
+  // dans une transaction. Après un import, l'état mémorisé (réglages, moteur, thème, espaces) est relu depuis la base.
+  const boiteDonnees = async <T>(ouvrir: () => Promise<T>): Promise<T | null> => {
+    if (boiteFichierOuverte) return null
+    boiteFichierOuverte = true // la boîte prend le focus : sans ce drapeau, le blur fermerait le panneau sous elle
+    try { return await ouvrir() } finally { boiteFichierOuverte = false }
+  }
+  ipcMain.handle('browser:export-data', async (event) => {
+    exigerBarre(event)
+    const db = base
+    if (!db) throw new Error('Base indisponible')
+    const options = { title: 'Exporter mes données', defaultPath: join(app.getPath('documents'), `arbalete-donnees-${new Date().toISOString().slice(0, 10)}.json`), filters: [{ name: 'Données Arbalète', extensions: ['json'] }] }
+    const choix = await boiteDonnees(() => (mainWindow ? dialog.showSaveDialog(mainWindow, options) : dialog.showSaveDialog(options)))
+    if (!choix || choix.canceled || !choix.filePath) return null
+    return ecrireExport(choix.filePath, construireExport(db))
+  })
+  ipcMain.handle('browser:import-data', async (event) => {
+    exigerBarre(event)
+    const db = base
+    if (!db) throw new Error('Base indisponible')
+    const options = { title: 'Importer mes données', properties: ['openFile' as const], filters: [{ name: 'Données Arbalète', extensions: ['json'] }] }
+    const choix = await boiteDonnees(() => (mainWindow ? dialog.showOpenDialog(mainWindow, options) : dialog.showOpenDialog(options)))
+    if (!choix || choix.canceled || choix.filePaths.length === 0) return null
+    const chemin = choix.filePaths[0]
+    if (statSync(chemin).size > TAILLE_MAX_FICHIER) throw new Error('Fichier trop volumineux')
+    const bilan = importerExport(db, lireExport(readFileSync(chemin, 'utf8')))
+    if (bilan.reglages) {
+      reglages = lireReglages(db)
+      envoyerAuxInterfaces('browser:settings', { ...reglages })
+      moteur = lireMoteur(db)
+      appliquerTheme(lireTheme(db))
+    }
+    espaces = lireEspaces(db)
+    broadcastState()
+    return bilan
   })
   // Effacer les données de navigation (ARB-54) : période et types viennent de listes fermées, validés ici.
   // shortcut: Electron ne date pas les cookies ni le cache, ils sont effacés en entier quelle que soit la période ; à revoir

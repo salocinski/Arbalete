@@ -370,6 +370,8 @@ export function installPreviewApi(): boolean {
     moveFavorite: async () => undefined,
     removeFavorite: async () => undefined,
     importFavorites: async () => null,
+    exportData: async () => ({ favoris: 3, pages: 12 }),
+    importData: async () => ({ favoris: 3, pages: 12, espaces: 1, reglages: true }),
     openHistoryPage: async () => undefined,
     clearBrowsingData: async () => undefined,
     // Pas de menu contextuel dans l'aperçu : les pages y sont un cadre, sans clic droit de Chromium (ARB-40).

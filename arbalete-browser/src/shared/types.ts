@@ -58,6 +58,10 @@ export type SidebarAction = 'open' | 'hide' | 'toggle-pin' | 'toggle-compact'
 
 export type ThemeChoice = 'system' | 'dark' | 'light'
 
+// Ce qu'un import de données (ARB-79) a ajouté : favoris, pages d'historique (nouvelles ou complétées), espaces ; `reglages`
+// vrai si le fichier en portait.
+export interface BilanImport { favoris: number; pages: number; espaces: number; reglages: boolean }
+
 // Réponse à l'invite de restauration qui suit un arrêt forcé (ARB-46).
 export type RestoreAnswer = 'restore' | 'dismiss'
 
@@ -171,6 +175,11 @@ export type BrowserAPI = {
   // Importe les favoris d'un fichier HTML exporté de Chrome ou Edge, choisi dans une boîte système (ARB-50) : nombre de
   // favoris ajoutés, null si annulé.
   importFavorites: () => Promise<number | null>
+  // Sauvegarde des données (ARB-79) : `exportData` écrit favoris, historique, espaces et réglages dans un fichier JSON choisi
+  // dans une boîte système (nombre de favoris et de pages écrits, null si annulé) ; `importData` ajoute à la base ce qu'un tel
+  // fichier contient, sans rien supprimer (null si annulé). Vue de la barre seule.
+  exportData: () => Promise<{ favoris: number; pages: number } | null>
+  importData: () => Promise<BilanImport | null>
   // Passe à cet espace (ARB-61) : ses onglets remplacent ceux affichés, son dernier onglet actif reprend la page ; un espace
   // sans onglet en ouvre un. Sans effet si l'espace est inconnu ou déjà actif.
   setWorkspace: (id: number) => Promise<void>

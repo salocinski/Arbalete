@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AppWindow, Clock, Search, Star, Zap } from 'lucide-react'
 import type { EntreePalette, TypePalette } from '../../../shared/palette'
-import { Overlay } from './Overlay'
+import { Modal } from './ui/Modal'
 import { Input } from './ui/Input'
 
 const icones: Record<TypePalette, typeof Search> = { onglet: AppWindow, action: Zap, favori: Star, historique: Clock }
@@ -32,8 +32,7 @@ export function CommandPalette({ lignes, onClose }: { lignes: EntreePalette[]; o
   }
 
   return (
-    <Overlay centre onClose={onClose}>
-      <div className="palette" role="dialog" aria-label="Palette de commandes">
+    <Modal className="palette" label="Palette de commandes" onClose={onClose}>
         <Input autoFocus value={texte} onChange={(event) => changer(event.target.value)} onKeyDown={touche}
           placeholder="Rechercher un onglet, un favori, une page ou une action" aria-label="Rechercher" role="combobox"
           aria-expanded={lignes.length > 0} aria-autocomplete="list" aria-controls="palette-liste" aria-activedescendant={lignes[selection] ? `palette-${selection}` : undefined}
@@ -53,7 +52,6 @@ export function CommandPalette({ lignes, onClose }: { lignes: EntreePalette[]; o
             )
           })}
         </div>
-      </div>
-    </Overlay>
+      </Modal>
   )
 }

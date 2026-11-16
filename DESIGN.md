@@ -340,7 +340,8 @@ CommandBar, FloatingPanel, ContextMenu, Tooltip, Modal, Toast, SplitView, Settin
   (`components/ui/`, styles dans `design-system/controls.css`) ; Destructive prend la couleur d'erreur, sans token
   d'état dédié (survol et appui par mélange avec le texte principal).
 - **Champs** : surface neutre, bordure discrète, focus identifiable, erreur explicite.
-- **Panneaux flottants** : commande, menus, sélecteurs, dialogues, actions contextuelles.
+- **Panneaux flottants** : commande, menus, sélecteurs, dialogues, actions contextuelles. `FloatingPanel` porte surface, bordure, rayon 14 px et ombre ; `Modal` (rôle dialog, focus piégé, Échap) l'habille pour les sept panneaux centrés (ARB-126).
+- **Infobulle** (ARB-126) : bulle de 28 px sous le bouton (au-dessus s'il manque de place), après 400 ms de survol ou au focus clavier ; ouverture 180 ms et fermeture 150 ms, sans fondu quand les animations sont réduites ; vue native placée au-dessus de la barre, retirée par un minuteur de sécurité de 10 s.
 - **Avis éphémère** (ARB-108, première forme du Toast) : petite carte flottante (surface, bordure, rayon 14 px, ombre
   flottante) posée en bas à gauche de la page, qui s'efface après 6 s et porte une action Primary et une croix ; icône
   d'avertissement en `--color-warning`. Il est doublé d'une icône persistante dans le champ d'adresse, à droite de l'étoile,
@@ -383,7 +384,7 @@ du front matter. Implémentation (ARB-34) : `arbalete-browser/src/renderer/src/d
 de l'interface qui contient des couleurs, palette choisie par `data-theme` sur `<html>` (sombre par défaut). Il ajoute
 `--color-on-accent` (texte sur un fond Amber : Obsidian en sombre, blanc en clair), `--shadow-floating` (menus et
 panneaux flottants) et les niveaux `--z-chrome`, `--z-menu`, `--z-sidebar`, `--z-overlay` ; `--color-focus` reprend
-l'accent. Restent à définir : ombres et z-index complets (ARB-126), densité.
+l'accent. Ombres et z-index sont complets depuis ARB-126 (`--shadow-floating`, `--z-*`, `--radius-floating`, durées `--duration-panel-open` 180 ms et `--duration-panel-close` 150 ms). Reste à définir : densité.
 
 Personnalisation future, jamais au détriment de la cohérence : couleur par espace, largeur et densité de la
 barre latérale, thème, raccourcis, animations.

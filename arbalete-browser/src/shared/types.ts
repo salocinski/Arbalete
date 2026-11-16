@@ -159,6 +159,10 @@ export type BrowserAPI = {
   showBlockedPopups: () => Promise<void>
   allowPopups: () => Promise<void>
   closePopupNotice: () => Promise<void>
+  // Infobulle (ARB-126) : la fenêtre et la vue de la barre la montrent sous un élément (rectangle dans leur propre vue), le texte
+  // est nettoyé et le rectangle borné par le processus principal ; `hideTooltip` la ferme en fondu.
+  showTooltip: (text: string, anchor: { x: number; y: number; width: number; height: number }) => Promise<void>
+  hideTooltip: () => Promise<void>
   // Ajoute la page de l'onglet actif aux favoris, ou l'en retire (ARB-47) ; sans effet sur une page hors du web. L'état
   // `favorite` en rend compte.
   toggleFavorite: () => Promise<void>

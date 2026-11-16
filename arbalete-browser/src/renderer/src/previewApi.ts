@@ -392,6 +392,8 @@ export function installPreviewApi(): boolean {
     showBlockedPopups: async () => undefined,
     allowPopups: async () => undefined,
     closePopupNotice: async () => undefined,
+    showTooltip: async () => undefined,
+    hideTooltip: async () => undefined,
     getDownloads: async () => downloads,
     onDownloads: (callback) => {
       downloadListeners.add(callback)

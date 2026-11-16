@@ -2,6 +2,18 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.25] - 2026-11-16
+
+### Ajouté
+- Couche d’overlays complétée (ARB-126, EP-06) : `FloatingPanel` (cadre commun : rayon 14 px, ouverture 180 ms, fermeture 150 ms, animations réduites respectées), `Modal` (rôle dialog, focus piégé, Tab et Maj+Tab bouclent, focus rendu à l’élément d’origine), `Tooltip` et `Toast`. Tokens `--radius-floating`, `--duration-panel-*`, `--shadow-floating` et `--z-*`.
+- Infobulle des boutons-icônes affichée dans la vue native de l’aperçu d’adresse, donc au-dessus de la page web ; retirée en fondu, au clic, à la sortie ou après 10 s (canaux `browser:show-tooltip` et `browser:hide-tooltip`).
+
+### Modifié
+- Les sept panneaux centrés (Archive, Couleur, Palette, Favoris, Historique, Permission, Paramètres) passent par `Modal`. L’avis de pop-up bloquée (ARB-108) utilise `Toast`.
+
+### Limites
+- Le `Toast` n’a pas été vérifié sur une vraie page web. Pas d’infobulle dans une modale (le `title` natif y est retiré). Une infobulle ouverte ne suit pas un redimensionnement avant son retrait.
+
 ## [0.12.44.24] - 2026-11-16
 
 ### Ajouté

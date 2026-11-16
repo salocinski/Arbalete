@@ -243,7 +243,7 @@ function barreAuPremierPlan() {
 }
 
 async function epinglerBarre(voulu: boolean) {
-  if ((await etatBarre()).pinned !== voulu) await ui.locator('[title*="la barre latérale"]').click()
+  if ((await etatBarre()).pinned !== voulu) await ui.locator('[aria-label*="la barre latérale"]').click()
   await expect.poll(etatBarre).toEqual({ open: voulu, pinned: voulu })
 }
 
@@ -552,7 +552,7 @@ test('C35 : le thème s’applique à la fenêtre et à la barre ; set-theme et 
     fenetre.setTitleBarOverlay = (options) => { relevees.push(options); original(options) }
   })
   const choix = () => barreUi.evaluate(() => window.arbalete.getTheme())
-  const bouton = ui.getByTitle('Thème : changer le mode')
+  const bouton = ui.getByLabel('Thème : changer le mode')
   expect(await choix()).toBe('system')
   try {
     await bouton.click()
@@ -759,17 +759,17 @@ test('C3 : précédent et suivant suivent l’historique', async () => {
   await attendreUrlActive(`${origine}/page-b.html`)
   await expect.poll(async () => ongletActif(await etat())?.canGoBack).toBe(true)
 
-  await ui.getByTitle('Précédent (Alt+←)').click()
+  await ui.getByLabel('Précédent (Alt+←)').click()
   await attendreUrlActive(`${origine}/page-a.html`)
   await expect.poll(async () => ongletActif(await etat())?.canGoForward).toBe(true)
 
-  await ui.getByTitle('Suivant (Alt+→)').click()
+  await ui.getByLabel('Suivant (Alt+→)').click()
   await attendreUrlActive(`${origine}/page-b.html`)
 
   // Fin d'historique (ARB-31) : Suivant est désactivé, Précédent et Recharger restent actifs.
-  await expect(ui.getByTitle('Suivant (Alt+→)')).toBeDisabled()
-  await expect(ui.getByTitle('Précédent (Alt+←)')).toBeEnabled()
-  await expect(ui.getByTitle('Recharger')).toBeEnabled()
+  await expect(ui.getByLabel('Suivant (Alt+→)')).toBeDisabled()
+  await expect(ui.getByLabel('Précédent (Alt+←)')).toBeEnabled()
+  await expect(ui.getByLabel('Recharger')).toBeEnabled()
 })
 
 // Value: protects=raccourcis d'Arbalète où que soit le focus (ARB-18) : depuis la page, Ctrl+L met le focus dans la
@@ -896,7 +896,7 @@ test('C11 : le bouton Recharger recharge la page de l’onglet actif', async () 
   await expect.poll(async () => ongletActif(await etat())?.isLoading).toBe(false)
   const avant = requetes['/page-a.html'] ?? 0
 
-  await ui.getByTitle('Recharger').click()
+  await ui.getByLabel('Recharger').click()
   await expect.poll(() => requetes['/page-a.html'] ?? 0).toBeGreaterThan(avant)
   await attendreUrlActive(`${origine}/page-a.html`)
 })
@@ -1032,7 +1032,7 @@ test('C9 : épingler puis libérer la barre latérale réaligne la vue web', asy
   await attendreVueAlignee()
   expect(await boundsBarre()).toMatchObject({ x: 0, width: 252 })
 
-  await barreUi.getByTitle('Libérer la barre latérale (Ctrl+Maj+B)').click()
+  await barreUi.getByLabel('Libérer la barre latérale (Ctrl+Maj+B)').click()
   await expect.poll(etatBarre).toEqual({ open: false, pinned: false })
   await expect.poll(async () => (await rectangleZoneContenu()).x).toBe(8)
   await attendreVueAlignee()
@@ -3920,4 +3920,77 @@ test('C96 : les mises à jour ne se lisent ni ne se lancent que depuis la vue de
   await barreUi.evaluate(() => window.arbalete.checkForUpdates())
   await barreUi.evaluate(() => window.arbalete.installUpdate())
   expect((await barreUi.evaluate(() => window.arbalete.getUpdateState())).etat).toBe('inactive')
+})
+
+test('C97 : l’infobulle s’affiche au-dessus de la barre (vue native), se retire en fondu, et refuse un texte vide', async () => {
+  const vuesData = () => app.evaluate(({ BrowserWindow, WebContentsView }) => {
+    const enfants = BrowserWindow.getAllWindows()[0].contentView.children.filter((e) => e instanceof WebContentsView) as InstanceType<typeof WebContentsView>[]
+    return { nombre: enfants.filter((e) => e.webContents.getURL().startsWith('data:')).length,
+      derniereEstData: enfants[enfants.length - 1].webContents.getURL().startsWith('data:') }
+  })
+  await barreUi.evaluate(() => window.arbalete.showTooltip('Nouvel onglet', { x: 20, y: 60, width: 32, height: 32 }))
+  await expect.poll(vuesData).toMatchObject({ nombre: 1, derniereEstData: true })
+  await barreUi.evaluate(() => window.arbalete.hideTooltip())
+  await expect.poll(async () => (await vuesData()).nombre, { timeout: 3000 }).toBe(0)
+  // Un texte vide ou une vue qui n'a pas de boutons : rien ne s'affiche.
+  await barreUi.evaluate(() => window.arbalete.showTooltip('   ', { x: 20, y: 60, width: 32, height: 32 }))
+  await ui.evaluate(() => window.arbalete.showTooltip('Barre de contrôle', { x: 20, y: 10, width: 32, height: 32 }))
+  await expect.poll(async () => (await vuesData()).nombre).toBe(1)
+  await ui.evaluate(() => window.arbalete.hideTooltip())
+  await expect.poll(async () => (await vuesData()).nombre, { timeout: 3000 }).toBe(0)
+})
+
+test('C98 : le focus reste piégé dans la modale (Tab boucle) et Échap la ferme', async () => {
+  await epinglerBarre(true)
+  try {
+    await barreUi.locator('.workspace-switcher').click({ button: 'right' })
+    await barreUi.getByRole('menu').getByRole('menuitem', { name: 'Changer la couleur…' }).click()
+    const modale = barreUi.getByRole('dialog')
+    await expect(modale).toBeVisible()
+    const dansModale = () => barreUi.evaluate(() => !!document.activeElement?.closest('[role="dialog"]'))
+    for (let i = 0; i < 20; i++) {
+      await barreUi.keyboard.press('Tab')
+      expect(await dansModale()).toBe(true)
+    }
+    for (let i = 0; i < 3; i++) {
+      await barreUi.keyboard.press('Shift+Tab')
+      expect(await dansModale()).toBe(true)
+    }
+    await app.evaluate(({ BrowserWindow, WebContentsView }) => {
+      const vue = BrowserWindow.getAllWindows()[0].contentView.children.find((e) => e instanceof WebContentsView
+        && e.webContents.getURL().includes('vue=barre')) as InstanceType<typeof WebContentsView>
+      vue.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' })
+      vue.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' })
+    })
+    await expect(modale).toHaveCount(0)
+  } finally {
+    await epinglerBarre(false)
+  }
+})
+
+test('C99 : l’infobulle refuse une ancre aberrante, se place sous l’ancre dans la fenêtre et cède la place à un overlay', async () => {
+  const bulles = () => app.evaluate(({ BrowserWindow, WebContentsView }) => {
+    const fenetre = BrowserWindow.getAllWindows()[0]
+    const vues = fenetre.contentView.children.filter((e) => e instanceof WebContentsView && e.webContents.getURL().startsWith('data:')) as InstanceType<typeof WebContentsView>[]
+    return { nombre: vues.length, bounds: vues[0]?.getBounds() ?? null, fenetre: fenetre.getContentBounds() }
+  })
+  // Ancres aberrantes : rien ne s'affiche.
+  await barreUi.evaluate(() => Promise.all([{ x: NaN, y: 0, width: 10, height: 10 }, { x: 'a', y: 0, width: 10, height: 10 }, null].map((a) => window.arbalete.showTooltip('Test', a as never).then(() => 'ok', () => 'refuse'))))
+  expect((await bulles()).nombre).toBe(0)
+  // Une ancre valide : la bulle est sous l'ancre (si la place existe) et dans la fenêtre.
+  await ui.evaluate(() => window.arbalete.showTooltip('Barre de contrôle', { x: 20, y: 10, width: 32, height: 32 }))
+  await expect.poll(async () => (await bulles()).nombre).toBe(1)
+  const { bounds, fenetre } = await bulles()
+  expect(bounds!.y).toBeGreaterThanOrEqual(10 + 32)
+  expect(bounds!.x).toBeGreaterThanOrEqual(0)
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(fenetre.width)
+  // Un overlay ouvert retire la bulle et refuse d'en afficher une.
+  await barreUi.evaluate(() => window.arbalete.setOverlay(true))
+  try {
+    await expect.poll(async () => (await bulles()).nombre).toBe(0)
+    await barreUi.evaluate(() => window.arbalete.showTooltip('Nouvel onglet', { x: 20, y: 60, width: 32, height: 32 }))
+    expect((await bulles()).nombre).toBe(0)
+  } finally {
+    await barreUi.evaluate(() => window.arbalete.setOverlay(false))
+  }
 })

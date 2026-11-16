@@ -2,6 +2,15 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.22] - 2026-11-16
+
+### Ajouté
+- Navigateur par défaut (ARB-80) : l’installeur déclare Arbalète à Windows pour les liens http et https. Elle apparaît dans « Applications par défaut » ; la section « Navigateur par défaut » de Paramètres affiche le navigateur actuel et ouvre ces paramètres. Une fois Arbalète choisie, un lien cliqué dans une autre application s’ouvre dans un onglet. La désinstallation retire la déclaration.
+- Windows réserve ce choix à l’utilisateur : aucun code ne peut l’imposer. Les liens des autres applications sont lancés avec `--` avant l’adresse, et une adresse contenant un guillemet est refusée, pour qu’un lien ne puisse pas ajouter d’options à Chromium.
+
+### Modifié
+- La carte ARB-80 de `kanban.html` passe à `done` ; `CLAUDE.md` décrit `build/installer.nsh` et C95. L’inscription dans le registre, le choix dans Windows et un vrai lien d’une autre application restent manuels après installation (tests unitaires du script et C95 sur les canaux seulement) ; ni association des fichiers .html, ni installation par machine, ni invite au premier lancement.
+
 ## [0.12.44.21] - 2026-11-16
 
 ### Ajouté

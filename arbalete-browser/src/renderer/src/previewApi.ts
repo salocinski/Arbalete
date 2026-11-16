@@ -370,6 +370,8 @@ export function installPreviewApi(): boolean {
     moveFavorite: async () => undefined,
     removeFavorite: async () => undefined,
     importFavorites: async () => null,
+    getDefaultBrowser: async () => 'Google Chrome',
+    openDefaultApps: async () => {},
     exportData: async () => ({ favoris: 3, pages: 12 }),
     importData: async () => ({ favoris: 3, pages: 12, espaces: 1, reglages: true }),
     openHistoryPage: async () => undefined,

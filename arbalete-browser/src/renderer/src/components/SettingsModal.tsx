@@ -45,6 +45,16 @@ export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onC
     return () => { perime = true; clearInterval(minuteur) }
   }, [])
 
+  // Navigateur par défaut (ARB-80) : relu à l'ouverture et quand la fenêtre reprend le focus (retour des paramètres Windows).
+  const [navigateur, setNavigateur] = useState<string | null>(null)
+  useEffect(() => {
+    let perime = false
+    const lire = () => window.arbalete.getDefaultBrowser().then((nom) => { if (!perime) setNavigateur(nom) }, () => {})
+    void lire()
+    window.addEventListener('focus', lire)
+    return () => { perime = true; window.removeEventListener('focus', lire) }
+  }, [])
+
   // Page d'accueil : champ libre, enregistré par Entrée ou le bouton ; relu quand le processus principal la change.
   const [accueil, setAccueil] = useState('')
   useEffect(() => { setAccueil(reglages.accueil) }, [reglages.accueil])
@@ -110,6 +120,12 @@ export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onC
             <Button variant="secondary" size="sm" onClick={() => void window.arbalete.setDownloadFolder('choisir').catch(() => {})}>Choisir un dossier…</Button>
             <Button variant="secondary" size="sm" disabled={!reglages.dossierTelechargements} onClick={() => void window.arbalete.setDownloadFolder('defaut').catch(() => {})}>Par défaut</Button>
           </div>
+        </Section>
+
+        <Section titre="Navigateur par défaut">
+          <p className="settings-help" aria-live="polite">{navigateur ? `Navigateur actuel : ${navigateur}.` : 'Navigateur actuel inconnu.'}</p>
+          <Button variant="secondary" size="sm" onClick={() => void window.arbalete.openDefaultApps().catch(() => {})}>Ouvrir les paramètres Windows…</Button>
+          <p className="settings-help">Windows laisse ce choix à l’utilisateur : choisissez Arbalète pour http et https. Les liens des autres applications s’ouvriront alors dans un onglet.</p>
         </Section>
 
         <Section titre="Sauvegarde des données">

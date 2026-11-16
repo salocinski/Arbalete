@@ -31,7 +31,20 @@ test('scripts/dist.mjs donne à l\'application la version du fichier VERSION', (
 })
 
 test('la configuration et le script de l\'installeur sont aux emplacements attendus du dépôt', () => {
-  for (const f of ['arbalete-browser/electron-builder.yml', 'arbalete-browser/scripts/dist.mjs']) {
+  for (const f of ['arbalete-browser/electron-builder.yml', 'arbalete-browser/scripts/dist.mjs', 'arbalete-browser/build/installer.nsh']) {
     assert.ok(existsSync(resolve(racine, '..', f)), `introuvable : ${f}`)
   }
+})
+
+test('l\'installeur déclare Arbalète à Windows pour http et https, et retire la déclaration à la désinstallation (ARB-80)', () => {
+  assert.match(config, /include: build\/installer\.nsh/)
+  const nsh = readFileSync(resolve(racine, 'build/installer.nsh'), 'utf8')
+  const [installation, desinstallation] = nsh.split('!macro customUnInstall')
+  assert.match(installation, /URLAssociations" "http" "ArbaleteURL"/)
+  assert.match(installation, /URLAssociations" "https" "ArbaleteURL"/)
+  assert.ok(installation.includes('"Arbalete" "Software\\Clients\\StartMenuInternet\\Arbalete\\Capabilities"'))
+  assert.ok(installation.includes('ArbaleteURL\\shell\\open\\command" "" \'"$INSTDIR\\${APP_EXECUTABLE_FILENAME}" -- "%1"\'')) // « -- » : un guillemet dans l'adresse ne peut pas ajouter d'options à Chromium
+  assert.ok(desinstallation.includes('DeleteRegValue HKCU "Software\\RegisteredApplications" "Arbalete"'))
+  assert.ok(desinstallation.includes('DeleteRegKey HKCU "Software\\Clients\\StartMenuInternet\\Arbalete"'))
+  assert.ok(desinstallation.includes('DeleteRegKey HKCU "Software\\Classes\\ArbaleteURL"'))
 })

@@ -3900,3 +3900,13 @@ test('C94 : le délai de mise en veille valide son argument et la mesure de mém
   expect(memoire.mo).toBeGreaterThanOrEqual(0)
   expect(memoire.enVeille).toBeGreaterThanOrEqual(0)
 })
+
+test('C95 : le navigateur par défaut ne se lit ni ne s’ouvre que depuis la vue de la barre', async () => {
+  const refuse = (promesse: Promise<unknown>) => promesse.then(() => 'ok', () => 'refuse')
+  // La fenêtre ne lit pas le navigateur actuel et n'ouvre pas les paramètres Windows (shell.openExternal).
+  expect(await refuse(ui.evaluate(() => window.arbalete.getDefaultBrowser()))).toBe('refuse')
+  expect(await refuse(ui.evaluate(() => window.arbalete.openDefaultApps()))).toBe('refuse')
+  // La barre lit un nom ou null ; openDefaultApps n'y est pas appelé : il ouvrirait les paramètres de la machine.
+  const nom = await barreUi.evaluate(() => window.arbalete.getDefaultBrowser())
+  expect(nom === null || typeof nom === 'string').toBe(true)
+})

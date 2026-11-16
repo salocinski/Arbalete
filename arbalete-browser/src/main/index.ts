@@ -171,7 +171,7 @@ const ADRESSES_MAX_PAR_LANCEMENT = 10
 function adressesLancees(valeurs: unknown): string[] {
   if (!Array.isArray(valeurs)) return []
   return valeurs
-    .filter((valeur): valeur is string => typeof valeur === 'string' && /^https?:\/\/\S+$/i.test(valeur) && URL.canParse(valeur))
+    .filter((valeur): valeur is string => typeof valeur === 'string' && /^https?:\/\/[^\s"]+$/i.test(valeur) && URL.canParse(valeur))
     .slice(0, ADRESSES_MAX_PAR_LANCEMENT)
 }
 
@@ -2218,6 +2218,17 @@ app.whenReady().then(() => {
     espaces = lireEspaces(db)
     broadcastState()
     return bilan
+  })
+  // Navigateur par défaut (ARB-80) : l'installeur déclare Arbalète à Windows (build/installer.nsh), mais Windows 10 et 11
+  // réservent le choix à l'utilisateur. `get-default-browser` rend le nom du navigateur actuel pour https ; `open-default-apps`
+  // ouvre la page « Applications par défaut » des paramètres Windows (constante, rien ne vient de l'interface).
+  ipcMain.handle('browser:get-default-browser', (event) => {
+    exigerBarre(event)
+    return app.getApplicationNameForProtocol('https://') || null
+  })
+  ipcMain.handle('browser:open-default-apps', async (event) => {
+    exigerBarre(event)
+    await shell.openExternal('ms-settings:defaultapps?registeredAppUser=Arbalete')
   })
   // Effacer les données de navigation (ARB-54) : période et types viennent de listes fermées, validés ici.
   // shortcut: Electron ne date pas les cookies ni le cache, ils sont effacés en entier quelle que soit la période ; à revoir

@@ -510,11 +510,11 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "epic": "phase-1-valider-le-socle",
       "kind": "tache",
       "milestone": "EP-01",
-      "note": "Un seul tsconfig mélange types Node et DOM. Créer tsconfig.node.json et tsconfig.web.json.\nCritère : Le renderer n'a plus accès aux types Node\ntypecheck couvre les deux cibles",
+      "note": "Un seul tsconfig mélange types Node et DOM. Créer tsconfig.node.json et tsconfig.web.json.\nCritère : Le renderer n'a plus accès aux types Node\ntypecheck couvre les deux cibles\nTerminé (2026-11-17) : tsconfig.json devient une référence vers tsconfig.node.json (main, preload, configs : types Node, sans DOM), tsconfig.web.json (renderer : DOM, sans types Node) et tsconfig.test.json (tests Playwright et *.test.ts : Node et DOM) ; typecheck lance tsc -b. Livré avec ARB-7 (PR #132).",
       "num": 6,
       "prio": "P2",
       "size": "S",
-      "status": "doing",
+      "status": "done",
       "title": "Séparer les tsconfig main/preload et renderer"
     },
     {
@@ -522,11 +522,11 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "epic": "phase-1-valider-le-socle",
       "kind": "tache",
       "milestone": "EP-01",
-      "note": "Règles TypeScript + React hooks, formatage automatique.\nCritère : npm run lint passe sans erreur",
+      "note": "Règles TypeScript + React hooks, formatage automatique.\nCritère : npm run lint passe sans erreur\nTerminé (2026-11-17) : ESLint écarté, typescript-eslint n'acceptant pas TypeScript 7. Oxlint (règles TypeScript, react/rules-of-hooks et exhaustive-deps) et Prettier ; lint et format:check tournent dans le job verifier de la CI, gardés par src/configuration.test.ts. Deux règles du compilateur React (set-state-in-effect, immutability) sont désactivées, trop bruyantes sur le code existant. Livré avec ARB-6 (PR #132).",
       "num": 7,
       "prio": "P2",
       "size": "S",
-      "status": "doing",
+      "status": "done",
       "title": "Ajouter Oxlint et Prettier"
     },
     {
@@ -2136,6 +2136,18 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "size": "S",
       "status": "todo",
       "title": "Ouvrir le compte SignPath et publier la première Release signée"
+    },
+    {
+      "deps": [],
+      "epic": "phase-1-valider-le-socle",
+      "kind": "tache",
+      "milestone": "EP-01",
+      "note": "Le test C80 (menu d'un onglet, tests/smoke.spec.ts) échoue par intermittence : l'entrée « Désépingler » n'apparaît pas dans les 5 s (expect toBeVisible). Constaté le 2026-11-17 sur la PR #132 puis sur main (d182331) avec un code identique à un commit vert ; le job relancé sans changement est passé. Le test peut bloquer une fusion au hasard, PR-Rule exigeant le smoke test. Cause non cherchée (menu pas encore ouvert, épinglage pas encore écrit, ou course avec la couche d'overlays).\nCritère : La cause de l'échec intermittent est identifiée et corrigée dans le test ou dans le code\nC80 passe 20 fois de suite en CI ou en local sans échec",
+      "num": 142,
+      "prio": "P2",
+      "size": "S",
+      "status": "todo",
+      "title": "Stabiliser le test smoke C80 (menu d'un onglet)"
     }
   ]
 }

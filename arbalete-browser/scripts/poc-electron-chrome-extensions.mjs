@@ -27,7 +27,10 @@ const PUB = 'https://googleads.g.doubleclick.net/pagead/id'
 const serveur = createServer((req, res) => {
   res.setHeader('content-type', 'text/html; charset=utf-8')
   if (req.url.startsWith('/hote')) {
-    const [, partition, tab] = decodeURIComponent(req.url).match(/^\/hote\/([^/]+)\/(\d+)/)
+    // Seuls des caractères sûrs entrent dans le HTML : `"` ou `<` ne passent pas (pas d'injection).
+    const m = decodeURIComponent(req.url).match(/^\/hote\/([\w:.-]+)\/(\d+)$/)
+    if (!m) return res.writeHead(400).end()
+    const [, partition, tab] = m
     res.end(
       `<!doctype html><title>hote</title><body><browser-action-list partition="${partition}" tab="${tab}"></browser-action-list>`
     )

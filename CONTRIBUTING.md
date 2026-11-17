@@ -13,7 +13,7 @@ En participant, tu acceptes de respecter le [code de conduite](CODE_OF_CONDUCT.m
 
 ## Installer le projet
 
-Prérequis : Windows 10/11, Node.js LTS, Git.
+Prérequis : Windows 10/11, Node.js LTS (20.19 ou 22.12 et plus), Git.
 
 ```powershell
 git clone https://github.com/<ton-compte>/arbalete.git   # ton fork

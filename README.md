@@ -21,7 +21,7 @@ projet communautaire sous licence GPL-3.0.
 
 ## Démarrer
 
-Prérequis : Windows 10/11, [Node.js LTS](https://nodejs.org), Git.
+Prérequis : Windows 10/11, [Node.js LTS](https://nodejs.org) (20.19 ou 22.12 et plus, déclaré dans `engines`), Git.
 
 ```powershell
 git clone https://github.com/salocinski/arbalete.git

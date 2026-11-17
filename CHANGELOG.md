@@ -2,6 +2,14 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.30] - 2026-11-17
+
+### Modifié
+- Version de Node (ARB-99) : `package.json` déclare `engines.node` (`^20.19.0 || >=22.12.0`, la plage exigée par Vite, electron-vite et Oxlint). npm avertit désormais à l’installation sous une version trop ancienne, au lieu d’un échec obscur plus loin. `src/configuration.test.ts` vérifie que la CI s’y conforme.
+
+### Limites
+- Simple avertissement : pas d’`engine-strict`, et pas de `.nvmrc`.
+
 ## [0.12.44.29] - 2026-11-17
 
 ### Ajouté

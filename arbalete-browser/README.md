@@ -5,7 +5,7 @@ Navigateur Windows inspiré d'Arc, construit avec Electron, React, TypeScript et
 ## Prérequis
 
 - Windows 10/11
-- Node.js LTS
+- Node.js LTS (20.19 ou 22.12 et plus, déclaré dans `engines` de `package.json`)
 - npm
 
 ## Démarrer

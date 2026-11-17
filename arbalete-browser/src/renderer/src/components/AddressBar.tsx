@@ -20,7 +20,16 @@ type AddressBarProps = {
 // Champ contrôlé par MainView : Ctrl+L y place le focus et la page d'accueil partage sa saisie.
 // Suggestions (ARB-53) : le champ garde le clavier. Il envoie le texte et les flèches au processus principal, qui tient la
 // liste et la fait afficher par la vue de la barre (SuggestionsOverlay), au-dessus de la page.
-export function AddressBar({ address, addressRef, onAddressChange, onAddressFocusChange, onSubmit, favorite, favoritable, popupsBloquees }: AddressBarProps) {
+export function AddressBar({
+  address,
+  addressRef,
+  onAddressChange,
+  onAddressFocusChange,
+  onSubmit,
+  favorite,
+  favoritable,
+  popupsBloquees
+}: AddressBarProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const suggestions = useSuggestions()
 
@@ -47,11 +56,21 @@ export function AddressBar({ address, addressRef, onAddressChange, onAddressFocu
   }
 
   return (
-    <form ref={formRef} className="address-bar" onSubmit={(event) => { event.preventDefault(); void valider() }}>
+    <form
+      ref={formRef}
+      className="address-bar"
+      onSubmit={(event) => {
+        event.preventDefault()
+        void valider()
+      }}
+    >
       <Input
         ref={addressRef}
         value={address}
-        onChange={(event) => { onAddressChange(event.target.value); demander(event.target.value) }}
+        onChange={(event) => {
+          onAddressChange(event.target.value)
+          demander(event.target.value)
+        }}
         onKeyDown={surTouche}
         onFocus={() => onAddressFocusChange(true)}
         onBlur={() => onAddressFocusChange(false)}
@@ -60,18 +79,28 @@ export function AddressBar({ address, addressRef, onAddressChange, onAddressFocu
         aria-autocomplete="list"
         aria-label="Adresse ou recherche"
         spellCheck={false}
-        leading={<ShieldCheck size={16} className="secure-icon"/>}
+        leading={<ShieldCheck size={16} className="secure-icon" />}
         trailing={
           <>
-            <IconButton size="sm" title={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'} aria-pressed={favorite}
-              disabled={!favoritable} className={favorite ? 'favorite-on' : undefined}
-              onClick={() => void window.arbalete.toggleFavorite()}>
-              <Star size={14} fill={favorite ? 'currentColor' : 'none'}/>
+            <IconButton
+              size="sm"
+              title={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+              aria-pressed={favorite}
+              disabled={!favoritable}
+              className={favorite ? 'favorite-on' : undefined}
+              onClick={() => void window.arbalete.toggleFavorite()}
+            >
+              <Star size={14} fill={favorite ? 'currentColor' : 'none'} />
             </IconButton>
             {popupsBloquees > 0 && (
-              <IconButton size="sm" title="Pop-up bloquée : afficher l’avis" className="popup-blocked" data-testid="popup-blocked"
-                onClick={() => void window.arbalete.showBlockedPopups()}>
-                <AppWindow size={14}/>
+              <IconButton
+                size="sm"
+                title="Pop-up bloquée : afficher l’avis"
+                className="popup-blocked"
+                data-testid="popup-blocked"
+                onClick={() => void window.arbalete.showBlockedPopups()}
+              >
+                <AppWindow size={14} />
                 {popupsBloquees > 1 && <span className="popup-blocked-count">{popupsBloquees}</span>}
               </IconButton>
             )}

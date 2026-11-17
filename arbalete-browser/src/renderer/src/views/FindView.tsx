@@ -19,11 +19,17 @@ export function FindView() {
     champ.current?.focus()
     const retirerResultat = window.arbalete.onFindResult(setResultat)
     const retirerFocus = window.arbalete.onFindFocus((reouverte) => {
-      if (reouverte) { setTexte(''); setResultat(null) }
+      if (reouverte) {
+        setTexte('')
+        setResultat(null)
+      }
       champ.current?.focus()
       champ.current?.select()
     })
-    return () => { retirerResultat(); retirerFocus() }
+    return () => {
+      retirerResultat()
+      retirerFocus()
+    }
   }, [])
 
   const chercher = (valeur: string, avant: boolean, suivant: boolean) => {
@@ -37,17 +43,44 @@ export function FindView() {
 
   return (
     <div className="find-bar" role="search">
-      <input ref={champ} className="find-input" type="text" value={texte} placeholder="Rechercher dans la page"
-        aria-label="Rechercher dans la page" spellCheck={false}
-        onChange={(event) => { setTexte(event.target.value); chercher(event.target.value, true, false) }}
+      <input
+        ref={champ}
+        className="find-input"
+        type="text"
+        value={texte}
+        placeholder="Rechercher dans la page"
+        aria-label="Rechercher dans la page"
+        spellCheck={false}
+        onChange={(event) => {
+          setTexte(event.target.value)
+          chercher(event.target.value, true, false)
+        }}
         onKeyDown={(event) => {
-          if (event.key === 'Escape') { event.preventDefault(); fermer() }
-          else if (event.key === 'Enter') { event.preventDefault(); chercher(texte, !event.shiftKey, true) }
-        }} />
-      <span className="find-count" aria-live="polite">{compteur(texte, resultat)}</span>
-      <IconButton title="Résultat précédent (Maj+Entrée)" disabled={!texte} onClick={() => chercher(texte, false, true)}><ChevronUp size={16}/></IconButton>
-      <IconButton title="Résultat suivant (Entrée)" disabled={!texte} onClick={() => chercher(texte, true, true)}><ChevronDown size={16}/></IconButton>
-      <IconButton title="Fermer (Échap)" onClick={fermer}><X size={16}/></IconButton>
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            fermer()
+          } else if (event.key === 'Enter') {
+            event.preventDefault()
+            chercher(texte, !event.shiftKey, true)
+          }
+        }}
+      />
+      <span className="find-count" aria-live="polite">
+        {compteur(texte, resultat)}
+      </span>
+      <IconButton
+        title="Résultat précédent (Maj+Entrée)"
+        disabled={!texte}
+        onClick={() => chercher(texte, false, true)}
+      >
+        <ChevronUp size={16} />
+      </IconButton>
+      <IconButton title="Résultat suivant (Entrée)" disabled={!texte} onClick={() => chercher(texte, true, true)}>
+        <ChevronDown size={16} />
+      </IconButton>
+      <IconButton title="Fermer (Échap)" onClick={fermer}>
+        <X size={16} />
+      </IconButton>
     </div>
   )
 }

@@ -5,7 +5,14 @@ import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { createServer, type InlineConfig, type ViteDevServer } from 'vite'
-import { _electron as electron, expect, test, type ConsoleMessage, type ElectronApplication, type Page } from '@playwright/test'
+import {
+  _electron as electron,
+  expect,
+  test,
+  type ConsoleMessage,
+  type ElectronApplication,
+  type Page
+} from '@playwright/test'
 import configElectron from '../electron.vite.config'
 
 // Mode développement (npm run dev) : l'interface est servie par le serveur Vite et le processus principal construit
@@ -45,8 +52,9 @@ test.beforeAll(async () => {
   })
   // La barre latérale (ARB-33) est servie par le même serveur, avec ?vue=barre : ce n'est pas la fenêtre d'interface.
   const estInterface = (url: string) => url.startsWith(origineDev) && !url.includes('vue=barre')
-  ui = app.windows().find((page) => estInterface(page.url()))
-    ?? await app.waitForEvent('window', { predicate: (page) => estInterface(page.url()) })
+  ui =
+    app.windows().find((page) => estInterface(page.url())) ??
+    (await app.waitForEvent('window', { predicate: (page) => estInterface(page.url()) }))
   // L'onglet n'a d'URL http(s) qu'une fois sa navigation validée, plus tard que la fenêtre : dansOnglet le cherche par
   // cette URL (ARB-111). Le premier onglet charge google.com, d'où un délai réseau.
   await expect.poll(() => dansOnglet<boolean>('() => true').catch(() => false), { timeout: 15_000 }).toBe(true)
@@ -64,35 +72,59 @@ function devtoolsOuverts() {
 // Ouverts ET leur interface chargée : fermer des DevTools encore en chargement a fait mourir le processus principal
 // (« Target page, context or browser has been closed » en CI), d'où cette attente avant tout appui qui les ferme.
 function attendreDevtoolsPrets() {
-  return expect.poll(() => app!.evaluate(({ BrowserWindow }) => {
-    const contenu = BrowserWindow.getAllWindows()[0].webContents
-    return contenu.isDevToolsOpened() && contenu.devToolsWebContents !== null && !contenu.devToolsWebContents.isLoading()
-  }), { timeout: 15_000 }).toBe(true)
+  return expect
+    .poll(
+      () =>
+        app!.evaluate(({ BrowserWindow }) => {
+          const contenu = BrowserWindow.getAllWindows()[0].webContents
+          return (
+            contenu.isDevToolsOpened() &&
+            contenu.devToolsWebContents !== null &&
+            !contenu.devToolsWebContents.isLoading()
+          )
+        }),
+      { timeout: 15_000 }
+    )
+    .toBe(true)
 }
 
 // Exécute une action dans le processus principal sur le webContents de l'onglet : le premier en http(s) qui n'est pas
 // l'interface. L'action est une fonction écrite en texte (app.evaluate ne transporte pas les fermetures).
 function dansOnglet<T>(action: string, arg?: unknown): Promise<T> {
-  return app!.evaluate(async ({ BrowserWindow, webContents }, { action, arg }) => {
-    const interfaceUi = BrowserWindow.getAllWindows()[0].webContents
-    const onglet = webContents.getAllWebContents()
-      .find((wc) => wc !== interfaceUi && /^https?:/.test(wc.getURL())
-        && !wc.getURL().startsWith(new URL(interfaceUi.getURL()).origin))
-    if (!onglet) throw new Error('aucun onglet trouvé')
-    return await (new Function('onglet', 'arg', `return (${action})(onglet, arg)`))(onglet, arg)
-  }, { action, arg }) as Promise<T>
+  return app!.evaluate(
+    async ({ BrowserWindow, webContents }, { action, arg }) => {
+      const interfaceUi = BrowserWindow.getAllWindows()[0].webContents
+      const onglet = webContents
+        .getAllWebContents()
+        .find(
+          (wc) =>
+            wc !== interfaceUi &&
+            /^https?:/.test(wc.getURL()) &&
+            !wc.getURL().startsWith(new URL(interfaceUi.getURL()).origin)
+        )
+      if (!onglet) throw new Error('aucun onglet trouvé')
+      return await new Function('onglet', 'arg', `return (${action})(onglet, arg)`)(onglet, arg)
+    },
+    { action, arg }
+  ) as Promise<T>
 }
 
 type Touche = { type: 'keyDown' | 'keyUp'; keyCode: string; modifiers?: Array<'isautorepeat'> }
-const appuiF12: Touche[] = [{ type: 'keyDown', keyCode: 'F12' }, { type: 'keyUp', keyCode: 'F12' }]
+const appuiF12: Touche[] = [
+  { type: 'keyDown', keyCode: 'F12' },
+  { type: 'keyUp', keyCode: 'F12' }
+]
 
 // sendInputEvent passe par le circuit d'entrée natif (before-input-event) ; ui.keyboard (CDP) ne l'atteint pas.
 function envoyerTouches(evenements: Touche[], cible: 'interface' | 'onglet'): Promise<void> {
   if (cible === 'onglet') {
-    return dansOnglet(`(onglet, evenements) => {
+    return dansOnglet(
+      `(onglet, evenements) => {
       onglet.focus()
       for (const evenement of evenements) onglet.sendInputEvent(evenement)
-    }`, evenements)
+    }`,
+      evenements
+    )
   }
   return app!.evaluate(({ BrowserWindow }, evenements) => {
     const contenu = BrowserWindow.getAllWindows()[0].webContents
@@ -130,7 +162,7 @@ test('C18 : en développement, l’interface servie par Vite pilote l’IPC sous
   expect(messages.filter((texte) => /Refused to/.test(texte))).toEqual([])
 
   const estBarre = (page: Page) => page.url().startsWith(origineDev) && page.url().includes('vue=barre')
-  const barre = app!.windows().find(estBarre) ?? await app!.waitForEvent('window', { predicate: estBarre })
+  const barre = app!.windows().find(estBarre) ?? (await app!.waitForEvent('window', { predicate: estBarre }))
   // Rendue et pilotant l'IPC, quel que soit son état : un vrai pointeur au bord gauche peut l'avoir ouverte.
   await expect(barre.locator('.sidebar-zone')).toBeAttached()
   const sidebar = await barre.evaluate(() => window.arbalete.getSidebar())
@@ -177,7 +209,13 @@ test('C29 : en développement, seule la touche F12 bascule les DevTools, dans l�
   expect(await devtoolsOuverts()).toBe(false)
 
   for (const cible of ['interface', 'onglet'] as const) {
-    await envoyerTouches([{ type: 'keyDown', keyCode: 'F2' }, { type: 'keyUp', keyCode: 'F2' }], cible)
+    await envoyerTouches(
+      [
+        { type: 'keyDown', keyCode: 'F2' },
+        { type: 'keyUp', keyCode: 'F2' }
+      ],
+      cible
+    )
     // Répétition automatique d'un appui long : ignorée, sinon les DevTools clignotent.
     await envoyerTouches([{ type: 'keyDown', keyCode: 'F12', modifiers: ['isautorepeat'] }], cible)
   }
@@ -207,10 +245,18 @@ test('C30 : en développement, F12 dans un onglet n’atteint pas la page', asyn
   const urlPage = `http://127.0.0.1:${(serveurPage.address() as AddressInfo).port}/`
   try {
     const presser = (keyCode: string) =>
-      envoyerTouches([{ type: 'keyDown', keyCode }, { type: 'keyUp', keyCode }], 'onglet')
-    const compte = (touche: string) => dansOnglet<number>(
-      `(onglet, touche) => onglet.executeJavaScript('window.__touches.filter((t) => t === ' + JSON.stringify(touche) + ').length')`,
-      touche)
+      envoyerTouches(
+        [
+          { type: 'keyDown', keyCode },
+          { type: 'keyUp', keyCode }
+        ],
+        'onglet'
+      )
+    const compte = (touche: string) =>
+      dansOnglet<number>(
+        `(onglet, touche) => onglet.executeJavaScript('window.__touches.filter((t) => t === ' + JSON.stringify(touche) + ').length')`,
+        touche
+      )
 
     // Le chargement de google.com au démarrage peut être encore en cours : l'interrompre ferait rejeter loadURL
     // (ERR_ABORTED, -3). On attend qu'il se termine avant de changer de page.
@@ -256,8 +302,12 @@ test('C55 : une ELECTRON_RENDERER_URL malformée fait échouer le démarrage ave
     stdio: ['ignore', 'pipe', 'pipe']
   })
   let sortie = ''
-  enfant.stdout.on('data', (morceau) => { sortie += morceau })
-  enfant.stderr.on('data', (morceau) => { sortie += morceau })
+  enfant.stdout.on('data', (morceau) => {
+    sortie += morceau
+  })
+  enfant.stderr.on('data', (morceau) => {
+    sortie += morceau
+  })
   try {
     await expect.poll(() => sortie, { timeout: 20_000 }).toContain('ELECTRON_RENDERER_URL invalide')
   } finally {

@@ -23,8 +23,12 @@ const serveur = createServer((_req, res) => {
 let url
 
 // Electron sous Windows n'attache pas stdout à un tube : le journal va dans un fichier.
-const log = (m) => appendFileSync(join(RACINE, 'journal.txt'), `${new Date().toISOString()} ${m}
-`)
+const log = (m) =>
+  appendFileSync(
+    join(RACINE, 'journal.txt'),
+    `${new Date().toISOString()} ${m}
+`
+  )
 const pause = (ms) => new Promise((ok) => setTimeout(ok, ms))
 const resultats = []
 
@@ -92,7 +96,10 @@ async function principal() {
     resultats.push(await Promise.race([essayer(dossier).catch((e) => ({ dossier, exception: String(e) })), limite]))
     log(`fini ${dossier}`)
   }
-  writeFileSync(join(RACINE, 'resultats.json'), JSON.stringify({ electron: process.versions.electron, chrome: process.versions.chrome, resultats }, null, 2))
+  writeFileSync(
+    join(RACINE, 'resultats.json'),
+    JSON.stringify({ electron: process.versions.electron, chrome: process.versions.chrome, resultats }, null, 2)
+  )
   serveur.close()
   app.quit()
 }

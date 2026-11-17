@@ -21,7 +21,12 @@ export interface MiseAJourUpdater {
 const PREMIERE_VERIFICATION_MS = 30_000
 const INTERVALLE_MS = 6 * 3_600_000
 
-export function creerMiseAJour(options: { updater: MiseAJourUpdater; versionSemver: string; actif: boolean; diffuser: (etat: EtatMiseAJour) => void }) {
+export function creerMiseAJour(options: {
+  updater: MiseAJourUpdater
+  versionSemver: string
+  actif: boolean
+  diffuser: (etat: EtatMiseAJour) => void
+}) {
   const { updater, actif, diffuser } = options
   const version = versionAffichee(options.versionSemver)
   let etat: EtatMiseAJour = { etat: actif ? 'a-jour' : 'inactive', version }
@@ -37,11 +42,20 @@ export function creerMiseAJour(options: { updater: MiseAJourUpdater; versionSemv
     updater.allowPrerelease = false
     updater.on('checking-for-update', () => changer({ etat: 'recherche' }))
     updater.on('update-not-available', () => changer({ etat: 'a-jour' }))
-    updater.on('update-available', (info: { version: string }) => changer({ etat: 'telechargement', nouvelle: versionAffichee(info.version), pourcent: 0 }))
+    updater.on('update-available', (info: { version: string }) =>
+      changer({ etat: 'telechargement', nouvelle: versionAffichee(info.version), pourcent: 0 })
+    )
     updater.on('download-progress', (p: { percent: number }) => {
-      if (etat.etat === 'telechargement') changer({ etat: 'telechargement', nouvelle: etat.nouvelle, pourcent: Math.max(0, Math.min(100, Math.round(p.percent))) })
+      if (etat.etat === 'telechargement')
+        changer({
+          etat: 'telechargement',
+          nouvelle: etat.nouvelle,
+          pourcent: Math.max(0, Math.min(100, Math.round(p.percent)))
+        })
     })
-    updater.on('update-downloaded', (info: { version: string }) => changer({ etat: 'prete', nouvelle: versionAffichee(info.version) }))
+    updater.on('update-downloaded', (info: { version: string }) =>
+      changer({ etat: 'prete', nouvelle: versionAffichee(info.version) })
+    )
     updater.on('error', (erreur: unknown) => {
       console.error('Mise à jour :', erreur)
       if (etat.etat !== 'prete') changer({ etat: 'erreur' }) // le fichier téléchargé s'installera quand même

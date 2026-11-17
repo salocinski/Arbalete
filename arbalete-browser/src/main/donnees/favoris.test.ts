@@ -3,7 +3,18 @@ import { MIGRATIONS, appliquerMigrations } from './migrations.ts'
 import { deepStrictEqual, strictEqual, throws } from 'node:assert/strict'
 import { test } from 'node:test'
 import { ouvrirBase } from './base.ts'
-import { FAVORIS_GRILLE_MAX, basculerFavori, creerDossier, deplacerFavori, estFavori, favorisGrille, listerFavoris, renommerDossier, retirerFavori, supprimerDossier } from './favoris.ts'
+import {
+  FAVORIS_GRILLE_MAX,
+  basculerFavori,
+  creerDossier,
+  deplacerFavori,
+  estFavori,
+  favorisGrille,
+  listerFavoris,
+  renommerDossier,
+  retirerFavori,
+  supprimerDossier
+} from './favoris.ts'
 import { LONGUEUR_MAX_TITRE } from './historique.ts'
 
 // Tests unitaires des favoris (ARB-47).
@@ -13,8 +24,13 @@ test('basculer ajoute puis retire le favori', () => {
   strictEqual(estFavori(db, 'https://example.com/'), false)
   strictEqual(basculerFavori(db, 'https://example.com/', 'Exemple', 1000), true)
   strictEqual(estFavori(db, 'https://example.com/'), true)
-  deepStrictEqual(db.prepare('SELECT url, titre, date FROM favori').all().map((ligne) => ({ ...ligne })),
-    [{ url: 'https://example.com/', titre: 'Exemple', date: 1000 }])
+  deepStrictEqual(
+    db
+      .prepare('SELECT url, titre, date FROM favori')
+      .all()
+      .map((ligne) => ({ ...ligne })),
+    [{ url: 'https://example.com/', titre: 'Exemple', date: 1000 }]
+  )
   strictEqual(basculerFavori(db, 'https://example.com/', 'Exemple'), false)
   strictEqual(estFavori(db, 'https://example.com/'), false)
 })
@@ -40,7 +56,10 @@ test('la grille garde les 8 premiers favoris, dans leur ordre d’ajout', () => 
 test('à date égale, la grille garde l’ordre d’ajout (id)', () => {
   const db = ouvrirBase(':memory:')
   for (const nom of ['c', 'a', 'b']) basculerFavori(db, `https://example.com/${nom}`, nom, 5000)
-  deepStrictEqual(favorisGrille(db).map((f) => f.titre), ['c', 'a', 'b'])
+  deepStrictEqual(
+    favorisGrille(db).map((f) => f.titre),
+    ['c', 'a', 'b']
+  )
 })
 
 test('le titre est tronqué', () => {
@@ -101,10 +120,13 @@ test('retirer un favori par id', () => {
   strictEqual(retirerFavori(db, 1), false)
 })
 
-test('la migration 7 garde les favoris d\'une base au schéma 6, à la racine', () => {
+test("la migration 7 garde les favoris d'une base au schéma 6, à la racine", () => {
   const db = new DatabaseSync(':memory:')
   appliquerMigrations(db, MIGRATIONS.slice(0, 6))
   db.prepare('INSERT INTO favori (url, titre, date) VALUES (?, ?, ?)').run('https://a.fr/', 'A', 1)
   appliquerMigrations(db, MIGRATIONS)
-  deepStrictEqual(listerFavoris(db), { dossiers: [], favoris: [{ id: 1, url: 'https://a.fr/', titre: 'A', dossier: null }] })
+  deepStrictEqual(listerFavoris(db), {
+    dossiers: [],
+    favoris: [{ id: 1, url: 'https://a.fr/', titre: 'A', dossier: null }]
+  })
 })

@@ -14,10 +14,19 @@ export function SuggestionsOverlay({ state }: { state: SuggestionsState }) {
         {items.map((item, index) => {
           const Icone = icones[item.kind]
           return (
-            <button key={`${item.kind}:${item.url}`} type="button" role="option" tabIndex={-1} aria-selected={index === selection}
-              className="suggestion" onClick={() => void window.arbalete.chooseSuggestion(index)}>
-              <Icone size={14} className="muted-icon" aria-hidden="true"/>
-              <span className="suggestion-title">{item.kind === 'recherche' ? `Rechercher « ${item.titre} »` : item.titre}</span>
+            <button
+              key={`${item.kind}:${item.url}`}
+              type="button"
+              role="option"
+              tabIndex={-1}
+              aria-selected={index === selection}
+              className="suggestion"
+              onClick={() => void window.arbalete.chooseSuggestion(index)}
+            >
+              <Icone size={14} className="muted-icon" aria-hidden="true" />
+              <span className="suggestion-title">
+                {item.kind === 'recherche' ? `Rechercher « ${item.titre} »` : item.titre}
+              </span>
               {item.kind === 'historique' && <span className="suggestion-url">{item.url}</span>}
             </button>
           )

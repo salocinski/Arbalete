@@ -1,16 +1,53 @@
-import { app, BrowserWindow, Menu, clipboard, dialog, WebContentsView, ipcMain, screen, session, shell, nativeTheme, type IpcMainEvent, type IpcMainInvokeEvent, type WebContents } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  Menu,
+  clipboard,
+  dialog,
+  WebContentsView,
+  ipcMain,
+  screen,
+  session,
+  shell,
+  nativeTheme,
+  type IpcMainEvent,
+  type IpcMainInvokeEvent,
+  type WebContents
+} from 'electron'
 import { mkdirSync, statSync, readFileSync } from 'node:fs'
 import { isAbsolute, join } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
 import { pathToFileURL } from 'node:url'
 import { autoUpdater } from 'electron-updater'
 import { creerMiseAJour } from './miseAJour.ts'
-import type { BrowserState, BrowserTab, DataIncident, RestoreAnswer, SidebarAction, SidebarState, SuggestionsState, ThemeChoice } from '../shared/types'
+import type {
+  BrowserState,
+  BrowserTab,
+  DataIncident,
+  RestoreAnswer,
+  SidebarAction,
+  SidebarState,
+  SuggestionsState,
+  ThemeChoice
+} from '../shared/types'
 import { importerFavoris, lireFavorisHtml, TAILLE_MAX_IMPORT } from './donnees/importFavoris.ts'
-import { TAILLE_MAX_FICHIER, construireExport, ecrireExport, importerExport, lireExport } from './donnees/exportDonnees.ts'
+import {
+  TAILLE_MAX_FICHIER,
+  construireExport,
+  ecrireExport,
+  importerExport,
+  lireExport
+} from './donnees/exportDonnees.ts'
 import { ouvrirBaseOuRecuperer, type IncidentBase } from './donnees/base.ts'
 import { estAboutBlank, retourPermis } from './aboutBlank.ts'
-import { numeroDOnglet, ongletNumero, ongletRelatif, pasDEspace, pasDOnglet, rechargement } from './navigationClavier.ts'
+import {
+  numeroDOnglet,
+  ongletNumero,
+  ongletRelatif,
+  pasDEspace,
+  pasDOnglet,
+  rechargement
+} from './navigationClavier.ts'
 import { ongletVoisin } from './voisin.ts'
 import { depiler, empiler } from './ongletsFermes.ts'
 import { borner } from './bornes.ts'
@@ -20,8 +57,27 @@ import { autoriserPopups, popupsAutorises } from './donnees/popupsSites.ts'
 import { palierZoom, sensDuZoom, type SensZoom } from './zoom.ts'
 import { ecrireZoomSite, hoteZoom, lireZoomSite } from './donnees/zoomSites.ts'
 import { ecrirePermissionSite, lirePermissionSite } from './donnees/permissionsSites.ts'
-import { REPONSES_PERMISSION, decisionPermissions, permissionsDemandees, type DemandePermission, type PermissionSite, type ReponsePermission } from '../shared/permissions.ts'
-import { DUREE_FERMETURE, DUREE_OUVERTURE, RAYON_APERCU, pageApercu, placerApercu, placerInfobulle, scriptApercu, scriptOuverture, texteApercu, texteInfobulle, type CoteApercu } from './apercuUrl.ts'
+import {
+  REPONSES_PERMISSION,
+  decisionPermissions,
+  permissionsDemandees,
+  type DemandePermission,
+  type PermissionSite,
+  type ReponsePermission
+} from '../shared/permissions.ts'
+import {
+  DUREE_FERMETURE,
+  DUREE_OUVERTURE,
+  RAYON_APERCU,
+  pageApercu,
+  placerApercu,
+  placerInfobulle,
+  scriptApercu,
+  scriptOuverture,
+  texteApercu,
+  texteInfobulle,
+  type CoteApercu
+} from './apercuUrl.ts'
 import { placerRecherche, texteRecherche } from './recherche.ts'
 import { entreeMenuPageValide, type EntreeMenuPage, type MenuPage } from '../shared/menuPage.ts'
 import { adresseWeb, entreesMenuPage } from './menuPage.ts'
@@ -30,22 +86,85 @@ import { basculerPartage, dansPartage, scinder, type Partage } from '../shared/v
 import { construirePalette, type ActionPalette, type EntreePalette } from '../shared/palette.ts'
 import { estActionOnglet, ongletsAFermer, type ActionOnglet } from '../shared/menuOnglet.ts'
 import { MOTEUR_DEFAUT, choixMoteurValide, modeleDe, urlRecherche, type ChoixMoteur } from '../shared/moteurs.ts'
-import { SUGGESTIONS_MAX, construireSuggestions, deplacerSelection, indexValide, texteSuggestion } from './suggestions.ts'
+import {
+  SUGGESTIONS_MAX,
+  construireSuggestions,
+  deplacerSelection,
+  indexValide,
+  texteSuggestion
+} from './suggestions.ts'
 import { faviconAcceptable } from './favicon.ts'
 import { lireUrlDev } from './urlDev.ts'
 import { creerEcritureDifferee } from './donnees/ecritureDifferee.ts'
 import { noterFermetureNormale, noterOuverture } from './donnees/fermeture.ts'
 import { sauvegarderBase } from './donnees/sauvegarde.ts'
-import { basculerFavori, creerDossier, deplacerFavori, estFavori, favorisGrille, listerFavoris, renommerDossier, retirerFavori, supprimerDossier } from './donnees/favoris.ts'
-import { adresseHistorique, ajouterVisite, effacerHistorique, lirePage, listerHistorique, nommerPage, rechercherPages } from './donnees/historique.ts'
-import { PERIODES_EFFACEMENT, TYPES_EFFACEMENT, debutEffacement, type PeriodeEffacement, type TypeEffacement } from '../shared/historique.ts'
+import {
+  basculerFavori,
+  creerDossier,
+  deplacerFavori,
+  estFavori,
+  favorisGrille,
+  listerFavoris,
+  renommerDossier,
+  retirerFavori,
+  supprimerDossier
+} from './donnees/favoris.ts'
+import {
+  adresseHistorique,
+  ajouterVisite,
+  effacerHistorique,
+  lirePage,
+  listerHistorique,
+  nommerPage,
+  rechercherPages
+} from './donnees/historique.ts'
+import {
+  PERIODES_EFFACEMENT,
+  TYPES_EFFACEMENT,
+  debutEffacement,
+  type PeriodeEffacement,
+  type TypeEffacement
+} from '../shared/historique.ts'
 import { ETAT_BARRE_INITIAL, borneLargeurBarre, largeurBarre, transitionBarre } from '../shared/barre.ts'
-import { THEMES, ecrireBarre, ecrireMoteur, ecrireReglages, ecrireTheme, lireBarre, lireMoteur, lireReglages, lireTheme } from './donnees/preferences.ts'
+import {
+  THEMES,
+  ecrireBarre,
+  ecrireMoteur,
+  ecrireReglages,
+  ecrireTheme,
+  lireBarre,
+  lireMoteur,
+  lireReglages,
+  lireTheme
+} from './donnees/preferences.ts'
 import { CHEMIN_LONGUEUR_MAX, REGLAGES_DEFAUT, accueilValide, type Reglages } from '../shared/reglages.ts'
-import { actifsParEspace, lireSession, ongletsARestaurer, rattacherAuxEspaces, sauverSession, type OngletSauve } from './donnees/session.ts'
+import {
+  actifsParEspace,
+  lireSession,
+  ongletsARestaurer,
+  rattacherAuxEspaces,
+  sauverSession,
+  type OngletSauve
+} from './donnees/session.ts'
 import { dossierAccepte } from '../shared/dossiersOnglets.ts'
-import { creerDossierOnglet, lireDossiersOnglets, renommerDossierOnglet, replierDossierOnglet, supprimerDossierOnglet, type DossierOngletEspace } from './donnees/dossiersOnglets.ts'
-import { creerEspace, ecrireEspaceActif, lireEspaceActif, lireEspaces, modifierEspace, ordonnerEspaces, semerEspaces, supprimerEspace } from './donnees/espaces.ts'
+import {
+  creerDossierOnglet,
+  lireDossiersOnglets,
+  renommerDossierOnglet,
+  replierDossierOnglet,
+  supprimerDossierOnglet,
+  type DossierOngletEspace
+} from './donnees/dossiersOnglets.ts'
+import {
+  creerEspace,
+  ecrireEspaceActif,
+  lireEspaceActif,
+  lireEspaces,
+  modifierEspace,
+  ordonnerEspaces,
+  semerEspaces,
+  supprimerEspace
+} from './donnees/espaces.ts'
 import { champsNouvelEspace, ordreApresDeplacement, type CouleurEspace, type Espace } from '../shared/espaces.ts'
 import { creerGestionnaire } from './gestionnaireTelechargements.ts'
 import { ARCHIVE_GARDEE_MAX, delaiArchivageValide, epinglesDabord, ongletsAArchiver } from '../shared/archivage.ts'
@@ -54,7 +173,9 @@ import { archiver, listerArchive, retirerDeLArchive } from './donnees/archive.ts
 
 const CHEMIN_INTERFACE = join(__dirname, '../renderer/index.html')
 // Icône lue sur disque : resources/ en développement, extraResources de l'installeur (hors app.asar) une fois empaquetée.
-const CHEMIN_ICONE = app.isPackaged ? join(process.resourcesPath, 'icone.ico') : join(__dirname, '../../resources/icone.ico')
+const CHEMIN_ICONE = app.isPackaged
+  ? join(process.resourcesPath, 'icone.ico')
+  : join(__dirname, '../../resources/icone.ico')
 
 type TabRecord = {
   data: BrowserTab
@@ -92,7 +213,7 @@ let echapAvale = false
 let suggestions: SuggestionsState | null = null
 // Menu contextuel d'une page (ARB-40) : tenu ici avec l'adresse du lien et de l'image du clic, que l'interface ne voit
 // pas ; elle n'envoie que l'entrée choisie. Fermé avec l'overlay.
-let menuPage: (MenuPage & { tabId: string, lien: string, image: string, pageX: number, pageY: number }) | null = null
+let menuPage: (MenuPage & { tabId: string; lien: string; image: string; pageX: number; pageY: number }) | null = null
 // Palette de commandes (ARB-67) : les lignes proposées, avec la clé (onglet, adresse, action) que l'interface ne choisit
 // que par index. null tant qu'elle est fermée ; fermée avec l'overlay.
 let palette: EntreePalette[] | null = null
@@ -159,7 +280,11 @@ let nextTabNumber = 1
 // Ids des onglets de l'espace affiché, dans leur ordre : ceux que la barre, Ctrl+Tab, Ctrl+1…9 et la fermeture parcourent.
 // Les épinglés d'abord (ARB-64), chaque groupe dans l'ordre de la Map.
 function ongletsVisibles(): string[] {
-  return epinglesDabord([...tabs.values()].filter((tab) => tab.espace === espaceActif).map((tab) => ({ id: tab.data.id, epingle: !!tab.data.pinned }))).map((tab) => tab.id)
+  return epinglesDabord(
+    [...tabs.values()]
+      .filter((tab) => tab.espace === espaceActif)
+      .map((tab) => ({ id: tab.data.id, epingle: !!tab.data.pinned }))
+  ).map((tab) => tab.id)
 }
 // Bornes de la vue web avant que l'interface envoie les siennes : pleine largeur sous la barre de contrôle (48 px, --size-control-bar),
 // la barre latérale étant masquée à l'ouverture (ARB-33).
@@ -183,7 +308,10 @@ const ADRESSES_MAX_PAR_LANCEMENT = 10
 function adressesLancees(valeurs: unknown): string[] {
   if (!Array.isArray(valeurs)) return []
   return valeurs
-    .filter((valeur): valeur is string => typeof valeur === 'string' && /^https?:\/\/[^\s"]+$/i.test(valeur) && URL.canParse(valeur))
+    .filter(
+      (valeur): valeur is string =>
+        typeof valeur === 'string' && /^https?:\/\/[^\s"]+$/i.test(valeur) && URL.canParse(valeur)
+    )
     .slice(0, ADRESSES_MAX_PAR_LANCEMENT)
 }
 
@@ -236,7 +364,9 @@ function stateSnapshot(): BrowserState {
     favorite: pageActiveEstFavorite(),
     favorites: grilleFavoris(),
     popupsBloquees: activeRecord()?.popupsBloquees ?? 0,
-    folders: dossiersOnglets.filter((dossier) => dossier.espace === espaceActif).map(({ id, nom, replie }) => ({ id, nom, replie })),
+    folders: dossiersOnglets
+      .filter((dossier) => dossier.espace === espaceActif)
+      .map(({ id, nom, replie }) => ({ id, nom, replie })),
     split: partage ? [partage.gauche, partage.droite] : null
   }
 }
@@ -297,8 +427,9 @@ function basculerFavoriActif() {
 // Les vues de l'interface : la fenêtre (barre d'outils, zone de page), la barre latérale et la recherche dans la page.
 function contenusInterface(): WebContents[] {
   const fenetre = mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents : undefined
-  return [fenetre, barreView?.webContents, rechercheView?.webContents, avisView?.webContents]
-    .filter((contenu): contenu is WebContents => !!contenu && !contenu.isDestroyed())
+  return [fenetre, barreView?.webContents, rechercheView?.webContents, avisView?.webContents].filter(
+    (contenu): contenu is WebContents => !!contenu && !contenu.isDestroyed()
+  )
 }
 
 function envoyerAuxInterfaces(canal: string, valeur: unknown) {
@@ -321,7 +452,9 @@ const telechargements = creerGestionnaire({
       try {
         mkdirSync(reglages.dossierTelechargements, { recursive: true })
         return reglages.dossierTelechargements
-      } catch { /* repli ci-dessous */ }
+      } catch {
+        /* repli ci-dessous */
+      }
     }
     const dossier = app.getPath('downloads')
     mkdirSync(dossier, { recursive: true })
@@ -329,7 +462,11 @@ const telechargements = creerGestionnaire({
   },
   base: () => base,
   diffuser: (liste) => envoyerAuxInterfaces('browser:downloads', liste),
-  ouvrir: (chemin) => { void shell.openPath(chemin).then((erreur) => { if (erreur) console.error('Ouverture du téléchargement impossible :', erreur) }) },
+  ouvrir: (chemin) => {
+    void shell.openPath(chemin).then((erreur) => {
+      if (erreur) console.error('Ouverture du téléchargement impossible :', erreur)
+    })
+  },
   reveler: (chemin) => shell.showItemInFolder(chemin)
 })
 
@@ -392,7 +529,10 @@ function finirPleinEcranHtml(contenu: WebContents) {
 }
 
 function entrerPleinEcranPage(view: WebContentsView) {
-  if (!mainWindow || mainWindow.isDestroyed() || view !== activeRecord()?.view) { finirPleinEcranHtml(view.webContents); return }
+  if (!mainWindow || mainWindow.isDestroyed() || view !== activeRecord()?.view) {
+    finirPleinEcranHtml(view.webContents)
+    return
+  }
   pleinEcranPage = view
   fenetreDejaPleinEcran = mainWindow.isFullScreen()
   if (!fenetreDejaPleinEcran) mainWindow.setFullScreen(true)
@@ -473,8 +613,15 @@ function enregistrerBarre() {
 const sauvegardeBarre = creerEcritureDifferee(enregistrerBarre, 300, 2000)
 
 function appliquerBarre(suivant: SidebarState) {
-  if (suivant.open === barre.open && suivant.pinned === barre.pinned && suivant.compact === barre.compact && suivant.width === barre.width) return
-  const persistant = suivant.pinned !== barre.pinned || suivant.compact !== barre.compact || suivant.width !== barre.width
+  if (
+    suivant.open === barre.open &&
+    suivant.pinned === barre.pinned &&
+    suivant.compact === barre.compact &&
+    suivant.width === barre.width
+  )
+    return
+  const persistant =
+    suivant.pinned !== barre.pinned || suivant.compact !== barre.compact || suivant.width !== barre.width
   barre = suivant
   if (persistant) sauvegardeBarre.demander()
   placerBarre()
@@ -529,7 +676,11 @@ function fermerOverlay() {
   if (!mainWindow || mainWindow.isDestroyed() || barre.pinned) return
   const pointeur = screen.getCursorScreenPoint()
   const zone = mainWindow.getContentBounds()
-  const surLaBarre = pointeur.x >= zone.x && pointeur.x < zone.x + largeurBarre({ ...barre, open: true }) &&pointeur.y >= zone.y && pointeur.y < zone.y + zone.height
+  const surLaBarre =
+    pointeur.x >= zone.x &&
+    pointeur.x < zone.x + largeurBarre({ ...barre, open: true }) &&
+    pointeur.y >= zone.y &&
+    pointeur.y < zone.y + zone.height
   if (surLaBarre) return
   agirSurBarre('hide')
   // La barre retirée gardait le clavier (clic droit, menu) : il revient à la page, sauf s'il est dans le champ d'adresse.
@@ -603,7 +754,10 @@ function ouvrirMenuPage(tabId: string, params: Electron.ContextMenuParams) {
   const pageY = Number.isFinite(params.y) ? Math.max(0, Math.min(params.y, height)) : 0
   menuPage = { tabId, x: x + pageX, y: y + pageY, entrees, lien: params.linkURL, image: params.srcURL, pageX, pageY }
   ouvrirOverlay()
-  if (!overlayOuvert) { menuPage = null; return }
+  if (!overlayOuvert) {
+    menuPage = null
+    return
+  }
   envoyerAuxInterfaces('browser:page-menu', menuPage && { x: menuPage.x, y: menuPage.y, entrees: menuPage.entrees })
 }
 
@@ -614,12 +768,16 @@ function agirSurMenuPage(entree: EntreeMenuPage) {
   fermerOverlay()
   if (!wc || wc.isDestroyed()) return
   // Les actions de navigation visent l'onglet du clic, même si un autre est devenu actif pendant que le menu était ouvert.
-  if (entree === 'retour') { if (wc.navigationHistory.canGoBack()) wc.navigationHistory.goBack() }
-  else if (entree === 'avancer') { if (wc.navigationHistory.canGoForward()) wc.navigationHistory.goForward() }
-  else if (entree === 'recharger') wc.reload()
+  if (entree === 'retour') {
+    if (wc.navigationHistory.canGoBack()) wc.navigationHistory.goBack()
+  } else if (entree === 'avancer') {
+    if (wc.navigationHistory.canGoForward()) wc.navigationHistory.goForward()
+  } else if (entree === 'recharger') wc.reload()
   else if (entree === 'copier') wc.copy()
-  else if (entree === 'ouvrir-lien') { createTab(menu.lien); activeRecord()?.view.webContents.focus() }
-  else if (entree === 'copier-lien') clipboard.writeText(menu.lien)
+  else if (entree === 'ouvrir-lien') {
+    createTab(menu.lien)
+    activeRecord()?.view.webContents.focus()
+  } else if (entree === 'copier-lien') clipboard.writeText(menu.lien)
   else if (entree === 'enregistrer-image') wc.downloadURL(menu.image)
   else wc.inspectElement(menu.pageX, menu.pageY)
 }
@@ -627,8 +785,8 @@ function agirSurMenuPage(entree: EntreeMenuPage) {
 // Palette de commandes (ARB-67) : onglets de l'espace affiché, favoris, pages de l'historique et actions qui correspondent
 // au texte. Sans texte, l'historique n'est pas lu.
 function entreesPalette(texte: string) {
-  let favoris: { url: string, titre: string }[] = []
-  let pages: { url: string, titre: string }[] = []
+  let favoris: { url: string; titre: string }[] = []
+  let pages: { url: string; titre: string }[] = []
   if (base) {
     try {
       favoris = texte ? favorisGrille(base, 500) : []
@@ -637,8 +795,14 @@ function entreesPalette(texte: string) {
       console.error('Favoris ou historique non lus pour la palette :', erreur)
     }
   }
-  const ouverts = [...tabs.values()].filter((tab) => tab.espace === espaceActif)
-    .map(({ data }) => ({ id: data.id, titre: data.title, url: data.url, adresse: adresseHistorique(data.url) ?? data.url }))
+  const ouverts = [...tabs.values()]
+    .filter((tab) => tab.espace === espaceActif)
+    .map(({ data }) => ({
+      id: data.id,
+      titre: data.title,
+      url: data.url,
+      adresse: adresseHistorique(data.url) ?? data.url
+    }))
   return construirePalette(texte, ouverts, favoris, pages)
 }
 
@@ -648,7 +812,10 @@ function ouvrirPalette() {
   if (overlayOuvert || !barreView) return
   palette = entreesPalette('')
   ouvrirOverlay()
-  if (!overlayOuvert) { palette = null; return }
+  if (!overlayOuvert) {
+    palette = null
+    return
+  }
   barreView.webContents.focus()
   envoyerAuxInterfaces('browser:palette', palette)
 }
@@ -659,15 +826,23 @@ function choisirPalette(index: number, cle: string) {
   if (!entree || entree.cle !== cle) return
   fermerOverlay()
   if (entree.kind === 'onglet') activerAutreOnglet(entree.cle)
-  else if (entree.kind === 'favori') { ouvrirFavori(entree.cle); activeRecord()?.view.webContents.focus() }
-  else if (entree.kind === 'historique') { if (adresseWeb(entree.cle)) createTab(entree.cle); activeRecord()?.view.webContents.focus() }
-  else actionPalette(entree.cle as ActionPalette)
+  else if (entree.kind === 'favori') {
+    ouvrirFavori(entree.cle)
+    activeRecord()?.view.webContents.focus()
+  } else if (entree.kind === 'historique') {
+    if (adresseWeb(entree.cle)) createTab(entree.cle)
+    activeRecord()?.view.webContents.focus()
+  } else actionPalette(entree.cle as ActionPalette)
 }
 
 function actionPalette(action: ActionPalette) {
-  if (action === 'nouvel-onglet') { createTab(); focaliserAdresse() }
-  else if (action === 'rouvrir-onglet') { rouvrirOnglet(); activeRecord()?.view.webContents.focus() }
-  else if (action === 'theme') appliquerTheme(themeEffectif() === 'dark' ? 'light' : 'dark')
+  if (action === 'nouvel-onglet') {
+    createTab()
+    focaliserAdresse()
+  } else if (action === 'rouvrir-onglet') {
+    rouvrirOnglet()
+    activeRecord()?.view.webContents.focus()
+  } else if (action === 'theme') appliquerTheme(themeEffectif() === 'dark' ? 'light' : 'dark')
   else agirSurBarre('toggle-pin')
 }
 
@@ -761,12 +936,22 @@ function dessinerApercu() {
 
 function placerApercuVue() {
   if (!apercuView || !apercuVisible) return
-  apercuView.setBounds(apercuMode === 'infobulle' && apercuEmplacement ? apercuEmplacement : placerApercu(rectanglePage(), apercuTexte, apercuCote))
+  apercuView.setBounds(
+    apercuMode === 'infobulle' && apercuEmplacement
+      ? apercuEmplacement
+      : placerApercu(rectanglePage(), apercuTexte, apercuCote)
+  )
 }
 
 function retirerApercu() {
-  if (apercuRetrait) { clearTimeout(apercuRetrait); apercuRetrait = null }
-  if (infobulleSecours) { clearTimeout(infobulleSecours); infobulleSecours = null }
+  if (apercuRetrait) {
+    clearTimeout(apercuRetrait)
+    apercuRetrait = null
+  }
+  if (infobulleSecours) {
+    clearTimeout(infobulleSecours)
+    infobulleSecours = null
+  }
   apercuTexte = ''
   apercuCote = 'gauche'
   apercuEmplacement = null
@@ -790,11 +975,18 @@ function afficherInfobulle(texte: unknown, ancre: unknown, origine: { x: number;
   const rect = borner(brut, fenetre.width, fenetre.height)
   const libelle = texteInfobulle(texte)
   if (!rect || !libelle) return retirerInfobulle()
-  if (apercuRetrait) { clearTimeout(apercuRetrait); apercuRetrait = null }
+  if (apercuRetrait) {
+    clearTimeout(apercuRetrait)
+    apercuRetrait = null
+  }
   apercuView ??= creerApercu()
   apercuMode = 'infobulle'
   apercuTexte = libelle
-  apercuEmplacement = placerInfobulle({ ...rect, x: rect.x + origine.x, y: rect.y + origine.y }, { x: 0, y: 0, width: fenetre.width, height: fenetre.height }, libelle)
+  apercuEmplacement = placerInfobulle(
+    { ...rect, x: rect.x + origine.x, y: rect.y + origine.y },
+    { x: 0, y: 0, width: fenetre.width, height: fenetre.height },
+    libelle
+  )
   apercuVisible = true
   dessinerApercu()
   apercuView.setBounds(apercuEmplacement)
@@ -802,7 +994,10 @@ function afficherInfobulle(texte: unknown, ancre: unknown, origine: { x: number;
   mainWindow.contentView.addChildView(apercuView)
   apercuView.webContents.executeJavaScript(scriptOuverture(true, dureeFondu(DUREE_OUVERTURE))).catch(() => {})
   if (infobulleSecours) clearTimeout(infobulleSecours)
-  infobulleSecours = setTimeout(() => { infobulleSecours = null; retirerInfobulle() }, DELAI_SECOURS_INFOBULLE)
+  infobulleSecours = setTimeout(() => {
+    infobulleSecours = null
+    retirerInfobulle()
+  }, DELAI_SECOURS_INFOBULLE)
 }
 
 // Fermeture en fondu (150 ms) puis retrait de la vue ; `immediat` quand la barre ou un overlay va la recouvrir.
@@ -812,14 +1007,20 @@ function retirerInfobulle(immediat = false) {
   if (immediat || reglages.animationsReduites) return retirerApercu()
   if (apercuRetrait) return
   vue.webContents.executeJavaScript(scriptOuverture(false, DUREE_FERMETURE)).catch(() => {})
-  apercuRetrait = setTimeout(() => { apercuRetrait = null; retirerApercu() }, DUREE_FERMETURE)
+  apercuRetrait = setTimeout(() => {
+    apercuRetrait = null
+    retirerApercu()
+  }, DUREE_FERMETURE)
 }
 
 function afficherApercu(url: unknown) {
   if (!mainWindow || mainWindow.isDestroyed()) return
   const texte = texteApercu(url)
   if (!texte) return retirerApercu()
-  if (apercuRetrait) { clearTimeout(apercuRetrait); apercuRetrait = null }
+  if (apercuRetrait) {
+    clearTimeout(apercuRetrait)
+    apercuRetrait = null
+  }
   // Venant d'une infobulle, la vue est déjà affichée mais pas au rang de l'aperçu : la barre doit repasser au-dessus.
   const dejaEnUrl = apercuVisible && apercuMode === 'url'
   apercuMode = 'url'
@@ -850,7 +1051,9 @@ function creerRecherche(): WebContentsView {
   vue.setBorderRadius(RAYON_PAGE)
   verrouillerInterface(vue.webContents)
   // Le focus ne se prend que dans une fenêtre active : sinon Windows la ramènerait au premier plan (comme ARB-112).
-  vue.webContents.on('did-finish-load', () => { if (rechercheVisible && mainWindow?.isFocused()) focaliserRecherche(true) })
+  vue.webContents.on('did-finish-load', () => {
+    if (rechercheVisible && mainWindow?.isFocused()) focaliserRecherche(true)
+  })
   // Un rendu planté ne se recharge pas : la vue est jetée, la prochaine ouverture en recrée une.
   vue.webContents.on('render-process-gone', () => {
     fermerRecherche()
@@ -942,7 +1145,7 @@ function retirerAvis() {
 }
 
 function afficherAvis() {
-  if (!mainWindow || mainWindow.isDestroyed() || !activeTabId || !(activeRecord()?.popupsBloquees)) return
+  if (!mainWindow || mainWindow.isDestroyed() || !activeTabId || !activeRecord()?.popupsBloquees) return
   avisView ??= creerAvis()
   avisOnglet = activeTabId
   avisVisible = true
@@ -1048,28 +1251,50 @@ function optionsPopup(features: string): Electron.BrowserWindowConstructorOption
   return {
     ...taille,
     // Electron fusionne les features de la page (x, y, frame, alwaysOnTop, modal…) : on impose les nôtres.
-    ...(b ? { x: Math.round(b.x + (b.width - taille.width) / 2), y: Math.round(b.y + (b.height - taille.height) / 2) } : { center: true }),
-    frame: true, alwaysOnTop: false, modal: false, fullscreen: false, fullscreenable: false, kiosk: false, transparent: false,
+    ...(b
+      ? { x: Math.round(b.x + (b.width - taille.width) / 2), y: Math.round(b.y + (b.height - taille.height) / 2) }
+      : { center: true }),
+    frame: true,
+    alwaysOnTop: false,
+    modal: false,
+    fullscreen: false,
+    fullscreenable: false,
+    kiosk: false,
+    transparent: false,
     parent: mainWindow ?? undefined,
     icon: CHEMIN_ICONE,
     autoHideMenuBar: true,
     backgroundColor: FOND_FENETRE[themeEffectif()],
-    webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true, session: session.defaultSession }
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      webSecurity: true,
+      session: session.defaultSession
+    }
   }
 }
 
 function suivrePopup(fenetre: BrowserWindow) {
   fenetre.removeMenu()
-  fenetre.once('closed', () => { popupsOuvertes = Math.max(0, popupsOuvertes - 1) })
+  fenetre.once('closed', () => {
+    popupsOuvertes = Math.max(0, popupsOuvertes - 1)
+  })
   const contenu = fenetre.webContents
   contenu.setWindowOpenHandler(() => ({ action: 'deny' }))
-  contenu.on('will-navigate', (event, url) => { if (!/^https?:\/\//i.test(url)) event.preventDefault() })
+  contenu.on('will-navigate', (event, url) => {
+    if (!/^https?:\/\//i.test(url)) event.preventDefault()
+  })
   // Pas de barre d'adresse : l'hôte réel précède le titre, que la page contrôle, contre l'usurpation d'une fenêtre de connexion.
   contenu.on('page-title-updated', (event, titre) => {
     event.preventDefault()
     if (fenetre.isDestroyed()) return // un titre peut arriver après la fermeture de la pop-up
     let hote = ''
-    try { hote = new URL(contenu.getURL()).host } catch { /* adresse pas encore connue */ }
+    try {
+      hote = new URL(contenu.getURL()).host
+    } catch {
+      /* adresse pas encore connue */
+    }
     fenetre.setTitle(hote ? `${hote} — ${titre}` : titre)
   })
 }
@@ -1197,10 +1422,15 @@ function actionDuRaccourci(input: Electron.Input): (() => void) | undefined {
   const pas = pasDOnglet(input)
   if (pas) return () => activerAutreOnglet(ongletRelatif(ongletsVisibles(), activeTabId, pas))
   const pasEspace = pasDEspace(input)
-  if (pasEspace) return () => {
-    const cible = ongletRelatif(espaces.map((espace) => espace.id), espaceActif, pasEspace)
-    if (cible !== null) changerEspace(cible)
-  }
+  if (pasEspace)
+    return () => {
+      const cible = ongletRelatif(
+        espaces.map((espace) => espace.id),
+        espaceActif,
+        pasEspace
+      )
+      if (cible !== null) changerEspace(cible)
+    }
   const numero = numeroDOnglet(input)
   if (numero) return () => activerAutreOnglet(ongletNumero(ongletsVisibles(), numero))
   const recharge = rechargement(input, touche)
@@ -1208,15 +1438,24 @@ function actionDuRaccourci(input: Electron.Input): (() => void) | undefined {
   if (input.control && !input.alt && !input.meta) {
     if (input.shift) {
       if (touche === 'b') return () => agirSurBarre('toggle-pin')
-      if (touche === 't') return () => { rouvrirOnglet(); activeRecord()?.view.webContents.focus() }
+      if (touche === 't')
+        return () => {
+          rouvrirOnglet()
+          activeRecord()?.view.webContents.focus()
+        }
       return undefined
     }
     // Comme Chrome : le nouvel onglet donne la main à la barre d'adresse, la fermeture à l'onglet qui devient actif.
-    if (touche === 't') return () => { createTab(); focaliserAdresse() }
-    if (touche === 'w') return () => {
-      if (activeTabId) closeTab(activeTabId)
-      activeRecord()?.view.webContents.focus()
-    }
+    if (touche === 't')
+      return () => {
+        createTab()
+        focaliserAdresse()
+      }
+    if (touche === 'w')
+      return () => {
+        if (activeTabId) closeTab(activeTabId)
+        activeRecord()?.view.webContents.focus()
+      }
     if (touche === 'l') return focaliserAdresse
     if (touche === 'f') return ouvrirRecherche
     if (touche === 'k') return ouvrirPalette
@@ -1270,11 +1509,16 @@ function chargerOnglet(record: TabRecord) {
 
 // Un onglet restauré (ARB-45) s'ouvre en arrière-plan avec son titre enregistré ; sa page attend d'être affichée.
 // Un onglet s'ouvre dans l'espace affiché ; un onglet restauré garde le sien (ARB-61).
-function createTab(initialUrl = reglages.accueil, restaure?: { titre: string, espace?: number, epingle?: boolean, activite?: number, dossier?: number }): string {
+function createTab(
+  initialUrl = reglages.accueil,
+  restaure?: { titre: string; espace?: number; epingle?: boolean; activite?: number; dossier?: number }
+): string {
   const id = `tab-${nextTabNumber++}`
-  const espaceDeLOnglet = restaure ? restaure.espace ?? null : espaceActif
+  const espaceDeLOnglet = restaure ? (restaure.espace ?? null) : espaceActif
   // Le dossier d'un onglet restauré doit exister dans l'espace de l'onglet (l'onglet a pu changer d'espace) ; jamais épinglé.
-  const dossier = dossierAccepte(dossiersOnglets, restaure?.dossier, espaceDeLOnglet, !!restaure?.epingle) ? restaure?.dossier : undefined
+  const dossier = dossierAccepte(dossiersOnglets, restaure?.dossier, espaceDeLOnglet, !!restaure?.epingle)
+    ? restaure?.dossier
+    : undefined
   const view = nouvelleVue()
 
   const record: TabRecord = {
@@ -1350,7 +1594,10 @@ function brancherOnglet(id: string, record: TabRecord) {
   // Résultat de la recherche (ARB-70) : seule la mise à jour finale compte, les autres arrivent avec un compte partiel.
   view.webContents.on('found-in-page', (_event, resultat) => {
     if (!resultat.finalUpdate || view.webContents !== rechercheContenu || !rechercheView) return
-    rechercheView.webContents.send('browser:find-result', { active: resultat.activeMatchOrdinal, total: resultat.matches })
+    rechercheView.webContents.send('browser:find-result', {
+      active: resultat.activeMatchOrdinal,
+      total: resultat.matches
+    })
   })
   // État Error : le chargement de la page a échoué. -3 (ERR_ABORTED) est une navigation interrompue, pas une panne.
   view.webContents.on('did-fail-load', (_event, code, _desc, _url, cadrePrincipal) => {
@@ -1408,7 +1655,8 @@ function brancherOnglet(id: string, record: TabRecord) {
     if (estGeste(entree.type)) dernierGeste = performance.now()
     // Vue partagée (ARB-72) : un clic dans l'autre page la rend active (elle a déjà le clavier).
     // shortcut: pas d'activation pendant le plein écran d'une page (elle quitterait le plein écran), l'autre moitié reste attachée, à revoir si la vidéo en vue partagée gêne.
-    if (entree.type === 'mouseDown' && !pleinEcranPage && id !== activeTabId && dansPartage(partage, id)) activerAutreOnglet(id)
+    if (entree.type === 'mouseDown' && !pleinEcranPage && id !== activeTabId && dansPartage(partage, id))
+      activerAutreOnglet(id)
   })
   view.webContents.setWindowOpenHandler(({ url, features, disposition }) => {
     // Une page d'un espace masqué n'ouvre rien : l'onglet surgirait dans l'espace affiché (ARB-61).
@@ -1459,9 +1707,19 @@ function rouvrirSession(session: OngletSauve[]): boolean {
   if (!onglets.length) return false
   // Chaque onglet retrouve son espace (ARB-61) ; l'onglet actif de chaque espace est celui que le changement d'espace
   // réactivera, celui de l'espace affiché l'est tout de suite.
-  const rattaches = rattacherAuxEspaces(onglets, espaces.map((espace) => espace.id))
+  const rattaches = rattacherAuxEspaces(
+    onglets,
+    espaces.map((espace) => espace.id)
+  )
   // L'activité écrite n'est pas rendue : le temps où Arbalète était fermée ne compte pas comme du temps laissé de côté.
-  const ids = rattaches.map((onglet) => createTab(onglet.url, { titre: onglet.titre, espace: onglet.espace, epingle: onglet.epingle, dossier: onglet.dossier }))
+  const ids = rattaches.map((onglet) =>
+    createTab(onglet.url, {
+      titre: onglet.titre,
+      espace: onglet.espace,
+      epingle: onglet.epingle,
+      dossier: onglet.dossier
+    })
+  )
   for (const [espace, indice] of actifsParEspace(rattaches)) dernierActif.set(espace ?? null, ids[indice])
   const restaure = dernierActif.get(espaceActif)
   if (restaure && tabs.get(restaure)?.espace === espaceActif) activeTabId = restaure
@@ -1515,7 +1773,9 @@ function closeTab(id: string, memoriser = true) {
   if (!record) return
   if (memoriser) ongletsFermes = empiler(ongletsFermes, record.data.url)
   if (mainWindow && !mainWindow.isDestroyed()) {
-    try { mainWindow.contentView.removeChildView(record.view) } catch {}
+    try {
+      mainWindow.contentView.removeChildView(record.view)
+    } catch {}
   }
   record.view.webContents.close()
   const ordre = ongletsVisibles()
@@ -1558,7 +1818,11 @@ function actionOnglet(id: string, action: ActionOnglet) {
     setActiveView()
     broadcastState()
   } else {
-    for (const autre of ongletsAFermer([...tabs.values()].filter((t) => t.espace === record.espace).map((t) => t.data), id)) closeTab(autre)
+    for (const autre of ongletsAFermer(
+      [...tabs.values()].filter((t) => t.espace === record.espace).map((t) => t.data),
+      id
+    ))
+      closeTab(autre)
     activerOnglet(id)
   }
 }
@@ -1569,21 +1833,32 @@ function actionOnglet(id: string, action: ActionOnglet) {
 function archiverAnciens() {
   if (!base) return
   const maintenant = Date.now()
-  const archivables = ongletsAArchiver([...tabs.values()].map(({ data, espace, activite }) => ({
-    id: data.id,
-    epingle: !!data.pinned,
-    affiche: data.id === (espace === espaceActif ? activeTabId : dernierActif.get(espace ?? null)) || dansPartage(partage, data.id),
-    sonore: !!data.audible,
-    activite
-  })), maintenant, reglages.archivageHeures).filter((id) => adresseWeb(tabs.get(id)!.data.url))
+  const archivables = ongletsAArchiver(
+    [...tabs.values()].map(({ data, espace, activite }) => ({
+      id: data.id,
+      epingle: !!data.pinned,
+      affiche:
+        data.id === (espace === espaceActif ? activeTabId : dernierActif.get(espace ?? null)) ||
+        dansPartage(partage, data.id),
+      sonore: !!data.audible,
+      activite
+    })),
+    maintenant,
+    reglages.archivageHeures
+  )
+    .filter((id) => adresseWeb(tabs.get(id)!.data.url))
     // Au plus ce que l'archive garde : le surplus attend la passe suivante au lieu d'être fermé puis purgé.
     .slice(0, ARCHIVE_GARDEE_MAX)
   if (!archivables.length) return
   try {
-    archiver(base, archivables.map((id) => {
-      const { data, espace } = tabs.get(id)!
-      return { url: data.url, titre: data.title, espace }
-    }), maintenant)
+    archiver(
+      base,
+      archivables.map((id) => {
+        const { data, espace } = tabs.get(id)!
+        return { url: data.url, titre: data.title, espace }
+      }),
+      maintenant
+    )
   } catch (erreur) {
     console.error('Onglets non archivés :', erreur)
     return
@@ -1605,20 +1880,32 @@ function endormir(id: string) {
   record.view = nouvelleVue()
   record.chargee = false
   record.popupsBloquees = 0
-  record.data = { ...record.data, isLoading: false, audible: false, muted: false, canGoBack: false, canGoForward: false, error: false }
+  record.data = {
+    ...record.data,
+    isLoading: false,
+    audible: false,
+    muted: false,
+    canGoBack: false,
+    canGoForward: false,
+    error: false
+  }
   brancherOnglet(id, record)
   broadcastState()
 }
 
 function endormirAnciens() {
-  const aEndormir = ongletsAEndormir([...tabs.values()].map(({ data, activite, chargee }) => ({
-    id: data.id,
-    affiche: data.id === activeTabId || dansPartage(partage, data.id),
-    // Un onglet rendu muet par l'utilisateur joue peut-être encore : la vue neuve perdrait son réglage.
-    sonore: !!data.audible || !!data.muted,
-    enVeille: !chargee,
-    activite
-  })), Date.now(), reglages.veilleMinutes)
+  const aEndormir = ongletsAEndormir(
+    [...tabs.values()].map(({ data, activite, chargee }) => ({
+      id: data.id,
+      affiche: data.id === activeTabId || dansPartage(partage, data.id),
+      // Un onglet rendu muet par l'utilisateur joue peut-être encore : la vue neuve perdrait son réglage.
+      sonore: !!data.audible || !!data.muted,
+      enVeille: !chargee,
+      activite
+    })),
+    Date.now(),
+    reglages.veilleMinutes
+  )
   for (const id of aEndormir) {
     try {
       endormir(id)
@@ -1694,7 +1981,14 @@ function colorerEspace(id: number, couleur: string) {
 
 function deplacerEspace(id: number, sens: -1 | 1) {
   if (!base || !espaces.some((item) => item.id === id)) return
-  ordonnerEspaces(base, ordreApresDeplacement(espaces.map((item) => item.id), id, sens))
+  ordonnerEspaces(
+    base,
+    ordreApresDeplacement(
+      espaces.map((item) => item.id),
+      id,
+      sens
+    )
+  )
   espaces = lireEspaces(base)
   broadcastState()
 }
@@ -1762,7 +2056,11 @@ const CHEMIN_URL_INTERFACE = pathToFileURL(CHEMIN_INTERFACE).pathname
 
 function estUrlInterface(url: string): boolean {
   let adresse: URL
-  try { adresse = new URL(url) } catch { return false }
+  try {
+    adresse = new URL(url)
+  } catch {
+    return false
+  }
   if (URL_DEV) return adresse.origin === URL_DEV.origin
   // L'hôte vide écarte un chemin UNC (file://serveur/...) de même chemin que l'interface.
   return adresse.protocol === 'file:' && adresse.host === '' && adresse.pathname === CHEMIN_URL_INTERFACE
@@ -1772,8 +2070,8 @@ function estUrlInterface(url: string): boolean {
 // une autre page qui obtiendrait le preload, un iframe ou une fenêtre intruse est refusé.
 function emetteurAutorise(event: IpcMainEvent | IpcMainInvokeEvent): boolean {
   const cadre = event.senderFrame
-  const autorise = contenusInterface().includes(event.sender)
-    && cadre !== null && cadre.parent === null && estUrlInterface(cadre.url)
+  const autorise =
+    contenusInterface().includes(event.sender) && cadre !== null && cadre.parent === null && estUrlInterface(cadre.url)
   if (!autorise) console.warn(`IPC refusé : émetteur non autorisé (${cadre?.url ?? 'cadre détruit'})`)
   return autorise
 }
@@ -1791,7 +2089,8 @@ function exigerTexte(valeur: unknown): string {
 }
 
 function exigerEntier(valeur: unknown): number {
-  if (typeof valeur !== 'number' || !Number.isSafeInteger(valeur)) throw new Error('Argument IPC invalide : entier attendu')
+  if (typeof valeur !== 'number' || !Number.isSafeInteger(valeur))
+    throw new Error('Argument IPC invalide : entier attendu')
   return valeur
 }
 
@@ -1885,8 +2184,12 @@ function createWindow(adresses: readonly string[] = []) {
   })
   // Comme un menu, un overlay se ferme quand la fenêtre perd le focus (Alt+Tab, clic dans une autre application).
   // F11 (ou tout autre retour de la fenêtre à la normale) pendant un plein écran de la page : la page en sort aussi.
-  mainWindow.on('leave-full-screen', () => { if (pleinEcranPage) sortirPleinEcranPage(pleinEcranPage) })
-  mainWindow.on('blur', () => { if (!boiteFichierOuverte) fermerOverlay() })
+  mainWindow.on('leave-full-screen', () => {
+    if (pleinEcranPage) sortirPleinEcranPage(pleinEcranPage)
+  })
+  mainWindow.on('blur', () => {
+    if (!boiteFichierOuverte) fermerOverlay()
+  })
   // Avant que les vues des onglets disparaissent : la session écrite est celle que l'utilisateur ferme.
   mainWindow.on('close', () => sauvegardeSession.vider())
   mainWindow.on('closed', () => {
@@ -1917,9 +2220,12 @@ function createWindow(adresses: readonly string[] = []) {
 
 function versIncident(incident: IncidentBase): DataIncident {
   switch (incident.type) {
-    case 'corrompue': return { kind: 'corrupted', backup: incident.copie, restored: incident.restauree }
-    case 'plus-recente': return { kind: 'newer' }
-    case 'indisponible': return { kind: 'unavailable' }
+    case 'corrompue':
+      return { kind: 'corrupted', backup: incident.copie, restored: incident.restauree }
+    case 'plus-recente':
+      return { kind: 'newer' }
+    case 'indisponible':
+      return { kind: 'unavailable' }
   }
 }
 
@@ -2010,15 +2316,21 @@ app.whenReady().then(() => {
     // Seule la page de l'onglet actif décide (ni vue d'interface, ni onglet masqué) ; un sous-cadre d'un autre site
     // n'hérite jamais du choix de la page, sauf le plein écran (vidéo intégrée), accordé d'office.
     if (contenu !== activeRecord()?.view.webContents) return callback(false)
-    if (hoteZoom(details.requestingUrl ?? '') !== hote && permissions.some((p) => p !== 'plein-ecran')) return callback(false)
+    if (hoteZoom(details.requestingUrl ?? '') !== hote && permissions.some((p) => p !== 'plein-ecran'))
+      return callback(false)
     const decision = decisionSite(hote, permissions)
     if (decision !== 'demander') return callback(decision === 'autoriser')
     // Mêmes hôte et permissions déjà en attente : une seule invite, qui répond aux deux demandes. File plafonnée.
     const cle = permissions.join()
-    const existante = [invitePermission, ...invitesEnAttente].find((i) => i && i.hote === hote && i.permissions.join() === cle)
+    const existante = [invitePermission, ...invitesEnAttente].find(
+      (i) => i && i.hote === hote && i.permissions.join() === cle
+    )
     if (existante) {
       const premiere = existante.reponse
-      existante.reponse = (accordee) => { premiere(accordee); callback(accordee) }
+      existante.reponse = (accordee) => {
+        premiere(accordee)
+        callback(accordee)
+      }
       return
     }
     if (invitesEnAttente.length >= 5) return callback(false)
@@ -2060,7 +2372,7 @@ app.whenReady().then(() => {
   })
 
   traiter('browser:get-state', () => stateSnapshot())
-  traiter('browser:get-system-theme', () => nativeTheme.shouldUseDarkColors ? 'dark' : 'light')
+  traiter('browser:get-system-theme', () => (nativeTheme.shouldUseDarkColors ? 'dark' : 'light'))
   nativeTheme.on('updated', () => {
     envoyerAuxInterfaces('browser:system-theme', nativeTheme.shouldUseDarkColors ? 'dark' : 'light')
     appliquerThemeFenetre()
@@ -2093,35 +2405,50 @@ app.whenReady().then(() => {
   traiter('browser:get-memory', () => mesurerMemoire())
   ipcMain.handle('browser:set-download-folder', async (event, action) => {
     exigerBarre(event)
-    if (exigerChoix(action, ['choisir', 'defaut'] as const) === 'defaut') return appliquerReglages({ ...reglages, dossierTelechargements: null })
+    if (exigerChoix(action, ['choisir', 'defaut'] as const) === 'defaut')
+      return appliquerReglages({ ...reglages, dossierTelechargements: null })
     if (boiteFichierOuverte) return
     boiteFichierOuverte = true // la boîte prend le focus : sans ce drapeau, le blur de la fenêtre fermerait la modale sous elle
     let choix
     try {
-      const options = { title: 'Dossier de téléchargement', defaultPath: reglages.dossierTelechargements ?? app.getPath('downloads'), properties: ['openDirectory' as const, 'createDirectory' as const] }
+      const options = {
+        title: 'Dossier de téléchargement',
+        defaultPath: reglages.dossierTelechargements ?? app.getPath('downloads'),
+        properties: ['openDirectory' as const, 'createDirectory' as const]
+      }
       choix = await (mainWindow ? dialog.showOpenDialog(mainWindow, options) : dialog.showOpenDialog(options))
-    } finally { boiteFichierOuverte = false }
+    } finally {
+      boiteFichierOuverte = false
+    }
     const dossier = choix.filePaths[0]
     if (choix.canceled || !dossier) return
     if (dossier.length > CHEMIN_LONGUEUR_MAX) throw new Error('Chemin trop long')
     appliquerReglages({ ...reglages, dossierTelechargements: dossier })
   })
   traiter('browser:get-sidebar', () => ({ ...barre }))
-  traiter('browser:set-sidebar', (valeur) => agirSurBarre(exigerChoix(valeur, ['open', 'hide', 'toggle-pin', 'toggle-compact'] as const)))
+  traiter('browser:set-sidebar', (valeur) =>
+    agirSurBarre(exigerChoix(valeur, ['open', 'hide', 'toggle-pin', 'toggle-compact'] as const))
+  )
   traiter('browser:set-sidebar-width', (valeur) => {
-    if (typeof valeur !== 'number' || !Number.isFinite(valeur)) throw new Error('Argument IPC invalide : nombre attendu')
+    if (typeof valeur !== 'number' || !Number.isFinite(valeur))
+      throw new Error('Argument IPC invalide : nombre attendu')
     appliquerBarre({ ...barre, width: borneLargeurBarre(valeur) })
   })
   traiter('browser:get-overlay', () => overlayOuvert)
-  traiter('browser:get-permission-request', () => invitePermission && { hote: invitePermission.hote, permissions: invitePermission.permissions })
+  traiter(
+    'browser:get-permission-request',
+    () => invitePermission && { hote: invitePermission.hote, permissions: invitePermission.permissions }
+  )
   // Seule la vue de la barre, qui affiche l'invite, y répond.
   ipcMain.handle('browser:answer-permission', (event, valeur) => {
-    if (!emetteurAutorise(event) || event.sender !== barreView?.webContents) throw new Error('Émetteur IPC non autorisé')
+    if (!emetteurAutorise(event) || event.sender !== barreView?.webContents)
+      throw new Error('Émetteur IPC non autorisé')
     repondreInvitePermission(exigerChoix(valeur, REPONSES_PERMISSION))
   })
   // Seule la vue de la barre rend les overlays : elle seule peut en ouvrir ou en fermer un (décision 0002).
   ipcMain.handle('browser:set-overlay', (event, valeur) => {
-    if (!emetteurAutorise(event) || event.sender !== barreView?.webContents) throw new Error('Émetteur IPC non autorisé')
+    if (!emetteurAutorise(event) || event.sender !== barreView?.webContents)
+      throw new Error('Émetteur IPC non autorisé')
     if (typeof valeur !== 'boolean') throw new Error('Argument IPC invalide : booléen attendu')
     if (valeur) ouvrirOverlay()
     else {
@@ -2150,9 +2477,13 @@ app.whenReady().then(() => {
     const nom = exigerTexte(valeur)
     modifierDossierOnglet(exigerEntier(id), (db, dossier) => renommerDossierOnglet(db, dossier.id, nom))
   })
-  traiter('browser:toggle-tab-folder', (id) => modifierDossierOnglet(exigerEntier(id), (db, dossier) => replierDossierOnglet(db, dossier.id, !dossier.replie)))
+  traiter('browser:toggle-tab-folder', (id) =>
+    modifierDossierOnglet(exigerEntier(id), (db, dossier) => replierDossierOnglet(db, dossier.id, !dossier.replie))
+  )
   traiter('browser:delete-tab-folder', (id) => supprimerDossierOngletUtilisateur(exigerEntier(id)))
-  traiter('browser:set-tab-folder', (tabId, dossier) => rangerOnglet(exigerTexte(tabId), dossier === null ? null : exigerEntier(dossier)))
+  traiter('browser:set-tab-folder', (tabId, dossier) =>
+    rangerOnglet(exigerTexte(tabId), dossier === null ? null : exigerEntier(dossier))
+  )
   traiter('browser:activate-tab', (valeur) => {
     const id = exigerTexte(valeur)
     activerOnglet(id)
@@ -2164,7 +2495,8 @@ app.whenReady().then(() => {
   // Suggestions de la barre d'adresse (ARB-53). Le texte et les flèches viennent du champ, donc de la fenêtre seule ; la
   // vue de la barre n'affiche et ne fait que choisir une ligne (clic).
   const exigerFenetre = (event: IpcMainInvokeEvent) => {
-    if (!emetteurAutorise(event) || event.sender !== mainWindow?.webContents) throw new Error('Émetteur IPC non autorisé')
+    if (!emetteurAutorise(event) || event.sender !== mainWindow?.webContents)
+      throw new Error('Émetteur IPC non autorisé')
   }
   ipcMain.handle('browser:suggest', (event, texte, ancre) => {
     exigerFenetre(event)
@@ -2189,7 +2521,10 @@ app.whenReady().then(() => {
   // Rend vrai si une ligne a été ouverte : sinon (liste déjà remplacée, aucune ligne choisie), le champ navigue lui-même.
   traiter('browser:suggest-choose', (valeur) => {
     if (!suggestions) return false
-    const index = valeur === undefined ? indexValide(suggestions.selection, suggestions.items.length) : indexValide(valeur, suggestions.items.length)
+    const index =
+      valeur === undefined
+        ? indexValide(suggestions.selection, suggestions.items.length)
+        : indexValide(valeur, suggestions.items.length)
     if (index === undefined) return false
     const url = suggestions.items[index].url
     fermerSuggestions()
@@ -2200,18 +2535,29 @@ app.whenReady().then(() => {
   traiter('browser:get-suggestions', () => suggestions)
   // Palette de commandes (ARB-67) : seule la vue de la barre, qui l'affiche et porte son champ, l'ouvre, cherche et choisit.
   const exigerBarre = (event: IpcMainInvokeEvent) => {
-    if (!emetteurAutorise(event) || event.sender !== barreView?.webContents) throw new Error('Émetteur IPC non autorisé')
+    if (!emetteurAutorise(event) || event.sender !== barreView?.webContents)
+      throw new Error('Émetteur IPC non autorisé')
   }
   // Infobulle (ARB-126) : texte nettoyé et rectangle borné par le processus principal.
   // La barre de contrôle (fenêtre) et la barre latérale ont des boutons-icônes : les deux émettent, les autres vues non.
   const exigerBoutons = (event: IpcMainInvokeEvent) => {
-    if (!emetteurAutorise(event) || (event.sender !== barreView?.webContents && event.sender !== mainWindow?.webContents)) throw new Error('Émetteur IPC non autorisé')
+    if (
+      !emetteurAutorise(event) ||
+      (event.sender !== barreView?.webContents && event.sender !== mainWindow?.webContents)
+    )
+      throw new Error('Émetteur IPC non autorisé')
     return event.sender === barreView?.webContents ? barreView.getBounds() : { x: 0, y: 0 }
   }
   ipcMain.handle('browser:show-tooltip', (event, texte, ancre) => afficherInfobulle(texte, ancre, exigerBoutons(event)))
-  ipcMain.handle('browser:hide-tooltip', (event) => { exigerBoutons(event); retirerInfobulle() })
+  ipcMain.handle('browser:hide-tooltip', (event) => {
+    exigerBoutons(event)
+    retirerInfobulle()
+  })
   traiter('browser:get-palette', () => palette)
-  ipcMain.handle('browser:open-palette', (event) => { exigerBarre(event); ouvrirPalette() })
+  ipcMain.handle('browser:open-palette', (event) => {
+    exigerBarre(event)
+    ouvrirPalette()
+  })
   ipcMain.handle('browser:palette-search', (event, texte) => {
     exigerBarre(event)
     const recherche = texteSuggestion(texte)
@@ -2230,7 +2576,12 @@ app.whenReady().then(() => {
     exigerBarre(event)
     const recherche = texteSuggestion(texte)
     if (!recherche && texte.trim()) return [] // texte trop long : rien, pas tout l'historique
-    try { return base ? listerHistorique(base, recherche) : [] } catch (erreur) { console.error('Historique non lu :', erreur); return [] }
+    try {
+      return base ? listerHistorique(base, recherche) : []
+    } catch (erreur) {
+      console.error('Historique non lu :', erreur)
+      return []
+    }
   })
   ipcMain.handle('browser:open-history-page', (event, url) => {
     exigerBarre(event)
@@ -2243,7 +2594,12 @@ app.whenReady().then(() => {
   // (déjà rouvert) ne fait rien.
   ipcMain.handle('browser:list-archive', (event) => {
     exigerBarre(event)
-    try { return base ? listerArchive(base) : [] } catch (erreur) { console.error('Archive non lue :', erreur); return [] }
+    try {
+      return base ? listerArchive(base) : []
+    } catch (erreur) {
+      console.error('Archive non lue :', erreur)
+      return []
+    }
   })
   ipcMain.handle('browser:restore-archived', (event, id) => {
     exigerBarre(event)
@@ -2263,7 +2619,12 @@ app.whenReady().then(() => {
   }
   ipcMain.handle('browser:list-favorites', (event) => {
     exigerBarre(event)
-    try { return base ? listerFavoris(base) : { dossiers: [], favoris: [] } } catch (erreur) { console.error('Favoris non lus :', erreur); return { dossiers: [], favoris: [] } }
+    try {
+      return base ? listerFavoris(base) : { dossiers: [], favoris: [] }
+    } catch (erreur) {
+      console.error('Favoris non lus :', erreur)
+      return { dossiers: [], favoris: [] }
+    }
   })
   const ecritureFavoris = (canal: string, ecrire: (db: NonNullable<typeof base>, ...args: unknown[]) => unknown) =>
     ipcMain.handle(canal, (event, ...args) => {
@@ -2274,7 +2635,9 @@ app.whenReady().then(() => {
   ecritureFavoris('browser:create-favorite-folder', (db, nom) => creerDossier(db, nom))
   ecritureFavoris('browser:rename-favorite-folder', (db, id, nom) => renommerDossier(db, exigerEntier(id), nom))
   ecritureFavoris('browser:delete-favorite-folder', (db, id) => supprimerDossier(db, exigerEntier(id)))
-  ecritureFavoris('browser:move-favorite', (db, id, dossier) => deplacerFavori(db, exigerEntier(id), dossier === null ? null : exigerEntier(dossier)))
+  ecritureFavoris('browser:move-favorite', (db, id, dossier) =>
+    deplacerFavori(db, exigerEntier(id), dossier === null ? null : exigerEntier(dossier))
+  )
   ecritureFavoris('browser:remove-favorite', (db, id) => retirerFavori(db, exigerEntier(id)))
   // Import des favoris (ARB-50) : le fichier HTML exporté par Chrome ou Edge, choisi dans une boîte système ; renvoie le
   // nombre de favoris ajoutés, null si l'utilisateur annule. Le chemin vient de la boîte, jamais de l'interface.
@@ -2285,9 +2648,16 @@ app.whenReady().then(() => {
     boiteFichierOuverte = true
     let choix
     try {
-      choix = await (mainWindow ? dialog.showOpenDialog(mainWindow, { title: 'Importer des favoris', properties: ['openFile'], filters: [{ name: 'Favoris HTML', extensions: ['html', 'htm'] }] })
+      choix = await (mainWindow
+        ? dialog.showOpenDialog(mainWindow, {
+            title: 'Importer des favoris',
+            properties: ['openFile'],
+            filters: [{ name: 'Favoris HTML', extensions: ['html', 'htm'] }]
+          })
         : dialog.showOpenDialog({ properties: ['openFile'] }))
-    } finally { boiteFichierOuverte = false }
+    } finally {
+      boiteFichierOuverte = false
+    }
     if (choix.canceled || choix.filePaths.length === 0) return null
     const chemin = choix.filePaths[0]
     if (statSync(chemin).size > TAILLE_MAX_IMPORT) throw new Error('Fichier trop volumineux')
@@ -2301,14 +2671,24 @@ app.whenReady().then(() => {
   const boiteDonnees = async <T>(ouvrir: () => Promise<T>): Promise<T | null> => {
     if (boiteFichierOuverte) return null
     boiteFichierOuverte = true // la boîte prend le focus : sans ce drapeau, le blur fermerait le panneau sous elle
-    try { return await ouvrir() } finally { boiteFichierOuverte = false }
+    try {
+      return await ouvrir()
+    } finally {
+      boiteFichierOuverte = false
+    }
   }
   ipcMain.handle('browser:export-data', async (event) => {
     exigerBarre(event)
     const db = base
     if (!db) throw new Error('Base indisponible')
-    const options = { title: 'Exporter mes données', defaultPath: join(app.getPath('documents'), `arbalete-donnees-${new Date().toISOString().slice(0, 10)}.json`), filters: [{ name: 'Données Arbalète', extensions: ['json'] }] }
-    const choix = await boiteDonnees(() => (mainWindow ? dialog.showSaveDialog(mainWindow, options) : dialog.showSaveDialog(options)))
+    const options = {
+      title: 'Exporter mes données',
+      defaultPath: join(app.getPath('documents'), `arbalete-donnees-${new Date().toISOString().slice(0, 10)}.json`),
+      filters: [{ name: 'Données Arbalète', extensions: ['json'] }]
+    }
+    const choix = await boiteDonnees(() =>
+      mainWindow ? dialog.showSaveDialog(mainWindow, options) : dialog.showSaveDialog(options)
+    )
     if (!choix || choix.canceled || !choix.filePath) return null
     return ecrireExport(choix.filePath, construireExport(db))
   })
@@ -2316,8 +2696,14 @@ app.whenReady().then(() => {
     exigerBarre(event)
     const db = base
     if (!db) throw new Error('Base indisponible')
-    const options = { title: 'Importer mes données', properties: ['openFile' as const], filters: [{ name: 'Données Arbalète', extensions: ['json'] }] }
-    const choix = await boiteDonnees(() => (mainWindow ? dialog.showOpenDialog(mainWindow, options) : dialog.showOpenDialog(options)))
+    const options = {
+      title: 'Importer mes données',
+      properties: ['openFile' as const],
+      filters: [{ name: 'Données Arbalète', extensions: ['json'] }]
+    }
+    const choix = await boiteDonnees(() =>
+      mainWindow ? dialog.showOpenDialog(mainWindow, options) : dialog.showOpenDialog(options)
+    )
     if (!choix || choix.canceled || choix.filePaths.length === 0) return null
     const chemin = choix.filePaths[0]
     if (statSync(chemin).size > TAILLE_MAX_FICHIER) throw new Error('Fichier trop volumineux')
@@ -2364,21 +2750,29 @@ app.whenReady().then(() => {
   // touchés ; à traiter dans un ticket de suivi avant toute promesse de confidentialité.
   ipcMain.handle('browser:clear-browsing-data', async (event, periode, types) => {
     exigerBarre(event)
-    if (!PERIODES_EFFACEMENT.includes(periode) || !Array.isArray(types) || types.length > TYPES_EFFACEMENT.length
-      || !types.every((type) => TYPES_EFFACEMENT.includes(type))) throw new Error('Argument IPC invalide : période et types attendus')
+    if (
+      !PERIODES_EFFACEMENT.includes(periode) ||
+      !Array.isArray(types) ||
+      types.length > TYPES_EFFACEMENT.length ||
+      !types.every((type) => TYPES_EFFACEMENT.includes(type))
+    )
+      throw new Error('Argument IPC invalide : période et types attendus')
     const choisis = new Set<TypeEffacement>(types)
     if (choisis.has('historique') && base) effacerHistorique(base, debutEffacement(periode as PeriodeEffacement))
     // Chaque type est tenté même si un autre échoue ; l'échec est rendu à l'interface, qui relit la liste.
-    const echecs = (await Promise.allSettled([
-      choisis.has('cookies') ? session.defaultSession.clearStorageData({ storages: ['cookies'] }) : undefined,
-      choisis.has('cache') ? session.defaultSession.clearCache() : undefined
-    ])).filter((r) => r.status === 'rejected')
+    const echecs = (
+      await Promise.allSettled([
+        choisis.has('cookies') ? session.defaultSession.clearStorageData({ storages: ['cookies'] }) : undefined,
+        choisis.has('cache') ? session.defaultSession.clearCache() : undefined
+      ])
+    ).filter((r) => r.status === 'rejected')
     if (echecs.length) throw new Error('Effacement incomplet : cookies ou cache')
   })
   // Menu contextuel d'une page (ARB-40) : seule la vue de la barre, qui l'affiche, choisit une entrée.
   traiter('browser:get-page-menu', () => menuPage && { x: menuPage.x, y: menuPage.y, entrees: menuPage.entrees })
   ipcMain.handle('browser:page-menu-action', (event, valeur) => {
-    if (!emetteurAutorise(event) || event.sender !== barreView?.webContents) throw new Error('Émetteur IPC non autorisé')
+    if (!emetteurAutorise(event) || event.sender !== barreView?.webContents)
+      throw new Error('Émetteur IPC non autorisé')
     if (!entreeMenuPageValide(valeur)) throw new Error('Argument IPC invalide : entrée de menu attendue')
     agirSurMenuPage(valeur)
   })
@@ -2406,7 +2800,9 @@ app.whenReady().then(() => {
     incidentBase = null
     envoyerAuxInterfaces('browser:data-incident', null)
   })
-  traiter('browser:answer-restore-offer', (valeur) => repondreRestauration(exigerChoix(valeur, ['restore', 'dismiss'] as const)))
+  traiter('browser:answer-restore-offer', (valeur) =>
+    repondreRestauration(exigerChoix(valeur, ['restore', 'dismiss'] as const))
+  )
   ipcMain.on('browser:set-content-bounds', (event, bounds) => {
     if (!emetteurAutorise(event)) return
     if (!mainWindow || mainWindow.isDestroyed()) return
@@ -2440,12 +2836,14 @@ app.whenReady().then(() => {
   })
   // Recherche dans la page (ARB-70) : seule sa vue la pilote, comme seule la vue de la barre pilote les overlays.
   const exigerRecherche = (event: IpcMainInvokeEvent) => {
-    if (!emetteurAutorise(event) || event.sender !== rechercheView?.webContents) throw new Error('Émetteur IPC non autorisé')
+    if (!emetteurAutorise(event) || event.sender !== rechercheView?.webContents)
+      throw new Error('Émetteur IPC non autorisé')
   }
   ipcMain.handle('browser:find', (event, texte, avant, suivant) => {
     exigerRecherche(event)
     const recherche = texteRecherche(texte)
-    if (typeof avant !== 'boolean' || typeof suivant !== 'boolean') throw new Error('Argument IPC invalide : booléen attendu')
+    if (typeof avant !== 'boolean' || typeof suivant !== 'boolean')
+      throw new Error('Argument IPC invalide : booléen attendu')
     if (!rechercheContenu || rechercheContenu.isDestroyed()) return
     if (recherche) rechercheContenu.findInPage(recherche, { forward: avant, findNext: suivant })
     else rechercheContenu.stopFindInPage('clearSelection')

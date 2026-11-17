@@ -18,14 +18,21 @@ function nomSur(nom: string): string {
 
 // Tous les dossiers, dans l'ordre de création.
 export function lireDossiersOnglets(db: DatabaseSync): DossierOngletEspace[] {
-  const lignes = db.prepare('SELECT id, nom, espace, replie FROM dossier_onglet ORDER BY id').all() as Array<{ id: number; nom: string; espace: number; replie: number }>
+  const lignes = db.prepare('SELECT id, nom, espace, replie FROM dossier_onglet ORDER BY id').all() as Array<{
+    id: number
+    nom: string
+    espace: number
+    replie: number
+  }>
   return lignes.map((ligne) => ({ id: ligne.id, nom: ligne.nom, espace: ligne.espace, replie: ligne.replie === 1 }))
 }
 
 // Renvoie l'id du dossier créé ; lève une erreur si l'espace n'existe pas (clé étrangère) ou si le nom est invalide.
 export function creerDossierOnglet(db: DatabaseSync, espace: number, nom: string): number {
   validerId(espace)
-  return Number(db.prepare('INSERT INTO dossier_onglet (nom, espace) VALUES (?, ?)').run(nomSur(nom), espace).lastInsertRowid)
+  return Number(
+    db.prepare('INSERT INTO dossier_onglet (nom, espace) VALUES (?, ?)').run(nomSur(nom), espace).lastInsertRowid
+  )
 }
 
 // Les trois fonctions renvoient faux si le dossier n'existe pas.

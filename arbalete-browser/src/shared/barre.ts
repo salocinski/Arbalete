@@ -9,7 +9,12 @@ export const LARGEUR_ETENDUE_MAX = 400
 export const LARGEUR_COMPACTE = 68
 export const LARGEUR_BANDE = 6
 
-export const ETAT_BARRE_INITIAL: SidebarState = { open: false, pinned: false, compact: false, width: LARGEUR_ETENDUE_DEFAUT }
+export const ETAT_BARRE_INITIAL: SidebarState = {
+  open: false,
+  pinned: false,
+  compact: false,
+  width: LARGEUR_ETENDUE_DEFAUT
+}
 
 // Largeur reçue de l'interface ou relue de la base : entier dans les bornes, défaut si ce n'est pas un nombre.
 export function borneLargeurBarre(valeur: unknown): number {
@@ -21,11 +26,16 @@ export function borneLargeurBarre(valeur: unknown): number {
 export const PAS_CLAVIER_BARRE = 16
 export function largeurApresTouche(touche: string, largeur: number): number | undefined {
   switch (touche) {
-    case 'ArrowLeft': return borneLargeurBarre(largeur - PAS_CLAVIER_BARRE)
-    case 'ArrowRight': return borneLargeurBarre(largeur + PAS_CLAVIER_BARRE)
-    case 'Home': return LARGEUR_ETENDUE_MIN
-    case 'End': return LARGEUR_ETENDUE_MAX
-    default: return undefined
+    case 'ArrowLeft':
+      return borneLargeurBarre(largeur - PAS_CLAVIER_BARRE)
+    case 'ArrowRight':
+      return borneLargeurBarre(largeur + PAS_CLAVIER_BARRE)
+    case 'Home':
+      return LARGEUR_ETENDUE_MIN
+    case 'End':
+      return LARGEUR_ETENDUE_MAX
+    default:
+      return undefined
   }
 }
 
@@ -53,15 +63,21 @@ export function modeBarre(etat: SidebarState): ModeBarre {
 export function actionsVersMode(etat: SidebarState, mode: ModeBarre): SidebarAction[] {
   if (modeBarre(etat) === mode) return []
   if (mode === 'masquee') return ['toggle-pin']
-  return etat.pinned ? ['toggle-compact'] : ['toggle-pin', ...(etat.compact !== (mode === 'compacte') ? ['toggle-compact' as const] : [])]
+  return etat.pinned
+    ? ['toggle-compact']
+    : ['toggle-pin', ...(etat.compact !== (mode === 'compacte') ? ['toggle-compact' as const] : [])]
 }
 
 // Masquer n'agit pas sur une barre épinglée ; désépingler la referme. Le choix compacte survit au masquage.
 export function transitionBarre(etat: SidebarState, action: SidebarAction): SidebarState {
   switch (action) {
-    case 'open': return { ...etat, open: true }
-    case 'hide': return etat.pinned ? etat : { ...etat, open: false }
-    case 'toggle-pin': return etat.pinned ? { ...etat, open: false, pinned: false } : { ...etat, open: true, pinned: true }
-    case 'toggle-compact': return etat.pinned ? { ...etat, compact: !etat.compact } : etat
+    case 'open':
+      return { ...etat, open: true }
+    case 'hide':
+      return etat.pinned ? etat : { ...etat, open: false }
+    case 'toggle-pin':
+      return etat.pinned ? { ...etat, open: false, pinned: false } : { ...etat, open: true, pinned: true }
+    case 'toggle-compact':
+      return etat.pinned ? { ...etat, compact: !etat.compact } : etat
   }
 }

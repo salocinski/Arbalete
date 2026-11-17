@@ -31,7 +31,10 @@ test('la barre de contrôle fait 48 px par token, sans dimension en dur (ARB-31)
   const regle = styles.match(/^\.toolbar \{[^}]*\}/m)?.[0] ?? ''
   ok(regle.includes('height: var(--size-control-bar)'), 'la hauteur doit venir du token --size-control-bar')
   ok(!/\d+px/.test(regle), 'aucune dimension en px dans la règle .toolbar')
-  ok(/gap: var\(--space-\d+\)/.test(regle) && /padding: 0 var\(--space-\d+\)/.test(regle), 'gap et padding de .toolbar passent par les tokens')
+  ok(
+    /gap: var\(--space-\d+\)/.test(regle) && /padding: 0 var\(--space-\d+\)/.test(regle),
+    'gap et padding de .toolbar passent par les tokens'
+  )
   const nav = styles.match(/^\.nav-controls \{[^}]*\}/m)?.[0] ?? ''
   ok(/gap: var\(--space-\d+\)/.test(nav), 'gap de .nav-controls passe par un token')
 })

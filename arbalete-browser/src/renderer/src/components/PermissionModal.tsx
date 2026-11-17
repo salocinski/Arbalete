@@ -7,12 +7,24 @@ import { Modal } from './ui/Modal'
 export function PermissionModal({ demande, onClose }: { demande: DemandePermission; onClose: () => void }) {
   const repondre = (reponse: 'autoriser' | 'refuser') => void window.arbalete.answerPermission(reponse)
   return (
-    <Modal className="permission-modal" role="alertdialog" label={`Permission demandée par ${demande.hote}`} testId="permission-modal" onClose={onClose}>
-        <div><strong>{demande.hote}</strong> souhaite {phraseDemande(demande.permissions)}.</div>
-        <div className="permission-modal-actions">
-          <Button size="sm" autoFocus onClick={() => repondre('refuser')}>Refuser</Button>
-          <Button size="sm" variant="primary" onClick={() => repondre('autoriser')}>Autoriser</Button>
-        </div>
-      </Modal>
+    <Modal
+      className="permission-modal"
+      role="alertdialog"
+      label={`Permission demandée par ${demande.hote}`}
+      testId="permission-modal"
+      onClose={onClose}
+    >
+      <div>
+        <strong>{demande.hote}</strong> souhaite {phraseDemande(demande.permissions)}.
+      </div>
+      <div className="permission-modal-actions">
+        <Button size="sm" autoFocus onClick={() => repondre('refuser')}>
+          Refuser
+        </Button>
+        <Button size="sm" variant="primary" onClick={() => repondre('autoriser')}>
+          Autoriser
+        </Button>
+      </div>
+    </Modal>
   )
 }

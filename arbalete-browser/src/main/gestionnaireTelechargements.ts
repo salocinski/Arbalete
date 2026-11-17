@@ -2,8 +2,22 @@ import { existsSync } from 'node:fs'
 import { basename } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
 import { estActif, type EtatTelechargement, type Telechargement } from '../shared/telechargements.ts'
-import { TELECHARGEMENTS_GARDES, apresArret, creerTelechargement, dernierId, lireTelechargements, majTelechargement, retirerTelechargement } from './donnees/telechargements.ts'
-import { adresseTelechargement, cheminLibre, extensionExecutable, nomFichierSur, schemaAutorise } from './telechargements.ts'
+import {
+  TELECHARGEMENTS_GARDES,
+  apresArret,
+  creerTelechargement,
+  dernierId,
+  lireTelechargements,
+  majTelechargement,
+  retirerTelechargement
+} from './donnees/telechargements.ts'
+import {
+  adresseTelechargement,
+  cheminLibre,
+  extensionExecutable,
+  nomFichierSur,
+  schemaAutorise
+} from './telechargements.ts'
 
 // Gestionnaire des téléchargements (ARB-55, EP-10) : tient la liste en mémoire, la reflète dans la base (au mieux) et la
 // diffuse à l'interface. La partie d'Electron qu'il utilise est réduite à `Article`, un DownloadItem pour le gestionnaire,
@@ -45,7 +59,15 @@ type Options = {
   reveler: (chemin: string) => void
 }
 
-export function creerGestionnaire({ dossier, base, diffuser, maintenant = Date.now, existe = existsSync, ouvrir, reveler }: Options) {
+export function creerGestionnaire({
+  dossier,
+  base,
+  diffuser,
+  maintenant = Date.now,
+  existe = existsSync,
+  ouvrir,
+  reveler
+}: Options) {
   let liste: Telechargement[] = []
   const articles = new Map<number, Article>()
   let prochainId = 1
@@ -63,7 +85,11 @@ export function creerGestionnaire({ dossier, base, diffuser, maintenant = Date.n
   }
 
   // `forcer` : changement d'état, toujours écrit et diffusé ; la progression seule l'est au plus toutes les 400 ms.
-  const mettreAJour = (id: number, champs: { recu: number; total: number; etat: EtatTelechargement }, forcer = false) => {
+  const mettreAJour = (
+    id: number,
+    champs: { recu: number; total: number; etat: EtatTelechargement },
+    forcer = false
+  ) => {
     const rang = liste.findIndex((t) => t.id === id)
     if (rang < 0) return
     const changeEtat = liste[rang].etat !== champs.etat
@@ -75,13 +101,18 @@ export function creerGestionnaire({ dossier, base, diffuser, maintenant = Date.n
     diffuser([...liste])
   }
 
-  const octets = (article: Article) => ({ recu: article.getReceivedBytes(), total: Math.max(0, article.getTotalBytes()) })
+  const octets = (article: Article) => ({
+    recu: article.getReceivedBytes(),
+    total: Math.max(0, article.getTotalBytes())
+  })
 
   return {
     // Une fois la base ouverte : l'historique des sessions précédentes, ses téléchargements actifs devenus interrompus.
     charger() {
       // Les ids reprennent après l'historique même si sa lecture échoue : sinon un nouvel id heurterait une ligne existante.
-      ecrire((db) => { prochainId = dernierId(db) + 1 })
+      ecrire((db) => {
+        prochainId = dernierId(db) + 1
+      })
       ecrire((db) => {
         apresArret(db)
         liste = lireTelechargements(db)
@@ -98,12 +129,18 @@ export function creerGestionnaire({ dossier, base, diffuser, maintenant = Date.n
       }
       // Le fichier n'existe pas encore sur le disque quand un second téléchargement du même nom arrive : les chemins des
       // téléchargements actifs comptent comme pris, sinon les deux écriraient dans le même fichier.
-      const pris = (candidat: string) => existe(candidat) || liste.some((t) => t.chemin === candidat && estActif(t.etat))
+      const pris = (candidat: string) =>
+        existe(candidat) || liste.some((t) => t.chemin === candidat && estActif(t.etat))
       const chemin = cheminLibre(dossier(), nomFichierSur(article.getFilename()), pris)
       article.setSavePath(chemin)
       const telechargement: Telechargement = {
-        id: prochainId++, url: adresseTelechargement(article.getURL()), nom: basename(chemin), chemin,
-        ...octets(article), etat: 'en-cours', date: maintenant()
+        id: prochainId++,
+        url: adresseTelechargement(article.getURL()),
+        nom: basename(chemin),
+        chemin,
+        ...octets(article),
+        etat: 'en-cours',
+        date: maintenant()
       }
       liste = [telechargement, ...liste]
       // La liste ne grossit pas sans fin : au-delà de la limite, les plus anciens téléchargements terminés sont oubliés.
@@ -127,12 +164,19 @@ export function creerGestionnaire({ dossier, base, diffuser, maintenant = Date.n
           dernieresDiffusions.delete(telechargement.id)
           return
         }
-        mettreAJour(telechargement.id, { ...octets(article), etat: etat === 'interrupted' || article.isPaused() ? 'en-pause' : 'en-cours' })
+        mettreAJour(telechargement.id, {
+          ...octets(article),
+          etat: etat === 'interrupted' || article.isPaused() ? 'en-pause' : 'en-cours'
+        })
       })
       article.on('done', (_event, etat) => {
         articles.delete(telechargement.id)
         const termine = etat === 'completed'
-        mettreAJour(telechargement.id, { ...octets(article), etat: termine ? 'termine' : etat === 'cancelled' ? 'annule' : 'interrompu' }, true)
+        mettreAJour(
+          telechargement.id,
+          { ...octets(article), etat: termine ? 'termine' : etat === 'cancelled' ? 'annule' : 'interrompu' },
+          true
+        )
         dernieresDiffusions.delete(telechargement.id)
       })
     },

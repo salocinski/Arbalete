@@ -5,5 +5,7 @@ const LONGUEUR_MAX_FAVICON = 32_768
 const IMAGE_DATA = /^data:image\/(png|jpeg|gif|webp|x-icon|vnd\.microsoft\.icon)[;,]/i
 
 export function faviconAcceptable(favicons: string[]): string | undefined {
-  return favicons.find((url) => url.length <= LONGUEUR_MAX_FAVICON && (url.startsWith('https://') || IMAGE_DATA.test(url)))
+  return favicons.find(
+    (url) => url.length <= LONGUEUR_MAX_FAVICON && (url.startsWith('https://') || IMAGE_DATA.test(url))
+  )
 }

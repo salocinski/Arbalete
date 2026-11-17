@@ -4,7 +4,12 @@ import { test } from 'node:test'
 import type { Telechargement } from '../shared/telechargements.ts'
 import { ouvrirBase } from './donnees/base.ts'
 import { lireTelechargements } from './donnees/telechargements.ts'
-import { ACTIFS_MAX, INTERVALLE_PROGRESSION_MS, creerGestionnaire, type Article } from './gestionnaireTelechargements.ts'
+import {
+  ACTIFS_MAX,
+  INTERVALLE_PROGRESSION_MS,
+  creerGestionnaire,
+  type Article
+} from './gestionnaireTelechargements.ts'
 
 // Tests unitaires du gestionnaire des téléchargements (ARB-55), avec un faux DownloadItem.
 
@@ -22,16 +27,37 @@ class FauxArticle extends EventEmitter {
     this.url = url
     this.nom = nom
   }
-  getURL() { return this.url }
-  getFilename() { return this.nom }
-  getTotalBytes() { return this.total }
-  getReceivedBytes() { return this.recu }
-  setSavePath(chemin: string) { this.chemin = chemin }
-  isPaused() { return this.pause_ }
-  canResume() { return this.reprenable }
-  pause() { this.pause_ = true }
-  resume() { this.pause_ = false }
-  cancel() { this.annule = true; this.emit('done', {}, 'cancelled') }
+  getURL() {
+    return this.url
+  }
+  getFilename() {
+    return this.nom
+  }
+  getTotalBytes() {
+    return this.total
+  }
+  getReceivedBytes() {
+    return this.recu
+  }
+  setSavePath(chemin: string) {
+    this.chemin = chemin
+  }
+  isPaused() {
+    return this.pause_
+  }
+  canResume() {
+    return this.reprenable
+  }
+  pause() {
+    this.pause_ = true
+  }
+  resume() {
+    this.pause_ = false
+  }
+  cancel() {
+    this.annule = true
+    this.emit('done', {}, 'cancelled')
+  }
 }
 
 function monter(options: { existe?: (chemin: string) => boolean } = {}) {
@@ -41,13 +67,28 @@ function monter(options: { existe?: (chemin: string) => boolean } = {}) {
   const ouverts: string[] = []
   const reveles: string[] = []
   const gestionnaire = creerGestionnaire({
-    dossier: () => 'D', base: () => db, diffuser: (liste) => diffusions.push(liste), maintenant: () => horloge,
-    existe: options.existe ?? (() => false), ouvrir: (chemin) => ouverts.push(chemin), reveler: (chemin) => reveles.push(chemin)
+    dossier: () => 'D',
+    base: () => db,
+    diffuser: (liste) => diffusions.push(liste),
+    maintenant: () => horloge,
+    existe: options.existe ?? (() => false),
+    ouvrir: (chemin) => ouverts.push(chemin),
+    reveler: (chemin) => reveles.push(chemin)
   })
-  return { db, gestionnaire, diffusions, ouverts, reveles, avancer: (ms: number) => { horloge += ms } }
+  return {
+    db,
+    gestionnaire,
+    diffusions,
+    ouverts,
+    reveles,
+    avancer: (ms: number) => {
+      horloge += ms
+    }
+  }
 }
 
-const demarrer = (g: ReturnType<typeof monter>['gestionnaire'], article: FauxArticle) => g.nouveau(article as unknown as Article)
+const demarrer = (g: ReturnType<typeof monter>['gestionnaire'], article: FauxArticle) =>
+  g.nouveau(article as unknown as Article)
 
 test('un téléchargement va au dossier, sous un nom sûr et libre, sans invite', () => {
   const { gestionnaire, db } = monter({ existe: (chemin) => chemin === 'D\\f.zip' })
@@ -56,7 +97,10 @@ test('un téléchargement va au dossier, sous un nom sûr et libre, sans invite'
   demarrer(gestionnaire, article)
   strictEqual(article.chemin, 'D\\.._f.zip')
   const [ligne] = gestionnaire.liste()
-  deepStrictEqual([ligne.nom, ligne.url, ligne.etat, ligne.total], ['.._f.zip', 'https://example.com/f.zip', 'en-cours', 1000])
+  deepStrictEqual(
+    [ligne.nom, ligne.url, ligne.etat, ligne.total],
+    ['.._f.zip', 'https://example.com/f.zip', 'en-cours', 1000]
+  )
   strictEqual(lireTelechargements(db).length, 1)
 })
 
@@ -132,8 +176,14 @@ test('retirer ne touche qu’un téléchargement terminé', () => {
   gestionnaire.retirer(idActif)
   strictEqual(gestionnaire.liste().length, 2)
   gestionnaire.retirer(idFini)
-  deepStrictEqual(gestionnaire.liste().map((t) => t.id), [idActif])
-  deepStrictEqual(lireTelechargements(db).map((t) => t.id), [idActif])
+  deepStrictEqual(
+    gestionnaire.liste().map((t) => t.id),
+    [idActif]
+  )
+  deepStrictEqual(
+    lireTelechargements(db).map((t) => t.id),
+    [idActif]
+  )
 })
 
 test('un schéma refusé ou trop de téléchargements actifs sont annulés sans entrer dans la liste', () => {
@@ -152,15 +202,32 @@ test('au chargement, l’historique revient, les téléchargements actifs interr
   const premiere = monter()
   const article = new FauxArticle()
   demarrer(premiere.gestionnaire, article)
-  const second = creerGestionnaire({ dossier: () => 'D', base: () => premiere.db, diffuser: () => undefined, existe: () => false, ouvrir: () => undefined, reveler: () => undefined })
+  const second = creerGestionnaire({
+    dossier: () => 'D',
+    base: () => premiere.db,
+    diffuser: () => undefined,
+    existe: () => false,
+    ouvrir: () => undefined,
+    reveler: () => undefined
+  })
   second.charger()
-  deepStrictEqual(second.liste().map((t) => [t.id, t.etat]), [[1, 'interrompu']])
+  deepStrictEqual(
+    second.liste().map((t) => [t.id, t.etat]),
+    [[1, 'interrompu']]
+  )
   demarrer(second, new FauxArticle())
   strictEqual(second.liste()[0].id, 2)
 })
 
 test('sans base, les téléchargements marchent en mémoire', () => {
-  const gestionnaire = creerGestionnaire({ dossier: () => 'D', base: () => null, diffuser: () => undefined, existe: () => false, ouvrir: () => undefined, reveler: () => undefined })
+  const gestionnaire = creerGestionnaire({
+    dossier: () => 'D',
+    base: () => null,
+    diffuser: () => undefined,
+    existe: () => false,
+    ouvrir: () => undefined,
+    reveler: () => undefined
+  })
   gestionnaire.charger()
   const article = new FauxArticle()
   demarrer(gestionnaire, article)
@@ -211,8 +278,14 @@ test('la liste est limitée à 200 lignes : les plus anciens terminés sont oubl
     article.emit('done', {}, 'completed')
   }
   strictEqual(gestionnaire.liste().length, 200)
-  strictEqual(gestionnaire.liste().some((t) => t.id === idPremier), false)
-  strictEqual(gestionnaire.liste().some((t) => t.id === idActif), true)
+  strictEqual(
+    gestionnaire.liste().some((t) => t.id === idPremier),
+    false
+  )
+  strictEqual(
+    gestionnaire.liste().some((t) => t.id === idActif),
+    true
+  )
   strictEqual(lireTelechargements(db).length, 200)
 })
 
@@ -222,7 +295,9 @@ test('une base qui échoue n’empêche pas le téléchargement', () => {
   db.exec('DROP TABLE telechargement')
   let erreurs = 0
   const consoleErreur = console.error
-  console.error = () => { erreurs++ }
+  console.error = () => {
+    erreurs++
+  }
   try {
     const article = new FauxArticle()
     demarrer(gestionnaire, article)
@@ -257,7 +332,14 @@ test('après un échec de lecture de l’historique, les ids continuent après l
   const consoleErreur = console.error
   console.error = () => undefined
   try {
-    const second = creerGestionnaire({ dossier: () => 'D', base: () => lectureCassee, diffuser: () => undefined, existe: () => false, ouvrir: () => undefined, reveler: () => undefined })
+    const second = creerGestionnaire({
+      dossier: () => 'D',
+      base: () => lectureCassee,
+      diffuser: () => undefined,
+      existe: () => false,
+      ouvrir: () => undefined,
+      reveler: () => undefined
+    })
     second.charger()
     strictEqual(second.liste().length, 0)
     demarrer(second, new FauxArticle())
@@ -318,7 +400,10 @@ test('ouvrir et afficher dans le dossier : terminé et présent seulement, jamai
   const interrompu = lancer('c.pdf')
   fichiers.add('D\\c.pdf')
   interrompu.article.emit('done', {}, 'interrupted')
-  for (const { id } of [annule, interrompu]) { gestionnaire.ouvrir(id); gestionnaire.reveler(id) }
+  for (const { id } of [annule, interrompu]) {
+    gestionnaire.ouvrir(id)
+    gestionnaire.reveler(id)
+  }
   deepStrictEqual([ouverts.length, reveles.length], [1, 2])
 
   present = false

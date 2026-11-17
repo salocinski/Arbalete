@@ -21,7 +21,11 @@ function estRecente(chemin: string, maintenant: number): boolean {
 // base courante ne passe pas quick_check, pour ne pas remplacer une bonne copie par une base abîmée. Avec
 // seulementSiAncienne, une copie de moins de 24 h est gardée. La copie courante ne passe en `.precedente` que si elle a
 // plus de 24 h : deux fermetures rapprochées ne font donc pas deux copies identiques. Renvoie true si une copie a été écrite.
-export function sauvegarderBase(db: DatabaseSync, chemin: string, options: { seulementSiAncienne?: boolean, maintenant?: number } = {}): boolean {
+export function sauvegarderBase(
+  db: DatabaseSync,
+  chemin: string,
+  options: { seulementSiAncienne?: boolean; maintenant?: number } = {}
+): boolean {
   const cible = chemin + SUFFIXE_SAUVEGARDE
   const maintenant = options.maintenant ?? Date.now()
   const existe = existsSync(cible)

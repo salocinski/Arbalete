@@ -18,6 +18,7 @@ export function majLatest(yml: string, sha512: string, taille: number): string {
       return debut + taille
     })
     .replace(/^[ \t]+blockMapSize: [^\r\n]*\r?\n/gm, '')
-  if (nSha !== 2 || nTaille !== 1) throw new Error(`latest.yml inattendu : ${nSha} sha512 et ${nTaille} size (2 et 1 attendus)`)
+  if (nSha !== 2 || nTaille !== 1)
+    throw new Error(`latest.yml inattendu : ${nSha} sha512 et ${nTaille} size (2 et 1 attendus)`)
   return sortie
 }

@@ -11,7 +11,7 @@ test('seul un window.open avec fenêtre demandée est une pop-up', () => {
   for (const disposition of ['foreground-tab', 'background-tab', 'other', '']) equal(estPopup(disposition), false)
 })
 
-test('une ouverture n\'est permise que peu après un geste de l\'utilisateur', () => {
+test("une ouverture n'est permise que peu après un geste de l'utilisateur", () => {
   equal(gesteRecent(undefined, 1000), false)
   equal(gesteRecent(1000, 1000), true)
   equal(gesteRecent(1000, 6000), true)

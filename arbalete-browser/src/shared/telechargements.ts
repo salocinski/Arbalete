@@ -35,6 +35,7 @@ export function formaterTaille(octets: number): string {
     valeur /= 1024
     rang++
   }
-  const texte = rang === 0 || valeur >= 100 ? String(Math.round(valeur)) : String(Math.round(valeur * 10) / 10).replace('.', ',')
+  const texte =
+    rang === 0 || valeur >= 100 ? String(Math.round(valeur)) : String(Math.round(valeur * 10) / 10).replace('.', ',')
   return `${texte} ${unites[rang]}`
 }

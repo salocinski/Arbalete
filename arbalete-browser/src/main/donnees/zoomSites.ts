@@ -14,7 +14,9 @@ const FACTEUR_MAX = 5
 export function hoteZoom(url: string): string | undefined {
   try {
     const { protocol, hostname } = new URL(url)
-    return (protocol === 'http:' || protocol === 'https:') && hostname.length <= HOTE_MAX ? hostname.toLowerCase() : undefined
+    return (protocol === 'http:' || protocol === 'https:') && hostname.length <= HOTE_MAX
+      ? hostname.toLowerCase()
+      : undefined
   } catch {
     return undefined
   }

@@ -13,7 +13,7 @@ export const LIBELLES_MENU_PAGE = {
 
 export type EntreeMenuPage = keyof typeof LIBELLES_MENU_PAGE
 
-export type MenuPage = { x: number, y: number, entrees: EntreeMenuPage[] }
+export type MenuPage = { x: number; y: number; entrees: EntreeMenuPage[] }
 
 export function entreeMenuPageValide(valeur: unknown): valeur is EntreeMenuPage {
   return typeof valeur === 'string' && Object.hasOwn(LIBELLES_MENU_PAGE, valeur)

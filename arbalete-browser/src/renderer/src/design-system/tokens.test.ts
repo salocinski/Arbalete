@@ -21,18 +21,34 @@ const sombre = bloc(":root[data-theme='dark']")
 const clair = bloc(":root[data-theme='light']")
 
 test('aucune valeur hexadécimale hors de tokens.css', () => {
-  const fichiers = globSync('src/renderer/src/**/*.{css,tsx,ts}', { cwd: racine })
-    .filter((f) => !f.replaceAll('\\', '/').endsWith('design-system/tokens.css') && !f.endsWith('.test.ts'))
-  ok(fichiers.some((f) => f.endsWith('styles.css')), 'styles.css doit être analysé')
+  const fichiers = globSync('src/renderer/src/**/*.{css,tsx,ts}', { cwd: racine }).filter(
+    (f) => !f.replaceAll('\\', '/').endsWith('design-system/tokens.css') && !f.endsWith('.test.ts')
+  )
+  ok(
+    fichiers.some((f) => f.endsWith('styles.css')),
+    'styles.css doit être analysé'
+  )
   const fautes = fichiers.flatMap((f) => (lire(f).match(HEX) ?? []).map((hex) => `${f} : ${hex}`))
   deepStrictEqual(fautes, [])
 })
 
 test('les palettes sombre et claire définissent les mêmes variables', () => {
   deepStrictEqual([...clair.keys()].sort(), [...sombre.keys()].sort())
-  for (const nom of ['--color-background', '--color-surface', '--color-sidebar', '--color-text-primary',
-    '--color-text-secondary', '--color-border', '--color-accent', '--color-accent-hover', '--color-accent-active',
-    '--color-focus', '--color-success', '--color-warning', '--color-error']) {
+  for (const nom of [
+    '--color-background',
+    '--color-surface',
+    '--color-sidebar',
+    '--color-text-primary',
+    '--color-text-secondary',
+    '--color-border',
+    '--color-accent',
+    '--color-accent-hover',
+    '--color-accent-active',
+    '--color-focus',
+    '--color-success',
+    '--color-warning',
+    '--color-error'
+  ]) {
     ok(sombre.has(nom), `${nom} manque`)
   }
   // Sans data-theme (avant le premier rendu), la palette sombre s'applique.
@@ -70,7 +86,10 @@ test('le cadre de page (ARB-32) a une marge de --space-2 et le rayon --radius-md
 test('la barre de contrôle déplace la fenêtre, ses boutons et champs non', () => {
   const styles = lire('src/renderer/src/styles.css')
   ok(/\.toolbar \{[^}]*-webkit-app-region: drag/.test(styles), 'la barre de contrôle doit être une zone de déplacement')
-  ok(/\.toolbar button, \.toolbar input[^{]*\{ -webkit-app-region: no-drag/.test(styles), 'ses contrôles doivent rester cliquables')
+  ok(
+    /\.toolbar button, \.toolbar input[^{]*\{ -webkit-app-region: no-drag/.test(styles),
+    'ses contrôles doivent rester cliquables'
+  )
 })
 
 test('les polices embarquées couvrent les familles des tokens, fichiers présents', () => {

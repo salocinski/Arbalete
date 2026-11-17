@@ -16,7 +16,8 @@ test('un chemin réseau (UNC) est refusé, sous toutes ses écritures', () => {
     'file:///\\serveur\\partage',
     'file:\\\\serveur\\partage\\a.html',
     'file://192.168.0.1/c$/a'
-  ]) assert.equal(adresseFichierLocal(unc), null, unc)
+  ])
+    assert.equal(adresseFichierLocal(unc), null, unc)
 })
 
 test('ce qui n’est pas un fichier est refusé', () => {

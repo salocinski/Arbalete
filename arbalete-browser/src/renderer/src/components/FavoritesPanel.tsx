@@ -14,10 +14,15 @@ export function FavoritesPanel({ onClose }: { onClose: () => void }) {
   const [nouveau, setNouveau] = useState('')
   const [bilan, setBilan] = useState('')
   const [enCours, setEnCours] = useState(false)
-  const [renommage, setRenommage] = useState<{ id: number, nom: string } | null>(null)
+  const [renommage, setRenommage] = useState<{ id: number; nom: string } | null>(null)
 
-  const relire = useCallback(() => window.arbalete.listFavorites().then(setListe, () => setListe({ dossiers: [], favoris: [] })), [])
-  useEffect(() => { void relire() }, [relire])
+  const relire = useCallback(
+    () => window.arbalete.listFavorites().then(setListe, () => setListe({ dossiers: [], favoris: [] })),
+    []
+  )
+  useEffect(() => {
+    void relire()
+  }, [relire])
   // Relu aussi en cas d'échec : l'état affiché ne doit pas rester différent de la base.
   const agir = (action: Promise<void>) => void action.then(relire, relire)
 
@@ -33,12 +38,22 @@ export function FavoritesPanel({ onClose }: { onClose: () => void }) {
   const importer = () => {
     setBilan('')
     setEnCours(true)
-    window.arbalete.importFavorites().then((n) => {
-      if (n !== null) setBilan(n === 0 ? 'Aucun nouveau favori' : `${n} favori${n > 1 ? 's' : ''} importé${n > 1 ? 's' : ''}`)
-      return relire()
-    }, () => setBilan('Import impossible')).finally(() => setEnCours(false))
+    window.arbalete
+      .importFavorites()
+      .then(
+        (n) => {
+          if (n !== null)
+            setBilan(n === 0 ? 'Aucun nouveau favori' : `${n} favori${n > 1 ? 's' : ''} importé${n > 1 ? 's' : ''}`)
+          return relire()
+        },
+        () => setBilan('Import impossible')
+      )
+      .finally(() => setEnCours(false))
   }
-  const ouvrir = (url: string) => { void window.arbalete.openFavorite(url); onClose() }
+  const ouvrir = (url: string) => {
+    void window.arbalete.openFavorite(url)
+    onClose()
+  }
 
   const ligne = (favori: FavoriListe) => (
     <div key={favori.id} className="suggestion favorite-row" data-testid="favorite-item">
@@ -47,50 +62,106 @@ export function FavoritesPanel({ onClose }: { onClose: () => void }) {
         <span className="suggestion-title">{favori.titre || favori.url}</span>
         <span className="suggestion-url">{favori.titre ? favori.url : ''}</span>
       </button>
-      <select aria-label={`Dossier de ${favori.titre || favori.url}`} value={favori.dossier ?? ''}
-        onChange={(event) => agir(window.arbalete.moveFavorite(favori.id, event.target.value === '' ? null : Number(event.target.value)))}>
+      <select
+        aria-label={`Dossier de ${favori.titre || favori.url}`}
+        value={favori.dossier ?? ''}
+        onChange={(event) =>
+          agir(window.arbalete.moveFavorite(favori.id, event.target.value === '' ? null : Number(event.target.value)))
+        }
+      >
         <option value="">Sans dossier</option>
-        {liste?.dossiers.map((dossier) => <option key={dossier.id} value={dossier.id}>{dossier.nom}</option>)}
+        {liste?.dossiers.map((dossier) => (
+          <option key={dossier.id} value={dossier.id}>
+            {dossier.nom}
+          </option>
+        ))}
       </select>
-      <IconButton size="sm" title="Retirer des favoris" onClick={() => agir(window.arbalete.removeFavorite(favori.id))}><X size={14} /></IconButton>
+      <IconButton size="sm" title="Retirer des favoris" onClick={() => agir(window.arbalete.removeFavorite(favori.id))}>
+        <X size={14} />
+      </IconButton>
     </div>
   )
 
   const racine = liste?.favoris.filter((favori) => favori.dossier === null) ?? []
   return (
     <Modal className="palette favorites" label="Favoris" onClose={onClose}>
-        <Input value={nouveau} maxLength={LONGUEUR_MAX_NOM_DOSSIER} onChange={(event) => setNouveau(event.target.value)} placeholder="Nouveau dossier"
-          aria-label="Nom du nouveau dossier" leading={<FolderPlus size={14} className="muted-icon" aria-hidden="true" />}
-          trailing={<IconButton size="sm" title="Créer le dossier" disabled={!nouveau.trim()} onClick={creer}><FolderPlus size={14} /></IconButton>}
-          onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); creer() } }} />
-        <div className="favorite-import">
-          <Button size="sm" icon={<Import size={14} aria-hidden="true" />} disabled={enCours} onClick={importer}>Importer depuis Chrome ou Edge (fichier HTML)</Button>
-          <span role="status">{bilan}</span>
-        </div>
-        <div className="palette-liste">
-          {liste && liste.favoris.length === 0 && liste.dossiers.length === 0 && <p className="palette-vide">Aucun favori : l’étoile de la barre d’adresse en ajoute</p>}
-          {liste?.dossiers.map((dossier) => (
-            <section key={dossier.id} aria-label={dossier.nom}>
-              <div className="history-day favorite-folder">
-                <Folder size={14} aria-hidden="true" />
-                {renommage?.id === dossier.id ? (
-                  <Input autoFocus value={renommage.nom} maxLength={LONGUEUR_MAX_NOM_DOSSIER} aria-label="Nouveau nom du dossier"
-                    onChange={(event) => setRenommage({ id: dossier.id, nom: event.target.value })}
-                    onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); renommer() } }} />
-                ) : <h3>{dossier.nom}</h3>}
-                <IconButton size="sm" title={`Renommer ${dossier.nom}`} onClick={() => renommage?.id === dossier.id ? renommer() : setRenommage({ id: dossier.id, nom: dossier.nom })}><Pencil size={14} /></IconButton>
-                <IconButton size="sm" title={`Supprimer ${dossier.nom} (les favoris sont gardés)`} onClick={() => agir(window.arbalete.deleteFavoriteFolder(dossier.id))}><Trash2 size={14} /></IconButton>
-              </div>
-              {liste.favoris.filter((favori) => favori.dossier === dossier.id).map(ligne)}
-            </section>
-          ))}
-          {racine.length > 0 && (
-            <section aria-label="Sans dossier">
-              {(liste?.dossiers.length ?? 0) > 0 && <h3 className="history-day">Sans dossier</h3>}
-              {racine.map(ligne)}
-            </section>
-          )}
-        </div>
-      </Modal>
+      <Input
+        value={nouveau}
+        maxLength={LONGUEUR_MAX_NOM_DOSSIER}
+        onChange={(event) => setNouveau(event.target.value)}
+        placeholder="Nouveau dossier"
+        aria-label="Nom du nouveau dossier"
+        leading={<FolderPlus size={14} className="muted-icon" aria-hidden="true" />}
+        trailing={
+          <IconButton size="sm" title="Créer le dossier" disabled={!nouveau.trim()} onClick={creer}>
+            <FolderPlus size={14} />
+          </IconButton>
+        }
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
+            event.preventDefault()
+            creer()
+          }
+        }}
+      />
+      <div className="favorite-import">
+        <Button size="sm" icon={<Import size={14} aria-hidden="true" />} disabled={enCours} onClick={importer}>
+          Importer depuis Chrome ou Edge (fichier HTML)
+        </Button>
+        <span role="status">{bilan}</span>
+      </div>
+      <div className="palette-liste">
+        {liste && liste.favoris.length === 0 && liste.dossiers.length === 0 && (
+          <p className="palette-vide">Aucun favori : l’étoile de la barre d’adresse en ajoute</p>
+        )}
+        {liste?.dossiers.map((dossier) => (
+          <section key={dossier.id} aria-label={dossier.nom}>
+            <div className="history-day favorite-folder">
+              <Folder size={14} aria-hidden="true" />
+              {renommage?.id === dossier.id ? (
+                <Input
+                  autoFocus
+                  value={renommage.nom}
+                  maxLength={LONGUEUR_MAX_NOM_DOSSIER}
+                  aria-label="Nouveau nom du dossier"
+                  onChange={(event) => setRenommage({ id: dossier.id, nom: event.target.value })}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
+                      event.preventDefault()
+                      renommer()
+                    }
+                  }}
+                />
+              ) : (
+                <h3>{dossier.nom}</h3>
+              )}
+              <IconButton
+                size="sm"
+                title={`Renommer ${dossier.nom}`}
+                onClick={() =>
+                  renommage?.id === dossier.id ? renommer() : setRenommage({ id: dossier.id, nom: dossier.nom })
+                }
+              >
+                <Pencil size={14} />
+              </IconButton>
+              <IconButton
+                size="sm"
+                title={`Supprimer ${dossier.nom} (les favoris sont gardés)`}
+                onClick={() => agir(window.arbalete.deleteFavoriteFolder(dossier.id))}
+              >
+                <Trash2 size={14} />
+              </IconButton>
+            </div>
+            {liste.favoris.filter((favori) => favori.dossier === dossier.id).map(ligne)}
+          </section>
+        ))}
+        {racine.length > 0 && (
+          <section aria-label="Sans dossier">
+            {(liste?.dossiers.length ?? 0) > 0 && <h3 className="history-day">Sans dossier</h3>}
+            {racine.map(ligne)}
+          </section>
+        )}
+      </div>
+    </Modal>
   )
 }

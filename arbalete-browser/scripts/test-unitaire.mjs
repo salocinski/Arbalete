@@ -13,9 +13,9 @@ if (fichiers.length === 0) {
   process.exit(1)
 }
 
-const resultat = spawnSync(
-  electron,
-  ['--disable-warning=MODULE_TYPELESS_PACKAGE_JSON', '--test', ...fichiers],
-  { cwd: racine, stdio: 'inherit', env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } }
-)
+const resultat = spawnSync(electron, ['--disable-warning=MODULE_TYPELESS_PACKAGE_JSON', '--test', ...fichiers], {
+  cwd: racine,
+  stdio: 'inherit',
+  env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
+})
 process.exit(resultat.status ?? 1)

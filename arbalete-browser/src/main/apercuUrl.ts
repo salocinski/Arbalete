@@ -36,7 +36,12 @@ export function placerApercu(page: Rectangle, texte: string, cote: CoteApercu): 
   const disponible = Math.max(0, page.width - 2 * MARGE)
   const largeur = Math.min(Math.max(LARGEUR_MIN, texte.length * 7 + 26), Math.floor(page.width * 0.6), disponible)
   const x = cote === 'gauche' ? page.x + MARGE : page.x + page.width - MARGE - largeur
-  return { x: Math.round(x), y: Math.round(page.y + page.height - MARGE - HAUTEUR_APERCU), width: Math.round(largeur), height: HAUTEUR_APERCU }
+  return {
+    x: Math.round(x),
+    y: Math.round(page.y + page.height - MARGE - HAUTEUR_APERCU),
+    width: Math.round(largeur),
+    height: HAUTEUR_APERCU
+  }
 }
 
 // Document de la vue : aucun script (la CSP les interdit), le processus principal remplit le texte et le thème.

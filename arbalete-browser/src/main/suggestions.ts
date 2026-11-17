@@ -17,11 +17,17 @@ export function texteSuggestion(valeur: unknown): string {
 // Première ligne : ce que ferait Entrée (aller à l'adresse ou chercher), puis les pages déjà visitées qui correspondent,
 // sans répéter l'adresse de la première ligne. `adresse` est le texte normalisé comme le fait la navigation ;
 // `modele` est celui du moteur choisi (ARB-58), qui dit si cette adresse est une recherche.
-export function construireSuggestions(texte: string, adresse: string, pages: PageVisitee[], modele: string): Suggestion[] {
+export function construireSuggestions(
+  texte: string,
+  adresse: string,
+  pages: PageVisitee[],
+  modele: string
+): Suggestion[] {
   if (!texte) return []
-  const premiere: Suggestion = adresse === urlRecherche(modele, texte)
-    ? { kind: 'recherche', titre: texte, url: adresse }
-    : { kind: 'adresse', titre: texte, url: adresse }
+  const premiere: Suggestion =
+    adresse === urlRecherche(modele, texte)
+      ? { kind: 'recherche', titre: texte, url: adresse }
+      : { kind: 'adresse', titre: texte, url: adresse }
   const historique = pages
     .filter((page) => page.url !== adresse)
     .map((page): Suggestion => ({ kind: 'historique', titre: page.titre || page.url, url: page.url }))

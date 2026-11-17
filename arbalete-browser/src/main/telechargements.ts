@@ -9,11 +9,17 @@ const NOMS_RESERVES = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])( *\..*)?$/i
 // Au-delà, « nom (n) » n'est plus cherché : un suffixe daté évite des milliers de lectures du disque dans le processus principal.
 const ESSAIS_SUFFIXE_MAX = 1000
 
+// Les caractères de contrôle sont justement ce qu'on retire.
+// oxlint-disable-next-line no-control-regex
+const CARACTERES_INTERDITS = /[\u0000-\u001f<>:"/\\|?*]/g
+
 // Nom de fichier sûr sous Windows : sans séparateur de chemin, caractère interdit ni caractère de contrôle, sans point ni
 // espace final, ni nom réservé, d'au plus 150 caractères (extension conservée). Le nom vient du serveur, donc de la page.
 export function nomFichierSur(nom: string): string {
-  // oxlint-disable-next-line no-control-regex -- les caractères de contrôle sont justement ce qu'on retire
-  let propre = nom.replace(/[\u0000-\u001f<>:"/\\|?*]/g, '_').replace(/[. ]+$/, '').replace(/^\s+/, '')
+  let propre = nom
+    .replace(CARACTERES_INTERDITS, '_')
+    .replace(/[. ]+$/, '')
+    .replace(/^\s+/, '')
   if (propre.length > LONGUEUR_MAX_NOM) {
     const extension = extname(propre).slice(0, 20)
     // La coupe peut finir sur un point ou une espace, que Windows retirerait en silence : le nom enregistré ne serait plus celui affiché.
@@ -49,8 +55,57 @@ export function schemaAutorise(url: string): boolean {
 // Fichiers que Windows exécute ou interprète à l'ouverture : « Ouvrir » les refuse (« Afficher dans le dossier » reste permis).
 // shortcut: liste fixe d'extensions courantes, sans analyse du contenu ni avertissement Windows (SmartScreen) ; l'analyse de
 // sécurité des fichiers (EP-10) la remplacera.
-const EXTENSIONS_EXECUTABLES = new Set(['.exe', '.msi', '.bat', '.cmd', '.com', '.scr', '.pif', '.lnk', '.url', '.vbs', '.vbe', '.js', '.jse', '.wsf', '.wsh', '.ps1', '.psm1', '.hta', '.jar', '.reg', '.cpl', '.msc', '.appx', '.msix', '.application', '.gadget', '.chm',
-  '.jnlp', '.inf', '.scf', '.sct', '.ws', '.wsc', '.vb', '.msp', '.mst', '.dll', '.xll', '.diagcab', '.theme', '.settingcontent-ms', '.library-ms', '.appref-ms', '.xbap', '.ps1xml', '.psc1', '.docm', '.xlsm', '.pptm'])
+const EXTENSIONS_EXECUTABLES = new Set([
+  '.exe',
+  '.msi',
+  '.bat',
+  '.cmd',
+  '.com',
+  '.scr',
+  '.pif',
+  '.lnk',
+  '.url',
+  '.vbs',
+  '.vbe',
+  '.js',
+  '.jse',
+  '.wsf',
+  '.wsh',
+  '.ps1',
+  '.psm1',
+  '.hta',
+  '.jar',
+  '.reg',
+  '.cpl',
+  '.msc',
+  '.appx',
+  '.msix',
+  '.application',
+  '.gadget',
+  '.chm',
+  '.jnlp',
+  '.inf',
+  '.scf',
+  '.sct',
+  '.ws',
+  '.wsc',
+  '.vb',
+  '.msp',
+  '.mst',
+  '.dll',
+  '.xll',
+  '.diagcab',
+  '.theme',
+  '.settingcontent-ms',
+  '.library-ms',
+  '.appref-ms',
+  '.xbap',
+  '.ps1xml',
+  '.psc1',
+  '.docm',
+  '.xlsm',
+  '.pptm'
+])
 
 export function extensionExecutable(nom: string): boolean {
   // Le préfixe « _ » : un fichier nommé exactement « .bat » a pour extension .bat sous Windows, pas pour `extname`.

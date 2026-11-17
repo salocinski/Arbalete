@@ -1,6 +1,17 @@
 import { deepEqual, strictEqual } from 'node:assert/strict'
 import { test } from 'node:test'
-import { ETAT_BARRE_INITIAL, LARGEUR_BANDE, LARGEUR_COMPACTE, borneLargeurBarre, largeurApresTouche, largeurBarre, transitionBarre, MODES_BARRE, actionsVersMode, modeBarre } from './barre.ts'
+import {
+  ETAT_BARRE_INITIAL,
+  LARGEUR_BANDE,
+  LARGEUR_COMPACTE,
+  borneLargeurBarre,
+  largeurApresTouche,
+  largeurBarre,
+  transitionBarre,
+  MODES_BARRE,
+  actionsVersMode,
+  modeBarre
+} from './barre.ts'
 
 // Tests unitaires de la barre latérale en trois états (ARB-123).
 
@@ -8,7 +19,8 @@ test('la largeur est un entier borné à 200-400, 252 si ce n’est pas un nombr
   strictEqual(borneLargeurBarre(300.4), 300)
   strictEqual(borneLargeurBarre(1), 200)
   strictEqual(borneLargeurBarre(1e9), 400)
-  for (const valeur of [NaN, Infinity, '300', null, undefined, {}]) strictEqual(borneLargeurBarre(valeur), 252, String(valeur))
+  for (const valeur of [NaN, Infinity, '300', null, undefined, {}])
+    strictEqual(borneLargeurBarre(valeur), 252, String(valeur))
 })
 
 test('la poignée : flèches de 16 px bornées, Début 200, Fin 400, autre touche ignorée', () => {
@@ -51,11 +63,13 @@ test('largeur de la vue : bande masquée, largeur réglée étendue, 68 px compa
 })
 
 test('actionsVersMode (ARB-57) mène de tout état à chacun des trois modes, sans action inutile', () => {
-  for (const pinned of [false, true]) for (const compact of [false, true]) for (const mode of MODES_BARRE) {
-    const depart = { ...ETAT_BARRE_INITIAL, open: pinned, pinned, compact }
-    const actions = actionsVersMode(depart, mode)
-    const arrivee = actions.reduce(transitionBarre, depart)
-    strictEqual(modeBarre(arrivee), mode, `${JSON.stringify(depart)} → ${mode}`)
-    strictEqual(actions.length === 0, modeBarre(depart) === mode)
-  }
+  for (const pinned of [false, true])
+    for (const compact of [false, true])
+      for (const mode of MODES_BARRE) {
+        const depart = { ...ETAT_BARRE_INITIAL, open: pinned, pinned, compact }
+        const actions = actionsVersMode(depart, mode)
+        const arrivee = actions.reduce(transitionBarre, depart)
+        strictEqual(modeBarre(arrivee), mode, `${JSON.stringify(depart)} → ${mode}`)
+        strictEqual(actions.length === 0, modeBarre(depart) === mode)
+      }
 })

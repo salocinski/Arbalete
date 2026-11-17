@@ -26,7 +26,7 @@ export function MainView() {
   const activeUrl = activeTab?.url
 
   useEffect(() => {
-    if (!addressFocused && activeUrl) setAddress(activeUrl)
+    if (!addressFocused && activeUrl !== undefined) setAddress(activeUrl)
   }, [activeTab?.id, activeUrl, addressFocused])
 
   const syncBounds = useCallback(() => {
@@ -54,10 +54,14 @@ export function MainView() {
   }, [syncBounds, sidebar.pinned, sidebar.compact, sidebar.width])
 
   // Ctrl+L : le processus principal intercepte la touche où que soit le focus et demande la barre d'adresse (ARB-18).
-  useEffect(() => window.arbalete.onFocusAddress(() => {
-    addressRef.current?.focus()
-    addressRef.current?.select()
-  }), [])
+  useEffect(
+    () =>
+      window.arbalete.onFocusAddress(() => {
+        addressRef.current?.focus()
+        addressRef.current?.select()
+      }),
+    []
+  )
 
   // Aperçu web seulement : dans Electron, le processus principal intercepte ces raccourcis avant la page (ARB-18).
   useEffect(() => {
@@ -99,10 +103,24 @@ export function MainView() {
       {/* Aperçu web : pas de vue native, la barre est rendue ici, par-dessus la page. */}
       {isPreviewMode() && <Sidebar state={state} sidebar={sidebar} />}
 
-      <section className="browser-column" onMouseDown={() => { if (isPreviewMode()) void window.arbalete.setSidebar('hide') }}>
-        <Toolbar activeTab={activeTab} sidebarPinned={sidebar.pinned} themeChoice={theme.choice} favorite={state.favorite} popupsBloquees={state.popupsBloquees}
-          address={address} addressRef={addressRef}
-          onAddressChange={setAddress} onAddressFocusChange={setAddressFocused} onNavigate={navigate} />
+      <section
+        className="browser-column"
+        onMouseDown={() => {
+          if (isPreviewMode()) void window.arbalete.setSidebar('hide')
+        }}
+      >
+        <Toolbar
+          activeTab={activeTab}
+          sidebarPinned={sidebar.pinned}
+          themeChoice={theme.choice}
+          favorite={state.favorite}
+          popupsBloquees={state.popupsBloquees}
+          address={address}
+          addressRef={addressRef}
+          onAddressChange={setAddress}
+          onAddressFocusChange={setAddressFocused}
+          onNavigate={navigate}
+        />
         {dataIncident && <DataIncidentBanner incident={dataIncident} />}
         {restoreOffer && <RestoreBanner />}
 
@@ -117,9 +135,16 @@ export function MainView() {
               </div>
             )}
             {isDemo && (
-              <WelcomeCard address={address} onAddressChange={setAddress}
-                onAddressFocus={() => { setAddressFocused(true); addressRef.current?.focus() }}
-                onNavigate={navigate} onOpenUrl={openUrl} />
+              <WelcomeCard
+                address={address}
+                onAddressChange={setAddress}
+                onAddressFocus={() => {
+                  setAddressFocused(true)
+                  addressRef.current?.focus()
+                }}
+                onNavigate={navigate}
+                onOpenUrl={openUrl}
+              />
             )}
           </div>
           {isDemo && <StageFooter />}

@@ -1,17 +1,26 @@
 import { deepEqual, strictEqual } from 'node:assert/strict'
 import { test } from 'node:test'
-import { COULEURS_ESPACE, ESPACES_INITIAUX, NOMS_COULEUR_ESPACE, champsNouvelEspace, ordreApresDeplacement, type Espace } from './espaces.ts'
+import {
+  COULEURS_ESPACE,
+  ESPACES_INITIAUX,
+  NOMS_COULEUR_ESPACE,
+  champsNouvelEspace,
+  ordreApresDeplacement,
+  type Espace
+} from './espaces.ts'
 
 // Tests unitaires des fonctions pures de gestion des espaces (ARB-62).
 
-const espaces = (n: number): Espace[] => Array.from({ length: n }, (_, i) => ({ id: i + 1, nom: `E${i}`, couleur: 'personal', icone: '◆' }))
+const espaces = (n: number): Espace[] =>
+  Array.from({ length: n }, (_, i) => ({ id: i + 1, nom: `E${i}`, couleur: 'personal', icone: '◆' }))
 
 test('un nouvel espace prend la couleur et l’icône suivantes de la liste, en boucle', () => {
   const trois = champsNouvelEspace(espaces(ESPACES_INITIAUX.length), 'Travail')
   strictEqual(trois.nom, 'Travail')
   strictEqual(trois.couleur, COULEURS_ESPACE[ESPACES_INITIAUX.length % COULEURS_ESPACE.length])
   // Au-delà de la dernière couleur, la liste recommence : la couleur reste un token connu.
-  for (const n of [0, 1, 4, 14, 17]) strictEqual(COULEURS_ESPACE.includes(champsNouvelEspace(espaces(n), 'x').couleur), true, String(n))
+  for (const n of [0, 1, 4, 14, 17])
+    strictEqual(COULEURS_ESPACE.includes(champsNouvelEspace(espaces(n), 'x').couleur), true, String(n))
   strictEqual(champsNouvelEspace(espaces(COULEURS_ESPACE.length), 'x').couleur, COULEURS_ESPACE[0])
 })
 

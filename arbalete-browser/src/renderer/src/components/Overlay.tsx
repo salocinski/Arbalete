@@ -4,7 +4,19 @@ import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 // toute la fenêtre tant que l'overlay est ouvert. Un clic hors du contenu le ferme sans atteindre la page ; Échap est
 // traité par le processus principal, où que soit le focus.
 // `centre` (modale, ARB-134) : le contenu se place au milieu de la fenêtre, x et y sont ignorés.
-export function Overlay({ x = 0, y = 0, centre = false, onClose, children }: { x?: number; y?: number; centre?: boolean; onClose: () => void; children: ReactNode }) {
+export function Overlay({
+  x = 0,
+  y = 0,
+  centre = false,
+  onClose,
+  children
+}: {
+  x?: number
+  y?: number
+  centre?: boolean
+  onClose: () => void
+  children: ReactNode
+}) {
   const contenuRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ left: x, top: y })
 
@@ -30,9 +42,18 @@ export function Overlay({ x = 0, y = 0, centre = false, onClose, children }: { x
   }
 
   return (
-    <div className={centre ? 'overlay-layer overlay-layer--centre' : 'overlay-layer'} data-testid="overlay-layer" onMouseDown={fermerHorsContenu}
-      onContextMenu={(event) => { event.preventDefault(); fermerHorsContenu(event) }}>
-      <div ref={contenuRef} className="overlay-content" style={centre ? undefined : position}>{children}</div>
+    <div
+      className={centre ? 'overlay-layer overlay-layer--centre' : 'overlay-layer'}
+      data-testid="overlay-layer"
+      onMouseDown={fermerHorsContenu}
+      onContextMenu={(event) => {
+        event.preventDefault()
+        fermerHorsContenu(event)
+      }}
+    >
+      <div ref={contenuRef} className="overlay-content" style={centre ? undefined : position}>
+        {children}
+      </div>
     </div>
   )
 }
@@ -42,7 +63,19 @@ export type EntreeMenu = { label: string; action: () => void; remplace?: boolean
 
 // Menu flottant : chaque entrée ferme l'overlay puis agit. La première entrée prend le focus ; les flèches, Début et Fin
 // parcourent les entrées, comme le veut le rôle menu.
-export function MenuOverlay({ x, y, entrees, onClose, label }: { x: number; y: number; entrees: EntreeMenu[]; onClose: () => void; label: string }) {
+export function MenuOverlay({
+  x,
+  y,
+  entrees,
+  onClose,
+  label
+}: {
+  x: number
+  y: number
+  entrees: EntreeMenu[]
+  onClose: () => void
+  label: string
+}) {
   const parcourir = (event: React.KeyboardEvent<HTMLDivElement>) => {
     const items = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
     const courant = items.indexOf(document.activeElement as HTMLButtonElement)
@@ -56,7 +89,15 @@ export function MenuOverlay({ x, y, entrees, onClose, label }: { x: number; y: n
     <Overlay x={x} y={y} onClose={onClose}>
       <div className="overlay-menu" role="menu" aria-label={label} onKeyDown={parcourir}>
         {entrees.map((entree, index) => (
-          <button key={entree.label} role="menuitem" autoFocus={index === 0} onClick={() => { if (!entree.remplace) onClose(); entree.action() }}>
+          <button
+            key={entree.label}
+            role="menuitem"
+            autoFocus={index === 0}
+            onClick={() => {
+              if (!entree.remplace) onClose()
+              entree.action()
+            }}
+          >
             {entree.label}
           </button>
         ))}

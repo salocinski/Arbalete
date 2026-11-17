@@ -1,7 +1,18 @@
 import { deepEqual, strictEqual } from 'node:assert/strict'
 import { test } from 'node:test'
 import { ouvrirBase } from './base.ts'
-import { ecrireBarre, ecrireMoteur, ecrirePreference, ecrireReglages, ecrireTheme, lireBarre, lireMoteur, lirePreference, lireReglages, lireTheme } from './preferences.ts'
+import {
+  ecrireBarre,
+  ecrireMoteur,
+  ecrirePreference,
+  ecrireReglages,
+  ecrireTheme,
+  lireBarre,
+  lireMoteur,
+  lirePreference,
+  lireReglages,
+  lireTheme
+} from './preferences.ts'
 import { noterFermetureNormale, noterOuverture } from './fermeture.ts'
 
 // Tests unitaires des préférences (ARB-59).
@@ -42,7 +53,12 @@ test('mode et largeur de la barre sont relus ; épinglée, elle démarre ouverte
 
 test('une largeur illisible en base est bornée ou remplacée par 252', () => {
   const db = ouvrirBase(':memory:')
-  for (const [valeur, attendu] of [['10', 200], ['9999', 400], ['large', 252], ['', 200]] as const) {
+  for (const [valeur, attendu] of [
+    ['10', 200],
+    ['9999', 400],
+    ['large', 252],
+    ['', 200]
+  ] as const) {
     ecrirePreference(db, 'barre.largeur', valeur)
     strictEqual(lireBarre(db).width, attendu, valeur)
   }
@@ -72,8 +88,20 @@ test('moteur de recherche (ARB-58) : Google par défaut, choix relu, valeur inva
 
 test('réglages (ARB-57) : valeurs par défaut, dernier choix relu, valeurs invalides ignorées', () => {
   const db = ouvrirBase(':memory:')
-  deepEqual(lireReglages(db), { accueil: 'https://www.google.com', animationsReduites: false, dossierTelechargements: null, archivageHeures: 12, veilleMinutes: 30 })
-  const choisis = { accueil: 'https://exemple.org/', animationsReduites: true, dossierTelechargements: 'C:/Telechargements', archivageHeures: 24, veilleMinutes: 60 }
+  deepEqual(lireReglages(db), {
+    accueil: 'https://www.google.com',
+    animationsReduites: false,
+    dossierTelechargements: null,
+    archivageHeures: 12,
+    veilleMinutes: 30
+  })
+  const choisis = {
+    accueil: 'https://exemple.org/',
+    animationsReduites: true,
+    dossierTelechargements: 'C:/Telechargements',
+    archivageHeures: 24,
+    veilleMinutes: 60
+  }
   ecrireReglages(db, choisis)
   deepEqual(lireReglages(db), choisis)
   ecrireReglages(db, { ...choisis, dossierTelechargements: null })

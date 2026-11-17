@@ -20,7 +20,9 @@ export function DataIncidentBanner({ incident }: { incident: DataIncident }) {
     <div className="app-banner" role="alert" data-testid="data-incident-banner">
       <span>{message(incident)}</span>
       <div className="app-banner-actions">
-        <Button size="sm" onClick={() => void window.arbalete.dismissDataIncident()}>Fermer</Button>
+        <Button size="sm" onClick={() => void window.arbalete.dismissDataIncident()}>
+          Fermer
+        </Button>
       </div>
     </div>
   )

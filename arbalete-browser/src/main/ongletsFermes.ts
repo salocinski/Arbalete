@@ -13,7 +13,7 @@ export function empiler(pile: string[], url: string): string[] {
 }
 
 // Retire le dernier onglet fermé, ou renvoie undefined si la pile est vide.
-export function depiler(pile: string[]): { url: string, reste: string[] } | undefined {
+export function depiler(pile: string[]): { url: string; reste: string[] } | undefined {
   const url = pile.at(-1)
   return url === undefined ? undefined : { url, reste: pile.slice(0, -1) }
 }

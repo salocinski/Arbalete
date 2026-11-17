@@ -21,7 +21,7 @@ export type BrowserTab = {
   canGoBack: boolean
   canGoForward: boolean
   favicon?: string
-  // États visuels de l'onglet (ARB-124). 
+  // États visuels de l'onglet (ARB-124).
   pinned?: boolean // épinglé par le menu de l'onglet (ARB-41), écrit dans la session et gardé en tête de liste (ARB-64)
   folder?: number // id du dossier d'onglets qui le contient (ARB-69), jamais pour un onglet épinglé
   audible?: boolean
@@ -63,23 +63,33 @@ export type ThemeChoice = 'system' | 'dark' | 'light'
 
 // Ce qu'un import de données (ARB-79) a ajouté : favoris, pages d'historique (nouvelles ou complétées), espaces ; `reglages`
 // vrai si le fichier en portait.
-export interface BilanImport { favoris: number; pages: number; espaces: number; reglages: boolean }
+export interface BilanImport {
+  favoris: number
+  pages: number
+  espaces: number
+  reglages: boolean
+}
 
 // Réponse à l'invite de restauration qui suit un arrêt forcé (ARB-46).
 export type RestoreAnswer = 'restore' | 'dismiss'
 
 // Incident de la base à l'ouverture (ARB-119) : illisible et mise de côté sous le nom backup, plus récente que cette
 // version d'Arbalète, ou indisponible. Dans les deux derniers cas, rien n'est conservé pendant la session.
-export type DataIncident = { kind: 'corrupted', backup: string, restored: boolean } | { kind: 'newer' } | { kind: 'unavailable' }
+export type DataIncident =
+  { kind: 'corrupted'; backup: string; restored: boolean } | { kind: 'newer' } | { kind: 'unavailable' }
 
 // Suggestions de la barre d'adresse (ARB-53) : une ligne est ce que ferait Entrée (chercher ou aller à l'adresse) ou une
 // page déjà visitée. `selection` vaut -1 tant qu'aucune ligne n'est choisie aux flèches ; `anchor` est le champ, en
 // coordonnées de la fenêtre, sous lequel la liste s'affiche.
-export type Suggestion = { kind: 'recherche' | 'adresse' | 'historique', titre: string, url: string }
-export type SuggestionsState = { items: Suggestion[], selection: number, anchor: { x: number, y: number, width: number, height: number } }
+export type Suggestion = { kind: 'recherche' | 'adresse' | 'historique'; titre: string; url: string }
+export type SuggestionsState = {
+  items: Suggestion[]
+  selection: number
+  anchor: { x: number; y: number; width: number; height: number }
+}
 
 // Résultat de la recherche dans la page (ARB-70) : rang du résultat actif (1 à total, 0 sans résultat) et nombre total.
-export type FindResult = { active: number, total: number }
+export type FindResult = { active: number; total: number }
 
 export type BrowserAPI = {
   getState: () => Promise<BrowserState>
@@ -122,7 +132,7 @@ export type BrowserAPI = {
   // les flèches (`moveSuggestion`), le processus principal tient la liste, ouvre l'overlay et la diffuse à la vue de la
   // barre, qui l'affiche. Un texte vide ou `closeSuggestions` ferme la liste ; `chooseSuggestion` ouvre la ligne donnée
   // (clic) ou la ligne choisie aux flèches (Entrée) ; faux si aucune ligne n'a été ouverte.
-  suggest: (text: string, anchor: { x: number, y: number, width: number, height: number }) => Promise<void>
+  suggest: (text: string, anchor: { x: number; y: number; width: number; height: number }) => Promise<void>
   moveSuggestion: (step: 1 | -1) => Promise<void>
   chooseSuggestion: (index?: number) => Promise<boolean>
   closeSuggestions: () => Promise<void>

@@ -12,7 +12,13 @@ test('un onglet ordinaire n’a aucun état, un onglet actif a Active', () => {
 })
 
 test('les états se cumulent dans un ordre stable', () => {
-  deepEqual(etatsOnglet({ ...base, pinned: true, isLoading: true, muted: true, error: true }, true), ['active', 'pinned', 'loading', 'muted', 'error'])
+  deepEqual(etatsOnglet({ ...base, pinned: true, isLoading: true, muted: true, error: true }, true), [
+    'active',
+    'pinned',
+    'loading',
+    'muted',
+    'error'
+  ])
 })
 
 // Value: protects=précédences d'icône du favicon et de l'indicateur sonore; fails_when=l'erreur ne l'emporte plus sur
@@ -30,7 +36,15 @@ test('l’erreur l’emporte sur le chargement et le muet sur le son', () => {
 const css = readFileSync(fileURLToPath(new URL('../styles.css', import.meta.url)), 'utf8')
 
 test('la feuille de style définit Hover, Active, Pinned, Loading, Muted et Error', () => {
-  for (const motif of ['.tab-item:hover', '.tab-item--active', '.tab-pin', '.tab-item--loading', '.tab-item--muted', '.tab-item--error', '.tab-audio'])
+  for (const motif of [
+    '.tab-item:hover',
+    '.tab-item--active',
+    '.tab-pin',
+    '.tab-item--loading',
+    '.tab-item--muted',
+    '.tab-item--error',
+    '.tab-audio'
+  ])
     ok(css.includes(motif), `${motif} manque`)
 })
 

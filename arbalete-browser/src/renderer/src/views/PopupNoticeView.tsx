@@ -9,10 +9,17 @@ export function PopupNoticeView() {
   useTheme()
   useSettings()
   const { popupsBloquees } = useBrowserState()
-  useEffect(() => { document.documentElement.classList.add('vue-popup') }, [])
+  useEffect(() => {
+    document.documentElement.classList.add('vue-popup')
+  }, [])
 
   return (
-    <Toast testId="popup-notice" icone={<AppWindow size={16}/>} message={popupsBloquees > 1 ? `${popupsBloquees} pop-ups bloquées` : 'Pop-up bloquée'}
-      action={{ libelle: 'Autoriser', onClick: () => void window.arbalete.allowPopups() }} onClose={() => void window.arbalete.closePopupNotice()}/>
+    <Toast
+      testId="popup-notice"
+      icone={<AppWindow size={16} />}
+      message={popupsBloquees > 1 ? `${popupsBloquees} pop-ups bloquées` : 'Pop-up bloquée'}
+      action={{ libelle: 'Autoriser', onClick: () => void window.arbalete.allowPopups() }}
+      onClose={() => void window.arbalete.closePopupNotice()}
+    />
   )
 }

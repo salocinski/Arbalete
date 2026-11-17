@@ -2,14 +2,20 @@
 // Index hors liste, onglet inconnu ou déplacement sur place : l'ordre ne change pas.
 export function ordreApresDeplacementOnglet(ids: string[], id: string, versIndex: number): string[] {
   const depart = ids.indexOf(id)
-  if (depart < 0 || !Number.isInteger(versIndex) || versIndex < 0 || versIndex >= ids.length || versIndex === depart) return ids
+  if (depart < 0 || !Number.isInteger(versIndex) || versIndex < 0 || versIndex >= ids.length || versIndex === depart)
+    return ids
   const autres = ids.filter((autre) => autre !== id)
   autres.splice(versIndex, 0, id)
   return autres
 }
 
 // Nouvelle Map dans l'ordre voulu : l'ordre d'insertion de la Map des onglets est celui que la session écrit.
-export function reordonnerOnglets<V>(onglets: Map<string, V>, visibles: string[], id: string, versIndex: number): Map<string, V> {
+export function reordonnerOnglets<V>(
+  onglets: Map<string, V>,
+  visibles: string[],
+  id: string,
+  versIndex: number
+): Map<string, V> {
   const ordre = fusionnerOrdre([...onglets.keys()], visibles, ordreApresDeplacementOnglet(visibles, id, versIndex))
   return new Map(ordre.map((cle) => [cle, onglets.get(cle)!]))
 }

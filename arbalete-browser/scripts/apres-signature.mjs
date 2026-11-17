@@ -8,10 +8,14 @@ import { majLatest } from '../src/shared/signature.ts'
 /** `dossier` finit par un séparateur. Lève s'il n'y a pas exactement un installeur (la CI part d'un dépôt neuf, un `release/` local en garde d'anciens). */
 export function traiter(dossier) {
   const installeurs = readdirSync(dossier).filter((f) => /^Arbalete-Setup-.+\.exe$/.test(f))
-  if (installeurs.length !== 1) throw new Error(`Un seul installeur attendu dans ${dossier}, trouvé : ${installeurs.join(', ') || 'aucun'}`)
+  if (installeurs.length !== 1)
+    throw new Error(`Un seul installeur attendu dans ${dossier}, trouvé : ${installeurs.join(', ') || 'aucun'}`)
   const octets = readFileSync(dossier + installeurs[0])
   const latest = dossier + 'latest.yml'
-  writeFileSync(latest, majLatest(readFileSync(latest, 'utf8'), createHash('sha512').update(octets).digest('base64'), octets.length))
+  writeFileSync(
+    latest,
+    majLatest(readFileSync(latest, 'utf8'), createHash('sha512').update(octets).digest('base64'), octets.length)
+  )
   rmSync(dossier + installeurs[0] + '.blockmap', { force: true })
   return `latest.yml mis à jour pour ${installeurs[0]} (${octets.length} octets)`
 }

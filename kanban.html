@@ -1626,11 +1626,11 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "epic": "phase-1-valider-le-socle",
       "kind": "tache",
       "milestone": "EP-01",
-      "note": "Vite 8, electron-vite 6 et Electron exigent Node ^20.19 ou >= 22.12 ; rien ne l'indique dans le dépôt. Ajouter engines dans package.json et/ou .nvmrc. Issu de la revue d'ARB-4.\nCritère : npm install avertit sur une version de Node trop ancienne",
+      "note": "Vite 8, electron-vite 6 et Electron exigent Node ^20.19 ou >= 22.12 ; rien ne l'indique dans le dépôt. Ajouter engines dans package.json et/ou .nvmrc. Issu de la revue d'ARB-4.\nCritère : npm install avertit sur une version de Node trop ancienne\nTerminé (2026-11-17) : package.json déclare engines.node (^20.19.0 || >=22.12.0, plage de Vite 8, electron-vite 6 et Oxlint), gardé par un test de src/configuration.test.ts qui vérifie aussi la version de Node de ci.yml. Pas de .nvmrc (un fichier de plus à tenir à jour). Simple avertissement npm, sans engine-strict ; release.yml n’est pas lu par le test. PR #134.",
       "num": 99,
       "prio": "P3",
       "size": "S",
-      "status": "doing",
+      "status": "done",
       "title": "Fixer la version de Node (engines ou .nvmrc)"
     },
     {

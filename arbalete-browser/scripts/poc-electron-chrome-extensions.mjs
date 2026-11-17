@@ -30,7 +30,7 @@ const serveur = createServer((req, res) => {
     // Seuls des caractères sûrs entrent dans le HTML : `"` ou `<` ne passent pas (pas d'injection).
     const m = decodeURIComponent(req.url).match(/^\/hote\/([\w:.-]+)\/(\d+)$/)
     if (!m) return res.writeHead(400).end()
-    const [, partition, tab] = m
+    const [, partition, tab] = m.map((v) => v.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`))
     res.end(
       `<!doctype html><title>hote</title><body><browser-action-list partition="${partition}" tab="${tab}"></browser-action-list>`
     )

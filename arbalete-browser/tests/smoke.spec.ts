@@ -4096,10 +4096,11 @@ test('C80 : le menu d’un onglet duplique, épingle, copie l’adresse et ferme
     // Épingler : l'onglet visé porte l'état, l'entrée devient Désépingler ; une seconde fois le retire.
     await entree('Page A', 'Épingler')
     await expect.poll(async () => (await etat()).tabs.filter((tab) => tab.pinned).length).toBe(1)
-    // Depuis ARB-64, les épinglés sont en tête de liste : l'onglet épinglé est le premier « Page A », le dernier est l'autre.
-    await (
-      await onglet('Page A', (await barreUi.locator('.tab-item').filter({ hasText: 'Page A' }).count()) - 1)
-    ).click({ button: 'right' })
+    // L'état du processus principal précède le rendu de la barre : on vise l'onglet que la barre montre épinglé
+    // (ARB-142 ; viser « le premier Page A » avant ce rendu ouvrait le menu d'un onglet non épinglé).
+    const epinglesBarre = barreUi.locator('.tab-item').filter({ hasText: 'Page A' }).filter({ hasText: ', épinglé' })
+    await expect(epinglesBarre).toHaveCount(1)
+    await epinglesBarre.click({ button: 'right' })
     await expect(menu.getByRole('menuitem', { name: 'Désépingler', exact: true })).toBeVisible()
     await barreUi.evaluate(() => window.arbalete.setOverlay(false))
     await expect.poll(overlay).toBe(false)

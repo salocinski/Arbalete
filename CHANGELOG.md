@@ -2,6 +2,14 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.31] - 2026-11-17
+
+### Corrigé
+- Test smoke C80 (ARB-142) : le menu d’un onglet échouait par intermittence (« Désépingler » absent). Le test visait « le premier Page A » d’après l’état du processus principal, avant que la barre latérale ait réaffiché la liste, et ouvrait le menu d’un onglet non épinglé. Il attend maintenant que la barre montre l’onglet épinglé, puis clique dessus. Aucun code de l’application ne change.
+
+### Limites
+- La cause vient de la lecture du code : l’échec n’a pas été reproduit en local (30 passages sur 30 avant correction). C47 n’a montré aucun défaut et n’est pas modifié. La stabilité se confirme sur la CI.
+
 ## [0.12.44.30] - 2026-11-17
 
 ### Modifié

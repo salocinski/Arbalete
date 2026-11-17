@@ -63,7 +63,11 @@ function dormir(ms: number): void {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
 }
 
-function ouvrirAvecReessais(chemin: string, ouvrir: (chemin: string) => DatabaseSync, pause: (ms: number) => void): DatabaseSync {
+function ouvrirAvecReessais(
+  chemin: string,
+  ouvrir: (chemin: string) => DatabaseSync,
+  pause: (ms: number) => void
+): DatabaseSync {
   for (let essai = 1; ; essai++) {
     try {
       return ouvrir(chemin)
@@ -80,7 +84,11 @@ function ouvrirAvecReessais(chemin: string, ouvrir: (chemin: string) => Database
 // s'ouvre pas est écartée. null si aucune ne convient : l'appelant repart d'une base neuve.
 // La copie remise en place s'ouvre avec les mêmes réessais que la base : un échec d'E/S passager ne doit pas écarter une
 // bonne copie au profit d'une base vide.
-function restaurerSauvegarde(chemin: string, ouvrir: (chemin: string) => DatabaseSync, pause: (ms: number) => void): DatabaseSync | null {
+function restaurerSauvegarde(
+  chemin: string,
+  ouvrir: (chemin: string) => DatabaseSync,
+  pause: (ms: number) => void
+): DatabaseSync | null {
   for (const source of [chemin + SUFFIXE_SAUVEGARDE, chemin + SUFFIXE_SAUVEGARDE + SUFFIXE_PRECEDENTE]) {
     if (!existsSync(source)) continue
     try {
@@ -89,7 +97,11 @@ function restaurerSauvegarde(chemin: string, ouvrir: (chemin: string) => Databas
     } catch (erreur) {
       console.error(`Copie de secours inutilisable (${basename(source)}) :`, erreur)
       for (const suffixe of ['', '-wal', '-shm']) {
-        try { rmSync(chemin + suffixe, { force: true }) } catch (echec) { console.error('Copie écartée non supprimée :', echec) }
+        try {
+          rmSync(chemin + suffixe, { force: true })
+        } catch (echec) {
+          console.error('Copie écartée non supprimée :', echec)
+        }
       }
     }
   }
@@ -98,9 +110,7 @@ function restaurerSauvegarde(chemin: string, ouvrir: (chemin: string) => Databas
 
 // Ce que l'ouverture de la base a dû faire, pour en prévenir l'utilisateur (ARB-119).
 export type IncidentBase =
-  | { type: 'corrompue', copie: string, restauree: boolean }
-  | { type: 'plus-recente' }
-  | { type: 'indisponible' }
+  { type: 'corrompue'; copie: string; restauree: boolean } | { type: 'plus-recente' } | { type: 'indisponible' }
 
 // Ouvre la base comme ouvrirBase, sans lever d'erreur. Une base illisible est mise de côté sous
 // arbalete.db.corrompue-<date>, avec ses fichiers -wal et -shm, et remplacée par la dernière copie de secours saine
@@ -111,7 +121,7 @@ export function ouvrirBaseOuRecuperer(
   maintenant = new Date(),
   ouvrir: (chemin: string) => DatabaseSync = ouvrirBase,
   pause: (ms: number) => void = dormir
-): { db: DatabaseSync | null, incident: IncidentBase | null } {
+): { db: DatabaseSync | null; incident: IncidentBase | null } {
   try {
     return { db: ouvrirAvecReessais(chemin, ouvrir, pause), incident: null }
   } catch (erreur) {
@@ -133,7 +143,10 @@ export function ouvrirBaseOuRecuperer(
       if (existsSync(chemin + suffixe)) renameSync(chemin + suffixe, copie + suffixe)
     }
     const restauree = restaurerSauvegarde(chemin, ouvrir, pause)
-    return { db: restauree ?? ouvrirBase(chemin), incident: { type: 'corrompue', copie: basename(copie), restauree: restauree !== null } }
+    return {
+      db: restauree ?? ouvrirBase(chemin),
+      incident: { type: 'corrompue', copie: basename(copie), restauree: restauree !== null }
+    }
   } catch (erreur) {
     console.error('Base illisible non remplacée, aucune donnée ne sera conservée :', erreur)
     return { db: null, incident: { type: 'indisponible' } }

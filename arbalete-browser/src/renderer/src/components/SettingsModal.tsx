@@ -1,5 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { LARGEUR_ETENDUE_MAX, LARGEUR_ETENDUE_MIN, MODES_BARRE, actionsVersMode, modeBarre, type ModeBarre } from '../../../shared/barre'
+import {
+  LARGEUR_ETENDUE_MAX,
+  LARGEUR_ETENDUE_MIN,
+  MODES_BARRE,
+  actionsVersMode,
+  modeBarre,
+  type ModeBarre
+} from '../../../shared/barre'
 import { DELAIS_ARCHIVAGE, LIBELLES_DELAI } from '../../../shared/archivage'
 import { DELAIS_VEILLE, LIBELLES_VEILLE, type MemoireOnglets } from '../../../shared/veille'
 import { accueilValide } from '../../../shared/reglages'
@@ -12,18 +19,45 @@ import { SearchEngineSection } from './SearchEngineSection'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 
-const THEMES: Array<[ThemeChoice, string]> = [['system', 'Système'], ['dark', 'Sombre'], ['light', 'Clair']]
+const THEMES: Array<[ThemeChoice, string]> = [
+  ['system', 'Système'],
+  ['dark', 'Sombre'],
+  ['light', 'Clair']
+]
 const MODES: Record<ModeBarre, string> = { etendue: 'Étendue', compacte: 'Compacte', masquee: 'Masquée au survol' }
 
 function Section({ titre, children }: { titre: string; children: ReactNode }) {
-  return <section className="settings-section" aria-label={titre}><h3 className="settings-title">{titre}</h3>{children}</section>
+  return (
+    <section className="settings-section" aria-label={titre}>
+      <h3 className="settings-title">{titre}</h3>
+      {children}
+    </section>
+  )
 }
 
-function Choix<T extends string>({ label, options, valeur, onChoisir }: { label: string; options: Array<[T, string]>; valeur: T; onChoisir: (valeur: T) => void }) {
+function Choix<T extends string>({
+  label,
+  options,
+  valeur,
+  onChoisir
+}: {
+  label: string
+  options: Array<[T, string]>
+  valeur: T
+  onChoisir: (valeur: T) => void
+}) {
   return (
     <div className="engine-list engine-list--row" role="radiogroup" aria-label={label}>
       {options.map(([id, nom]) => (
-        <button key={id} role="radio" className="engine-option" aria-checked={id === valeur} onClick={() => onChoisir(id)}>{nom}</button>
+        <button
+          key={id}
+          role="radio"
+          className="engine-option"
+          aria-checked={id === valeur}
+          onClick={() => onChoisir(id)}
+        >
+          {nom}
+        </button>
       ))}
     </div>
   )
@@ -40,44 +74,80 @@ export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onC
   const [memoire, setMemoire] = useState<MemoireOnglets | null>(null)
   useEffect(() => {
     let perime = false
-    const mesurer = () => window.arbalete.getMemory().then((mesure) => { if (!perime) setMemoire(mesure) }, () => {})
+    const mesurer = () =>
+      window.arbalete.getMemory().then(
+        (mesure) => {
+          if (!perime) setMemoire(mesure)
+        },
+        () => {}
+      )
     void mesurer()
     const minuteur = setInterval(() => void mesurer(), 3000)
-    return () => { perime = true; clearInterval(minuteur) }
+    return () => {
+      perime = true
+      clearInterval(minuteur)
+    }
   }, [])
 
   // Navigateur par défaut (ARB-80) : relu à l'ouverture et quand la fenêtre reprend le focus (retour des paramètres Windows).
   const [navigateur, setNavigateur] = useState<string | null>(null)
   useEffect(() => {
     let perime = false
-    const lire = () => window.arbalete.getDefaultBrowser().then((nom) => { if (!perime) setNavigateur(nom) }, () => {})
+    const lire = () =>
+      window.arbalete.getDefaultBrowser().then(
+        (nom) => {
+          if (!perime) setNavigateur(nom)
+        },
+        () => {}
+      )
     void lire()
     window.addEventListener('focus', lire)
-    return () => { perime = true; window.removeEventListener('focus', lire) }
+    return () => {
+      perime = true
+      window.removeEventListener('focus', lire)
+    }
   }, [])
 
   // Mises à jour (ARB-77) : état lu à l'ouverture, puis suivi par le processus principal.
   const [maj, setMaj] = useState<EtatMiseAJour | null>(null)
   useEffect(() => {
     let perime = false
-    void window.arbalete.getUpdateState().then((etat) => { if (!perime) setMaj(etat) }, () => {})
+    void window.arbalete.getUpdateState().then(
+      (etat) => {
+        if (!perime) setMaj(etat)
+      },
+      () => {}
+    )
     const retirer = window.arbalete.onUpdateState(setMaj)
-    return () => { perime = true; retirer() }
+    return () => {
+      perime = true
+      retirer()
+    }
   }, [])
 
   // Page d'accueil : champ libre, enregistré par Entrée ou le bouton ; relu quand le processus principal la change.
   const [accueil, setAccueil] = useState('')
-  useEffect(() => { setAccueil(reglages.accueil) }, [reglages.accueil])
+  useEffect(() => {
+    setAccueil(reglages.accueil)
+  }, [reglages.accueil])
   const accueilNormalise = accueilValide(accueil)
   const accueilEnregistre = accueilNormalise === accueilValide(reglages.accueil)
-  const enregistrerAccueil = () => { if (accueilNormalise) void window.arbalete.setHomePage(accueilNormalise).catch(() => {}) }
+  const enregistrerAccueil = () => {
+    if (accueilNormalise) void window.arbalete.setHomePage(accueilNormalise).catch(() => {})
+  }
 
   // Export et import des données (ARB-79) : un seul à la fois ; l'annulation de la boîte ne laisse aucun message.
   const [donnees, setDonnees] = useState({ enCours: false, message: '' })
   const lancerDonnees = (action: () => Promise<string | null | undefined | false | 0>) => {
     setDonnees({ enCours: true, message: '' })
-    action().then((message) => setDonnees({ enCours: false, message: message || '' }),
-      (erreur: unknown) => setDonnees({ enCours: false, message: `Échec : ${erreur instanceof Error ? erreur.message.replace(/^Error invoking remote method '[^']*': (Error: )?/, '') : 'erreur inconnue'}` }))
+    action().then(
+      (message) => setDonnees({ enCours: false, message: message || '' }),
+      (erreur: unknown) =>
+        setDonnees({
+          enCours: false,
+          message: `Échec : ${erreur instanceof Error ? erreur.message.replace(/^Error invoking remote method '[^']*': (Error: )?/, '') : 'erreur inconnue'}`
+        })
+    )
   }
 
   // Les actions de barre se jouent l'une après l'autre : chacune part de l'état laissé par la précédente.
@@ -87,91 +157,224 @@ export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onC
 
   return (
     <Modal className="color-modal settings" label="Paramètres" onClose={onClose}>
-        <div className="color-modal-title">Paramètres</div>
+      <div className="color-modal-title">Paramètres</div>
 
-        <Section titre="Apparence">
-          <Choix label="Thème" options={THEMES} valeur={choice} onChoisir={(theme) => void window.arbalete.setTheme(theme)} />
-          <Choix label="Barre latérale" options={MODES_BARRE.map((mode): [ModeBarre, string] => [mode, MODES[mode]])} valeur={modeBarre(sidebar)} onChoisir={(mode) => void choisirMode(mode)} />
-          <label className="settings-row">
-            Largeur de la barre étendue
-            <input type="range" min={LARGEUR_ETENDUE_MIN} max={LARGEUR_ETENDUE_MAX} step={4} value={sidebar.width} aria-valuetext={`${sidebar.width} pixels`}
-              onChange={(event) => void window.arbalete.setSidebarWidth(Number(event.target.value))} />
-          </label>
-          <label className="settings-row settings-row--case">
-            <input type="checkbox" checked={reglages.animationsReduites} onChange={(event) => void window.arbalete.setReducedMotion(event.target.checked)} />
-            Réduire les animations
-          </label>
-        </Section>
+      <Section titre="Apparence">
+        <Choix
+          label="Thème"
+          options={THEMES}
+          valeur={choice}
+          onChoisir={(theme) => void window.arbalete.setTheme(theme)}
+        />
+        <Choix
+          label="Barre latérale"
+          options={MODES_BARRE.map((mode): [ModeBarre, string] => [mode, MODES[mode]])}
+          valeur={modeBarre(sidebar)}
+          onChoisir={(mode) => void choisirMode(mode)}
+        />
+        <label className="settings-row">
+          Largeur de la barre étendue
+          <input
+            type="range"
+            min={LARGEUR_ETENDUE_MIN}
+            max={LARGEUR_ETENDUE_MAX}
+            step={4}
+            value={sidebar.width}
+            aria-valuetext={`${sidebar.width} pixels`}
+            onChange={(event) => void window.arbalete.setSidebarWidth(Number(event.target.value))}
+          />
+        </label>
+        <label className="settings-row settings-row--case">
+          <input
+            type="checkbox"
+            checked={reglages.animationsReduites}
+            onChange={(event) => void window.arbalete.setReducedMotion(event.target.checked)}
+          />
+          Réduire les animations
+        </label>
+      </Section>
 
-        <Section titre="Moteur de recherche"><SearchEngineSection /></Section>
+      <Section titre="Moteur de recherche">
+        <SearchEngineSection />
+      </Section>
 
-        <Section titre="Onglets">
-          <Choix label="Archiver les onglets non épinglés après" options={DELAIS_ARCHIVAGE.map((heures): [string, string] => [String(heures), LIBELLES_DELAI[heures]])}
-            valeur={String(reglages.archivageHeures)} onChoisir={(heures) => void window.arbalete.setArchiveDelay(Number(heures)).catch(() => {})} />
-          <p className="settings-help">Un onglet épinglé, affiché ou qui joue du son n’est jamais archivé. Les onglets archivés se rouvrent depuis « Archive ».</p>
-          <Choix label="Mettre en veille les onglets laissés de côté après" options={DELAIS_VEILLE.map((minutes): [string, string] => [String(minutes), LIBELLES_VEILLE[minutes]])}
-            valeur={String(reglages.veilleMinutes)} onChoisir={(minutes) => void window.arbalete.setSleepDelay(Number(minutes)).catch(() => {})} />
-          <p className="settings-help">Un onglet en veille libère sa mémoire et recharge sa page quand on l’affiche (Précédent et le défilement sont perdus). L’onglet affiché ou qui joue du son reste éveillé.</p>
-          <p className="settings-help" aria-live="polite">{memoire ? `Mémoire des pages : ${memoire.mo} Mo, ${memoire.enVeille} onglet(s) sans page chargée.` : 'Mémoire des pages : mesure en cours…'}</p>
-        </Section>
+      <Section titre="Onglets">
+        <Choix
+          label="Archiver les onglets non épinglés après"
+          options={DELAIS_ARCHIVAGE.map((heures): [string, string] => [String(heures), LIBELLES_DELAI[heures]])}
+          valeur={String(reglages.archivageHeures)}
+          onChoisir={(heures) => void window.arbalete.setArchiveDelay(Number(heures)).catch(() => {})}
+        />
+        <p className="settings-help">
+          Un onglet épinglé, affiché ou qui joue du son n’est jamais archivé. Les onglets archivés se rouvrent depuis «
+          Archive ».
+        </p>
+        <Choix
+          label="Mettre en veille les onglets laissés de côté après"
+          options={DELAIS_VEILLE.map((minutes): [string, string] => [String(minutes), LIBELLES_VEILLE[minutes]])}
+          valeur={String(reglages.veilleMinutes)}
+          onChoisir={(minutes) => void window.arbalete.setSleepDelay(Number(minutes)).catch(() => {})}
+        />
+        <p className="settings-help">
+          Un onglet en veille libère sa mémoire et recharge sa page quand on l’affiche (Précédent et le défilement sont
+          perdus). L’onglet affiché ou qui joue du son reste éveillé.
+        </p>
+        <p className="settings-help" aria-live="polite">
+          {memoire
+            ? `Mémoire des pages : ${memoire.mo} Mo, ${memoire.enVeille} onglet(s) sans page chargée.`
+            : 'Mémoire des pages : mesure en cours…'}
+        </p>
+      </Section>
 
-        <Section titre="Démarrage">
-          <Input aria-label="Page d’accueil" placeholder="https://www.google.com" value={accueil} onChange={(event) => setAccueil(event.target.value)}
-            error={accueil.trim() && !accueilNormalise ? 'Une adresse http ou https, sans identifiant.' : undefined}
-            onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) enregistrerAccueil() }} />
-          <p className="settings-help">Ouverte par un nouvel onglet et au premier lancement.</p>
-          <Button variant="primary" size="sm" disabled={!accueilNormalise || accueilEnregistre} onClick={enregistrerAccueil}>{accueilEnregistre ? 'Enregistré' : 'Enregistrer'}</Button>
-        </Section>
+      <Section titre="Démarrage">
+        <Input
+          aria-label="Page d’accueil"
+          placeholder="https://www.google.com"
+          value={accueil}
+          onChange={(event) => setAccueil(event.target.value)}
+          error={accueil.trim() && !accueilNormalise ? 'Une adresse http ou https, sans identifiant.' : undefined}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.nativeEvent.isComposing) enregistrerAccueil()
+          }}
+        />
+        <p className="settings-help">Ouverte par un nouvel onglet et au premier lancement.</p>
+        <Button
+          variant="primary"
+          size="sm"
+          disabled={!accueilNormalise || accueilEnregistre}
+          onClick={enregistrerAccueil}
+        >
+          {accueilEnregistre ? 'Enregistré' : 'Enregistrer'}
+        </Button>
+      </Section>
 
-        <Section titre="Téléchargements">
-          <p className="settings-path" title={reglages.dossierTelechargements ?? undefined}>{reglages.dossierTelechargements ?? 'Dossier Téléchargements de Windows'}</p>
-          <div className="settings-actions">
-            <Button variant="secondary" size="sm" onClick={() => void window.arbalete.setDownloadFolder('choisir').catch(() => {})}>Choisir un dossier…</Button>
-            <Button variant="secondary" size="sm" disabled={!reglages.dossierTelechargements} onClick={() => void window.arbalete.setDownloadFolder('defaut').catch(() => {})}>Par défaut</Button>
-          </div>
-        </Section>
+      <Section titre="Téléchargements">
+        <p className="settings-path" title={reglages.dossierTelechargements ?? undefined}>
+          {reglages.dossierTelechargements ?? 'Dossier Téléchargements de Windows'}
+        </p>
+        <div className="settings-actions">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void window.arbalete.setDownloadFolder('choisir').catch(() => {})}
+          >
+            Choisir un dossier…
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={!reglages.dossierTelechargements}
+            onClick={() => void window.arbalete.setDownloadFolder('defaut').catch(() => {})}
+          >
+            Par défaut
+          </Button>
+        </div>
+      </Section>
 
-        <Section titre="Navigateur par défaut">
-          <p className="settings-help" aria-live="polite">{navigateur ? `Navigateur actuel : ${navigateur}.` : 'Navigateur actuel inconnu.'}</p>
-          <Button variant="secondary" size="sm" onClick={() => void window.arbalete.openDefaultApps().catch(() => {})}>Ouvrir les paramètres Windows…</Button>
-          <p className="settings-help">Windows laisse ce choix à l’utilisateur : choisissez Arbalète pour http et https. Les liens des autres applications s’ouvriront alors dans un onglet.</p>
-        </Section>
+      <Section titre="Navigateur par défaut">
+        <p className="settings-help" aria-live="polite">
+          {navigateur ? `Navigateur actuel : ${navigateur}.` : 'Navigateur actuel inconnu.'}
+        </p>
+        <Button variant="secondary" size="sm" onClick={() => void window.arbalete.openDefaultApps().catch(() => {})}>
+          Ouvrir les paramètres Windows…
+        </Button>
+        <p className="settings-help">
+          Windows laisse ce choix à l’utilisateur : choisissez Arbalète pour http et https. Les liens des autres
+          applications s’ouvriront alors dans un onglet.
+        </p>
+      </Section>
 
-        <Section titre="Mises à jour">
-          <p className="settings-help" aria-live="polite">{maj ? libelleMiseAJour(maj) : 'État inconnu.'}</p>
-          <div className="settings-actions">
-            {maj?.etat === 'prete'
-              ? <Button variant="secondary" size="sm" onClick={() => void window.arbalete.installUpdate().catch(() => {})}>Redémarrer et installer</Button>
-              : <Button variant="secondary" size="sm" disabled={!maj || maj.etat === 'inactive' || maj.etat === 'recherche' || maj.etat === 'telechargement'}
-                  onClick={() => void window.arbalete.checkForUpdates().catch(() => {})}>Rechercher une mise à jour</Button>}
-          </div>
-          <p className="settings-help">Arbalète cherche une nouvelle version au démarrage puis toutes les 6 heures, la télécharge en arrière-plan et l’installe à la fermeture.</p>
-        </Section>
+      <Section titre="Mises à jour">
+        <p className="settings-help" aria-live="polite">
+          {maj ? libelleMiseAJour(maj) : 'État inconnu.'}
+        </p>
+        <div className="settings-actions">
+          {maj?.etat === 'prete' ? (
+            <Button variant="secondary" size="sm" onClick={() => void window.arbalete.installUpdate().catch(() => {})}>
+              Redémarrer et installer
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!maj || maj.etat === 'inactive' || maj.etat === 'recherche' || maj.etat === 'telechargement'}
+              onClick={() => void window.arbalete.checkForUpdates().catch(() => {})}
+            >
+              Rechercher une mise à jour
+            </Button>
+          )}
+        </div>
+        <p className="settings-help">
+          Arbalète cherche une nouvelle version au démarrage puis toutes les 6 heures, la télécharge en arrière-plan et
+          l’installe à la fermeture.
+        </p>
+      </Section>
 
-        <Section titre="Sauvegarde des données">
-          <div className="settings-actions">
-            <Button variant="secondary" size="sm" disabled={donnees.enCours} onClick={() => lancerDonnees(() => window.arbalete.exportData().then((n) =>
-              n && `Exporté : ${n.favoris} favori(s), ${n.pages} page(s) d’historique.`))}>Exporter…</Button>
-            <Button variant="secondary" size="sm" disabled={donnees.enCours} onClick={() => lancerDonnees(() => window.arbalete.importData().then((b) =>
-              b && `Importé : ${b.favoris} favori(s), ${b.pages} page(s), ${b.espaces} espace(s)${b.reglages ? ', réglages' : ''}.`))}>Importer…</Button>
-          </div>
-          <p className="settings-help">Favoris, historique, espaces et réglages dans un fichier JSON non chiffré, à garder en lieu sûr. L’import ajoute sans rien supprimer ni remplacer, sauf les réglages du fichier.</p>
-          <p className="settings-help" role="status" aria-live="polite">{donnees.message}</p>
-        </Section>
+      <Section titre="Sauvegarde des données">
+        <div className="settings-actions">
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={donnees.enCours}
+            onClick={() =>
+              lancerDonnees(() =>
+                window.arbalete
+                  .exportData()
+                  .then((n) => n && `Exporté : ${n.favoris} favori(s), ${n.pages} page(s) d’historique.`)
+              )
+            }
+          >
+            Exporter…
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={donnees.enCours}
+            onClick={() =>
+              lancerDonnees(() =>
+                window.arbalete
+                  .importData()
+                  .then(
+                    (b) =>
+                      b &&
+                      `Importé : ${b.favoris} favori(s), ${b.pages} page(s), ${b.espaces} espace(s)${b.reglages ? ', réglages' : ''}.`
+                  )
+              )
+            }
+          >
+            Importer…
+          </Button>
+        </div>
+        <p className="settings-help">
+          Favoris, historique, espaces et réglages dans un fichier JSON non chiffré, à garder en lieu sûr. L’import
+          ajoute sans rien supprimer ni remplacer, sauf les réglages du fichier.
+        </p>
+        <p className="settings-help" role="status" aria-live="polite">
+          {donnees.message}
+        </p>
+      </Section>
 
-        <Section titre="Confidentialité"><ClearDataForm /></Section>
-      </Modal>
+      <Section titre="Confidentialité">
+        <ClearDataForm />
+      </Section>
+    </Modal>
   )
 }
 
 function libelleMiseAJour(maj: EtatMiseAJour): string {
   const version = `Version installée : ${maj.version}.`
   switch (maj.etat) {
-    case 'inactive': return `${version} Les mises à jour ne sont actives que dans l’application installée.`
-    case 'recherche': return `${version} Recherche en cours…`
-    case 'telechargement': return `${version} Téléchargement de la version ${maj.nouvelle} : ${maj.pourcent ?? 0} %.`
-    case 'prete': return `${version} La version ${maj.nouvelle} est prête : elle s’installe à la fermeture, ou tout de suite.`
-    case 'erreur': return `${version} La recherche a échoué (réseau ou serveur indisponible) ; nouvel essai dans 6 heures.`
-    default: return `${version} Arbalète est à jour.`
+    case 'inactive':
+      return `${version} Les mises à jour ne sont actives que dans l’application installée.`
+    case 'recherche':
+      return `${version} Recherche en cours…`
+    case 'telechargement':
+      return `${version} Téléchargement de la version ${maj.nouvelle} : ${maj.pourcent ?? 0} %.`
+    case 'prete':
+      return `${version} La version ${maj.nouvelle} est prête : elle s’installe à la fermeture, ou tout de suite.`
+    case 'erreur':
+      return `${version} La recherche a échoué (réseau ou serveur indisponible) ; nouvel essai dans 6 heures.`
+    default:
+      return `${version} Arbalète est à jour.`
   }
 }

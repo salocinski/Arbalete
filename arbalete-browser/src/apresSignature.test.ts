@@ -8,7 +8,8 @@ import { join } from 'node:path'
 // @ts-expect-error script .mjs sans déclaration de types
 import { traiter } from '../scripts/apres-signature.mjs'
 
-const latest = 'version: 1.0.0\nfiles:\n  - url: Arbalete-Setup-1.0.0.exe\n    sha512: ancien\n    size: 1\npath: Arbalete-Setup-1.0.0.exe\nsha512: ancien\n'
+const latest =
+  'version: 1.0.0\nfiles:\n  - url: Arbalete-Setup-1.0.0.exe\n    sha512: ancien\n    size: 1\npath: Arbalete-Setup-1.0.0.exe\nsha512: ancien\n'
 
 function dossier(...fichiers: string[]): string {
   const d = mkdtempSync(join(tmpdir(), 'arb-sig-'))

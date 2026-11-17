@@ -3,8 +3,14 @@ import assert from 'node:assert/strict'
 import { delaiVeilleValide, memoireDesOnglets, ongletsAEndormir, type OngletEndormissable } from './veille.ts'
 
 const MIN = 60_000
-const onglet = (id: string, reste: Partial<OngletEndormissable> = {}): OngletEndormissable =>
-  ({ id, affiche: false, sonore: false, enVeille: false, activite: 0, ...reste })
+const onglet = (id: string, reste: Partial<OngletEndormissable> = {}): OngletEndormissable => ({
+  id,
+  affiche: false,
+  sonore: false,
+  enVeille: false,
+  activite: 0,
+  ...reste
+})
 
 describe('ongletsAEndormir', () => {
   it('endort un onglet laissé de côté au moins le délai, pas avant', () => {
@@ -13,7 +19,12 @@ describe('ongletsAEndormir', () => {
     assert.deepEqual(ongletsAEndormir(onglets, 130 * MIN - 1, 30), [])
   })
   it('garde l’onglet affiché, celui qui joue du son et ceux déjà en veille', () => {
-    const onglets = [onglet('affiche', { affiche: true }), onglet('son', { sonore: true }), onglet('veille', { enVeille: true }), onglet('vieux')]
+    const onglets = [
+      onglet('affiche', { affiche: true }),
+      onglet('son', { sonore: true }),
+      onglet('veille', { enVeille: true }),
+      onglet('vieux')
+    ]
     assert.deepEqual(ongletsAEndormir(onglets, 1000 * MIN, 30), ['vieux'])
   })
   it('endort aussi un onglet épinglé', () => {
@@ -35,7 +46,11 @@ describe('delaiVeilleValide', () => {
 })
 
 describe('memoireDesOnglets', () => {
-  const metriques = [{ pid: 1, ko: 51_200 }, { pid: 2, ko: 102_400 }, { pid: 3, ko: 999_999 }]
+  const metriques = [
+    { pid: 1, ko: 51_200 },
+    { pid: 2, ko: 102_400 },
+    { pid: 3, ko: 999_999 }
+  ]
   it('additionne les processus des onglets en Mo, sans compter deux fois un processus partagé', () => {
     assert.equal(memoireDesOnglets([1, 2, 2], metriques), 150)
   })

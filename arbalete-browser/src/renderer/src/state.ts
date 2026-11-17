@@ -13,16 +13,29 @@ import type { BrowserState, DataIncident, SidebarState, SuggestionsState, ThemeC
 
 // Aucun onglet fictif avant la réponse du processus principal (ARB-115, ARB-9) : l'aperçu navigateur crée ses propres
 // onglets de démonstration dans previewApi.ts.
-const starterState: BrowserState = { tabs: [], activeTabId: null, workspaces: [], activeWorkspaceId: null, favorite: false, favorites: [], popupsBloquees: 0, folders: [], split: null }
+const starterState: BrowserState = {
+  tabs: [],
+  activeTabId: null,
+  workspaces: [],
+  activeWorkspaceId: null,
+  favorite: false,
+  favorites: [],
+  popupsBloquees: 0,
+  folders: [],
+  split: null
+}
 
 export type ThemeState = { choice: ThemeChoice; effective: 'dark' | 'light' }
 
 export function useBrowserState(): BrowserState {
   const [state, setState] = useState<BrowserState>(starterState)
   useEffect(() => {
-    void window.arbalete.getState().then((next) => {
-      if (next.tabs.length) setState(next)
-    }).catch(() => {})
+    void window.arbalete
+      .getState()
+      .then((next) => {
+        if (next.tabs.length) setState(next)
+      })
+      .catch(() => {})
     return window.arbalete.onState((next) => setState(next))
   }, [])
   return state
@@ -32,7 +45,10 @@ export function useBrowserState(): BrowserState {
 export function usePageMenu(): MenuPage | null {
   const [menu, setMenu] = useState<MenuPage | null>(null)
   useEffect(() => {
-    void window.arbalete.getPageMenu().then(setMenu).catch(() => {})
+    void window.arbalete
+      .getPageMenu()
+      .then(setMenu)
+      .catch(() => {})
     return window.arbalete.onPageMenu(setMenu)
   }, [])
   return menu
@@ -42,7 +58,10 @@ export function usePageMenu(): MenuPage | null {
 export function useRestoreOffer(): boolean {
   const [offer, setOffer] = useState(false)
   useEffect(() => {
-    void window.arbalete.getRestoreOffer().then(setOffer).catch(() => {})
+    void window.arbalete
+      .getRestoreOffer()
+      .then(setOffer)
+      .catch(() => {})
     return window.arbalete.onRestoreOffer(setOffer)
   }, [])
   return offer
@@ -52,7 +71,10 @@ export function useRestoreOffer(): boolean {
 export function useDataIncident(): DataIncident | null {
   const [incident, setIncident] = useState<DataIncident | null>(null)
   useEffect(() => {
-    void window.arbalete.getDataIncident().then(setIncident).catch(() => {})
+    void window.arbalete
+      .getDataIncident()
+      .then(setIncident)
+      .catch(() => {})
     return window.arbalete.onDataIncident(setIncident)
   }, [])
   return incident
@@ -62,7 +84,10 @@ export function useDataIncident(): DataIncident | null {
 export function useDownloads(): Telechargement[] {
   const [downloads, setDownloads] = useState<Telechargement[]>([])
   useEffect(() => {
-    void window.arbalete.getDownloads().then(setDownloads).catch(() => {})
+    void window.arbalete
+      .getDownloads()
+      .then(setDownloads)
+      .catch(() => {})
     return window.arbalete.onDownloads(setDownloads)
   }, [])
   return downloads
@@ -71,7 +96,10 @@ export function useDownloads(): Telechargement[] {
 export function useSidebar(): SidebarState {
   const [sidebar, setSidebar] = useState<SidebarState>(ETAT_BARRE_INITIAL)
   useEffect(() => {
-    void window.arbalete.getSidebar().then(setSidebar).catch(() => {})
+    void window.arbalete
+      .getSidebar()
+      .then(setSidebar)
+      .catch(() => {})
     return window.arbalete.onSidebar(setSidebar)
   }, [])
   return sidebar
@@ -81,7 +109,10 @@ export function useSidebar(): SidebarState {
 export function useOverlay(): boolean {
   const [open, setOpen] = useState(false)
   useEffect(() => {
-    void window.arbalete.getOverlay().then(setOpen).catch(() => {})
+    void window.arbalete
+      .getOverlay()
+      .then(setOpen)
+      .catch(() => {})
     return window.arbalete.onOverlay(setOpen)
   }, [])
   return open
@@ -91,7 +122,10 @@ export function useOverlay(): boolean {
 export function useSuggestions(): SuggestionsState | null {
   const [state, setState] = useState<SuggestionsState | null>(null)
   useEffect(() => {
-    void window.arbalete.getSuggestions().then(setState).catch(() => {})
+    void window.arbalete
+      .getSuggestions()
+      .then(setState)
+      .catch(() => {})
     return window.arbalete.onSuggestions(setState)
   }, [])
   return state
@@ -101,7 +135,10 @@ export function useSuggestions(): SuggestionsState | null {
 export function usePalette(): EntreePalette[] | null {
   const [lignes, setLignes] = useState<EntreePalette[] | null>(null)
   useEffect(() => {
-    void window.arbalete.getPalette().then(setLignes).catch(() => {})
+    void window.arbalete
+      .getPalette()
+      .then(setLignes)
+      .catch(() => {})
     return window.arbalete.onPalette(setLignes)
   }, [])
   return lignes
@@ -111,7 +148,10 @@ export function usePalette(): EntreePalette[] | null {
 export function usePermissionRequest(): DemandePermission | null {
   const [demande, setDemande] = useState<DemandePermission | null>(null)
   useEffect(() => {
-    void window.arbalete.getPermissionRequest().then(setDemande).catch(() => {})
+    void window.arbalete
+      .getPermissionRequest()
+      .then(setDemande)
+      .catch(() => {})
     return window.arbalete.onPermissionRequest(setDemande)
   }, [])
   return demande
@@ -122,7 +162,10 @@ export function usePermissionRequest(): DemandePermission | null {
 export function useSettings(): Reglages {
   const [reglages, setReglages] = useState<Reglages>(REGLAGES_DEFAUT)
   useEffect(() => {
-    void window.arbalete.getSettings().then(setReglages).catch(() => {})
+    void window.arbalete
+      .getSettings()
+      .then(setReglages)
+      .catch(() => {})
     return window.arbalete.onSettings(setReglages)
   }, [])
   useEffect(() => {
@@ -137,16 +180,28 @@ export function useTheme(): ThemeState {
   const [choice, setChoice] = useState<ThemeChoice>('system')
   // Valeur initiale posée par main.tsx avant le premier rendu, confirmée ensuite par le processus principal.
   const [systemTheme, setSystemTheme] = useState<'dark' | 'light'>(() =>
-    document.documentElement.dataset.theme === 'light' ? 'light' : 'dark')
+    document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
+  )
   useEffect(() => {
-    void window.arbalete.getTheme().then(setChoice).catch(() => {})
-    void window.arbalete.getSystemTheme().then(setSystemTheme).catch(() => {})
+    void window.arbalete
+      .getTheme()
+      .then(setChoice)
+      .catch(() => {})
+    void window.arbalete
+      .getSystemTheme()
+      .then(setSystemTheme)
+      .catch(() => {})
     const unsubscribeChoice = window.arbalete.onTheme(setChoice)
     const unsubscribeSystem = window.arbalete.onSystemTheme(setSystemTheme)
-    return () => { unsubscribeChoice(); unsubscribeSystem() }
+    return () => {
+      unsubscribeChoice()
+      unsubscribeSystem()
+    }
   }, [])
   const effective = choice === 'system' ? systemTheme : choice
   // Les palettes de design-system/tokens.css se choisissent par data-theme sur <html> : sans rechargement (ARB-34).
-  useEffect(() => { document.documentElement.dataset.theme = effective }, [effective])
+  useEffect(() => {
+    document.documentElement.dataset.theme = effective
+  }, [effective])
   return { choice, effective }
 }

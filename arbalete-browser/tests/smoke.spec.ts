@@ -1,6 +1,16 @@
 import { spawn, spawnSync } from 'node:child_process'
 import { createServer, type Server, type ServerResponse } from 'node:http'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import type { AddressInfo } from 'node:net'
 import { join, resolve } from 'node:path'
@@ -61,7 +71,11 @@ async function envoyerGrosFichier(res: ServerResponse, ms: number) {
   for (let envoye = 0; envoye < TAILLE_GROS_FICHIER && !res.destroyed; envoye += MO) {
     if (!res.write(bloc)) {
       await new Promise<void>((fin) => {
-        const fini = () => { res.off('drain', fini); res.off('close', fini); fin() }
+        const fini = () => {
+          res.off('drain', fini)
+          res.off('close', fini)
+          fin()
+        }
         res.once('drain', fini)
         res.once('close', fini)
       })
@@ -101,24 +115,43 @@ test.beforeAll(async () => {
   origine = `http://127.0.0.1:${(serveur.address() as AddressInfo).port}`
 
   profil = mkdtempSync(join(tmpdir(), 'arbalete-test-'))
-  app = await electron.launch({ args: ['.', '--', `${origine}/demarrage.html`], cwd: resolve(__dirname, '..'), env: envTest() })
+  app = await electron.launch({
+    args: ['.', '--', `${origine}/demarrage.html`],
+    cwd: resolve(__dirname, '..'),
+    env: envTest()
+  })
   ui = await fenetreInterface(app)
   barreUi = await vueBarre(app)
   // Page de démarrage chargée et focalisée avant le premier test : sa fin de chargement (retour du focus à la page, ARB-112)
   // arrivait sinon au milieu des tests de survol de la barre (C33).
-  await expect.poll(async () => {
-    const etatInitial = await etat()
-    return ongletActif(etatInitial)?.url === `${origine}/demarrage.html` && !ongletActif(etatInitial)?.isLoading
-  }, { timeout: 15_000 }).toBe(true)
+  await expect
+    .poll(
+      async () => {
+        const etatInitial = await etat()
+        return ongletActif(etatInitial)?.url === `${origine}/demarrage.html` && !ongletActif(etatInitial)?.isLoading
+      },
+      { timeout: 15_000 }
+    )
+    .toBe(true)
   // Windows ne donne pas toujours le premier plan à la fenêtre lancée (une autre application le garde) : sans focus de la
   // fenêtre, la page ne reçoit jamais le sien (l'application le diffère, ARB-112) et l'attente expirait. Le test demande le
   // focus à la fenêtre à chaque itération, comme le ferait un utilisateur qui clique dessus (ARB-136).
-  await expect.poll(() => app.evaluate(({ BrowserWindow, WebContentsView }) => {
-    const fenetre = BrowserWindow.getAllWindows()[0]
-    if (!fenetre.isFocused()) fenetre.focus()
-    return fenetre.contentView.children
-      .some((enfant) => enfant instanceof WebContentsView && /^https?:/.test(enfant.webContents.getURL()) && enfant.webContents.isFocused())
-  }), { timeout: 15_000 }).toBe(true)
+  await expect
+    .poll(
+      () =>
+        app.evaluate(({ BrowserWindow, WebContentsView }) => {
+          const fenetre = BrowserWindow.getAllWindows()[0]
+          if (!fenetre.isFocused()) fenetre.focus()
+          return fenetre.contentView.children.some(
+            (enfant) =>
+              enfant instanceof WebContentsView &&
+              /^https?:/.test(enfant.webContents.getURL()) &&
+              enfant.webContents.isFocused()
+          )
+        }),
+      { timeout: 15_000 }
+    )
+    .toBe(true)
   // Le vrai curseur de l'utilisateur ne doit pas interférer : la barre s'ouvre au survol réel du bord gauche (onMouseEnter).
   // Les événements de Playwright (CDP) et de sendInputEvent ne passent pas par la souris du système, donc restent actifs.
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setIgnoreMouseEvents(true))
@@ -168,10 +201,11 @@ function chargerInterface(url: string) {
 
 // Statut de deux appels IPC depuis la page affichée dans la fenêtre d'interface.
 function statutsAppelsIpc(): Promise<string[]> {
-  return ui.evaluate(() => Promise.allSettled([
-    window.arbalete.getState(),
-    window.arbalete.createTab('http://127.0.0.1:1/intrus')
-  ]).then((reponses) => reponses.map((reponse) => reponse.status)))
+  return ui.evaluate(() =>
+    Promise.allSettled([window.arbalete.getState(), window.arbalete.createTab('http://127.0.0.1:1/intrus')]).then(
+      (reponses) => reponses.map((reponse) => reponse.status)
+    )
+  )
 }
 
 // Après un rechargement de l'interface : mêmes onglets, interface affichée, vue alignée.
@@ -190,32 +224,44 @@ function etatBarre() {
 }
 
 function boundsBarre() {
-  return app.evaluate(({ BrowserWindow, WebContentsView }) => BrowserWindow.getAllWindows()[0].contentView.children
-    .find((enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=barre'))?.getBounds())
+  return app.evaluate(({ BrowserWindow, WebContentsView }) =>
+    BrowserWindow.getAllWindows()[0]
+      .contentView.children.find(
+        (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=barre')
+      )
+      ?.getBounds()
+  )
 }
 
 // Événements souris natifs (sendInputEvent) envoyés à la vue de la barre : entrée dans la bande, sortie de la barre.
 function souris(type: 'mouseEnter' | 'mouseLeave', x: number) {
-  return app.evaluate(({ BrowserWindow, WebContentsView }, { type, x }) => {
-    const vue = BrowserWindow.getAllWindows()[0].contentView.children
-      .find((enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=barre')) as InstanceType<typeof WebContentsView>
-    vue.webContents.sendInputEvent({ type, x, y: 300 })
-    if (type === 'mouseEnter') vue.webContents.sendInputEvent({ type: 'mouseMove', x, y: 300 })
-  }, { type, x })
+  return app.evaluate(
+    ({ BrowserWindow, WebContentsView }, { type, x }) => {
+      const vue = BrowserWindow.getAllWindows()[0].contentView.children.find(
+        (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=barre')
+      ) as InstanceType<typeof WebContentsView>
+      vue.webContents.sendInputEvent({ type, x, y: 300 })
+      if (type === 'mouseEnter') vue.webContents.sendInputEvent({ type: 'mouseMove', x, y: 300 })
+    },
+    { type, x }
+  )
 }
 
 // Après l'ouverture, la barre remplace la bande de survol dans le DOM : tant que Chromium n'a pas rétabli le survol sur la
 // nouvelle barre, un mouseLeave natif n'atteint que l'élément détaché, la vue ne reçoit pas `mouseout` et le retrait ne part
 // pas (échec intermittent de C33, ARB-135). On renvoie un mouseMove dans la barre jusqu'à ce qu'elle soit survolée.
 async function attendreSurvolBarre() {
-  await expect.poll(async () => {
-    await app.evaluate(({ BrowserWindow, WebContentsView }) => {
-      const vue = BrowserWindow.getAllWindows()[0].contentView.children
-        .find((enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=barre')) as InstanceType<typeof WebContentsView>
-      vue.webContents.sendInputEvent({ type: 'mouseMove', x: 2, y: 300 })
+  await expect
+    .poll(async () => {
+      await app.evaluate(({ BrowserWindow, WebContentsView }) => {
+        const vue = BrowserWindow.getAllWindows()[0].contentView.children.find(
+          (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=barre')
+        ) as InstanceType<typeof WebContentsView>
+        vue.webContents.sendInputEvent({ type: 'mouseMove', x: 2, y: 300 })
+      })
+      return barreUi.evaluate(() => !!document.querySelector('.sidebar')?.matches(':hover'))
     })
-    return barreUi.evaluate(() => !!document.querySelector('.sidebar')?.matches(':hover'))
-  }).toBe(true)
+    .toBe(true)
 }
 
 // Clic natif (sendInputEvent, bouton droit : aucune action dans la page ni la barre d'outils) dans la page de l'onglet
@@ -223,9 +269,14 @@ async function attendreSurvolBarre() {
 function cliquerDans(cible: 'onglet' | 'fenetre') {
   return app.evaluate(({ BrowserWindow, WebContentsView }, cible) => {
     const fenetre = BrowserWindow.getAllWindows()[0]
-    const contenu = cible === 'fenetre' ? fenetre.webContents
-      : (fenetre.contentView.children.find((enfant) => enfant instanceof WebContentsView
-        && !enfant.webContents.getURL().includes('vue=barre')) as InstanceType<typeof WebContentsView>).webContents
+    const contenu =
+      cible === 'fenetre'
+        ? fenetre.webContents
+        : (
+            fenetre.contentView.children.find(
+              (enfant) => enfant instanceof WebContentsView && !enfant.webContents.getURL().includes('vue=barre')
+            ) as InstanceType<typeof WebContentsView>
+          ).webContents
     const [x, y] = cible === 'fenetre' ? [700, 4] : [400, 300]
     // Bouton gauche dans la page : un clic droit y ouvre le menu contextuel (ARB-40).
     const button = cible === 'fenetre' ? 'right' : 'left'
@@ -272,11 +323,15 @@ async function attendreUrlActive(url: string) {
 async function resultatDansOngletActif<T>(code: string): Promise<T> {
   return app.evaluate(async ({ BrowserWindow, WebContentsView }, source) => {
     const fenetre = BrowserWindow.getAllWindows().find((f) => !f.getParentWindow())! // les pop-ups (ARB-16) sont des fenêtres filles
-    const vue = fenetre.contentView.children.find((enfant) => enfant instanceof WebContentsView && !enfant.webContents.getURL().includes('vue=barre')) as InstanceType<typeof WebContentsView>
+    const vue = fenetre.contentView.children.find(
+      (enfant) => enfant instanceof WebContentsView && !enfant.webContents.getURL().includes('vue=barre')
+    ) as InstanceType<typeof WebContentsView>
     // ARB-108 : un window.open n'aboutit que peu après un geste de l'utilisateur ; on en envoie un vrai (sauf test « sans geste »).
-    if ((source.includes('window.open') || source.includes('.click()')) && !source.includes('SANS_GESTE')) vue.webContents.sendInputEvent({ type: 'mouseDown', x: 1, y: 1, button: 'left', clickCount: 1 })
+    if ((source.includes('window.open') || source.includes('.click()')) && !source.includes('SANS_GESTE'))
+      vue.webContents.sendInputEvent({ type: 'mouseDown', x: 1, y: 1, button: 'left', clickCount: 1 })
     // sendInputEvent et executeJavaScript suivent deux canaux : sans attente, le script peut passer avant que le geste soit noté.
-    if ((source.includes('window.open') || source.includes('.click()')) && !source.includes('SANS_GESTE')) await new Promise((fin) => setTimeout(fin, 100))
+    if ((source.includes('window.open') || source.includes('.click()')) && !source.includes('SANS_GESTE'))
+      await new Promise((fin) => setTimeout(fin, 100))
     return vue.webContents.executeJavaScript(source, true)
   }, code) as Promise<T>
 }
@@ -291,16 +346,20 @@ function rectangleZoneContenu() {
 
 function boundsVueActive() {
   return app.evaluate(({ BrowserWindow, WebContentsView }) => {
-    const vue = BrowserWindow.getAllWindows()[0].contentView.children.find((enfant) => enfant instanceof WebContentsView && !enfant.webContents.getURL().includes('vue=barre'))
+    const vue = BrowserWindow.getAllWindows()[0].contentView.children.find(
+      (enfant) => enfant instanceof WebContentsView && !enfant.webContents.getURL().includes('vue=barre')
+    )
     return vue?.getBounds()
   })
 }
 
 async function attendreVueAlignee() {
-  await expect.poll(async () => {
-    const [vue, zone] = [await boundsVueActive(), await rectangleZoneContenu()]
-    return JSON.stringify(vue) === JSON.stringify(zone)
-  }).toBe(true)
+  await expect
+    .poll(async () => {
+      const [vue, zone] = [await boundsVueActive(), await rectangleZoneContenu()]
+      return JSON.stringify(vue) === JSON.stringify(zone)
+    })
+    .toBe(true)
 }
 
 test('C1 : l’app démarre avec le pont window.arbalete et un onglet', async () => {
@@ -328,24 +387,42 @@ test('C31 : la barre latérale est masquée à l’ouverture et la page occupe t
   expect(zone.x + zone.width).toBe((await ui.evaluate(() => window.innerWidth)) - 8)
   // Marge basse de 8 px sous la page et coins de 10 px (--radius-md), mesurés sur le rendu de l'interface.
   const cadre = await ui.locator('.web-content').evaluate((el) => ({
-    bas: Math.round((el.parentElement as HTMLElement).getBoundingClientRect().bottom - el.getBoundingClientRect().bottom),
+    bas: Math.round(
+      (el.parentElement as HTMLElement).getBoundingClientRect().bottom - el.getBoundingClientRect().bottom
+    ),
     rayon: getComputedStyle(el).borderTopLeftRadius
   }))
   expect(cadre).toEqual({ bas: 8, rayon: '10px' })
   expect(await barreAuPremierPlan()).toBe(true)
   // Le focus clavier reste à la page (webContents.isFocused : Playwright émule document.hasFocus dans chaque page).
-  expect(await app.evaluate(({ BrowserWindow, WebContentsView }) => BrowserWindow.getAllWindows()[0].contentView.children
-    .some((enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=barre')
-      && enfant.webContents.isFocused()))).toBe(false)
+  expect(
+    await app.evaluate(({ BrowserWindow, WebContentsView }) =>
+      BrowserWindow.getAllWindows()[0].contentView.children.some(
+        (enfant) =>
+          enfant instanceof WebContentsView &&
+          enfant.webContents.getURL().includes('vue=barre') &&
+          enfant.webContents.isFocused()
+      )
+    )
+  ).toBe(false)
   // Extension (audit de couverture /ship, ARB-110).
   // Value: protects=au démarrage, barre masquée, le focus clavier va à la page de l'onglet actif;
   //   fails_when=le focus rendu à l'onglet au did-finish-load de la barre disparaît ou vise une autre vue;
   //   why_new=la vérification précédente ne prouve que l'absence de focus sur la barre; seam=none;
   //   no_claim=focus des webContents, pas le focus réel du système ; passe aussi sans le correctif, la course
   //   d'ARB-110 étant intermittente (contrôle positif, pas une preuve de régression).
-  await expect.poll(() => app.evaluate(({ BrowserWindow, WebContentsView }) => BrowserWindow.getAllWindows()[0].contentView.children
-    .some((enfant) => enfant instanceof WebContentsView && /^https?:/.test(enfant.webContents.getURL())
-      && enfant.webContents.isFocused()))).toBe(true)
+  await expect
+    .poll(() =>
+      app.evaluate(({ BrowserWindow, WebContentsView }) =>
+        BrowserWindow.getAllWindows()[0].contentView.children.some(
+          (enfant) =>
+            enfant instanceof WebContentsView &&
+            /^https?:/.test(enfant.webContents.getURL()) &&
+            enfant.webContents.isFocused()
+        )
+      )
+    )
+    .toBe(true)
 })
 
 // Value: protects=apparition au survol par-dessus la page et retrait (ARB-33) : la souris entre dans la bande, la
@@ -418,13 +495,15 @@ test('C32 : Ctrl+Maj+B depuis la page épingle puis libère la barre latérale',
   await attendreVueAlignee()
   await resultatDansOngletActif(`window.touchesB = 0
     addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'b') window.touchesB++ }); true`)
-  const presser = () => app.evaluate(({ BrowserWindow, WebContentsView }) => {
-    const vue = BrowserWindow.getAllWindows()[0].contentView.children.find((enfant) => enfant instanceof WebContentsView
-      && !enfant.webContents.getURL().includes('vue=barre')) as InstanceType<typeof WebContentsView>
-    vue.webContents.focus()
-    vue.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'B', modifiers: ['control', 'shift'] })
-    vue.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'B', modifiers: ['control', 'shift'] })
-  })
+  const presser = () =>
+    app.evaluate(({ BrowserWindow, WebContentsView }) => {
+      const vue = BrowserWindow.getAllWindows()[0].contentView.children.find(
+        (enfant) => enfant instanceof WebContentsView && !enfant.webContents.getURL().includes('vue=barre')
+      ) as InstanceType<typeof WebContentsView>
+      vue.webContents.focus()
+      vue.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'B', modifiers: ['control', 'shift'] })
+      vue.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'B', modifiers: ['control', 'shift'] })
+    })
 
   await presser()
   await expect.poll(etatBarre).toEqual({ open: true, pinned: true })
@@ -446,16 +525,28 @@ test('C32 : Ctrl+Maj+B depuis la page épingle puis libère la barre latérale',
   //   why_new=le bloc précédent ne presse le raccourci que dans l'onglet et n'y donne jamais le focus barre épinglée;
   //   seam=none; no_claim=modificateur isAutoRepeat simulé par sendInputEvent, pas un vrai appui long au clavier.
   const presserDans = (cible: 'onglet' | 'barre' | 'fenetre', repetition = false) =>
-    app.evaluate(({ BrowserWindow, WebContentsView }, { cible, repetition }) => {
-      const fenetre = BrowserWindow.getAllWindows()[0]
-      const contenu = cible === 'fenetre' ? fenetre.webContents
-        : (fenetre.contentView.children.find((enfant) => enfant instanceof WebContentsView
-          && enfant.webContents.getURL().includes('vue=barre') === (cible === 'barre')) as InstanceType<typeof WebContentsView>).webContents
-      contenu.focus()
-      const modifiers: Array<'control' | 'shift' | 'isautorepeat'> = repetition ? ['control', 'shift', 'isautorepeat'] : ['control', 'shift']
-      contenu.sendInputEvent({ type: 'keyDown', keyCode: 'B', modifiers })
-      contenu.sendInputEvent({ type: 'keyUp', keyCode: 'B', modifiers: ['control', 'shift'] })
-    }, { cible, repetition })
+    app.evaluate(
+      ({ BrowserWindow, WebContentsView }, { cible, repetition }) => {
+        const fenetre = BrowserWindow.getAllWindows()[0]
+        const contenu =
+          cible === 'fenetre'
+            ? fenetre.webContents
+            : (
+                fenetre.contentView.children.find(
+                  (enfant) =>
+                    enfant instanceof WebContentsView &&
+                    enfant.webContents.getURL().includes('vue=barre') === (cible === 'barre')
+                ) as InstanceType<typeof WebContentsView>
+              ).webContents
+        contenu.focus()
+        const modifiers: Array<'control' | 'shift' | 'isautorepeat'> = repetition
+          ? ['control', 'shift', 'isautorepeat']
+          : ['control', 'shift']
+        contenu.sendInputEvent({ type: 'keyDown', keyCode: 'B', modifiers })
+        contenu.sendInputEvent({ type: 'keyUp', keyCode: 'B', modifiers: ['control', 'shift'] })
+      },
+      { cible, repetition }
+    )
 
   await presserDans('onglet', true)
   // gstack-timing-ok: vérification négative (rien ne doit changer) ; le processus principal traite l'événement de façon synchrone.
@@ -488,7 +579,9 @@ test('C34 : la vue de la barre ne navigue pas, n’ouvre pas de fenêtre et pilo
   expect(await barreUi.evaluate(() => window.arbalete.getState().then((etat) => etat.tabs.length > 0))).toBe(true)
   expect(await barreUi.evaluate((url) => window.open(url) === null, `${origine}/page-b.html`)).toBe(true)
   expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1)
-  await barreUi.evaluate((url) => { location.href = url }, `${origine}/page-b.html`)
+  await barreUi.evaluate((url) => {
+    location.href = url
+  }, `${origine}/page-b.html`)
   // gstack-timing-ok: vérification négative (rien ne doit changer) ; le processus principal traite l'événement de façon synchrone.
   await barreUi.waitForTimeout(500)
   expect(barreUi.url()).toBe(urlBarre)
@@ -496,8 +589,9 @@ test('C34 : la vue de la barre ne navigue pas, n’ouvre pas de fenêtre et pilo
   // Chargée sur une autre page depuis le processus principal, la vue de la barre garde le preload mais perd l'IPC
   // (contrôle d'URL d'emetteurAutorise, comme C16 pour la fenêtre).
   const statuts = await app.evaluate(async ({ BrowserWindow, WebContentsView }, url) => {
-    const vue = BrowserWindow.getAllWindows()[0].contentView.children.find((enfant) => enfant instanceof WebContentsView
-      && enfant.webContents.getURL().includes('vue=barre')) as InstanceType<typeof WebContentsView>
+    const vue = BrowserWindow.getAllWindows()[0].contentView.children.find(
+      (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=barre')
+    ) as InstanceType<typeof WebContentsView>
     const urlInterface = vue.webContents.getURL()
     try {
       await vue.webContents.loadURL(url)
@@ -511,8 +605,9 @@ test('C34 : la vue de la barre ne navigue pas, n’ouvre pas de fenêtre et pilo
 
   // Playwright attend encore la navigation refusée : on recharge la vue depuis le processus principal pour la suite.
   await app.evaluate(({ BrowserWindow, WebContentsView }) => {
-    const vue = BrowserWindow.getAllWindows()[0].contentView.children.find((enfant) => enfant instanceof WebContentsView
-      && enfant.webContents.getURL().includes('vue=barre')) as InstanceType<typeof WebContentsView>
+    const vue = BrowserWindow.getAllWindows()[0].contentView.children.find(
+      (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=barre')
+    ) as InstanceType<typeof WebContentsView>
     vue.webContents.reload()
   })
   await expect(barreUi.getByTestId('sidebar-hover-strip')).toBeAttached()
@@ -540,7 +635,9 @@ test('C35 : le thème s’applique à la fenêtre et à la barre ; set-theme et 
     // Boutons Windows (titleBarOverlay, ARB-30) : dernières couleurs et hauteur envoyées par appliquerThemeFenetre, relevées
     // par l'espion posé ci-dessous (Playwright ne peut pas les relire sur la fenêtre).
     await app.evaluate(() => {
-      const dernier = (globalThis as unknown as { __overlays: { color: string, symbolColor: string, height: number }[] }).__overlays.at(-1)
+      const dernier = (
+        globalThis as unknown as { __overlays: { color: string; symbolColor: string; height: number }[] }
+      ).__overlays.at(-1)
       return dernier && `${dernier.color}/${dernier.symbolColor}/${dernier.height}`.toLowerCase()
     })
   ]
@@ -549,7 +646,10 @@ test('C35 : le thème s’applique à la fenêtre et à la barre ; set-theme et 
     const relevees: unknown[] = []
     ;(globalThis as unknown as { __overlays: unknown[] }).__overlays = relevees
     const original = fenetre.setTitleBarOverlay.bind(fenetre)
-    fenetre.setTitleBarOverlay = (options) => { relevees.push(options); original(options) }
+    fenetre.setTitleBarOverlay = (options) => {
+      relevees.push(options)
+      original(options)
+    }
   })
   const choix = () => barreUi.evaluate(() => window.arbalete.getTheme())
   const bouton = ui.getByLabel('Thème : changer le mode')
@@ -564,18 +664,26 @@ test('C35 : le thème s’applique à la fenêtre et à la barre ; set-theme et 
     await bouton.click()
     await expect.poll(choix).toBe('system')
     // Thème système : un changement de nativeTheme atteint la fenêtre et la barre.
-    await app.evaluate(({ nativeTheme }) => { nativeTheme.themeSource = 'light' })
+    await app.evaluate(({ nativeTheme }) => {
+      nativeTheme.themeSource = 'light'
+    })
     await expect.poll(themes).toEqual(['light', 'light', '#f3f5f7', '#f3f5f7/#202b36/48'])
-    await app.evaluate(({ nativeTheme }) => { nativeTheme.themeSource = 'dark' })
+    await app.evaluate(({ nativeTheme }) => {
+      nativeTheme.themeSource = 'dark'
+    })
     await expect.poll(themes).toEqual(['dark', 'dark', '#111820', '#111820/#e8edf2/48'])
   } finally {
-    await app.evaluate(({ nativeTheme }) => { nativeTheme.themeSource = 'system' })
+    await app.evaluate(({ nativeTheme }) => {
+      nativeTheme.themeSource = 'system'
+    })
   }
 
-  const statuts = await ui.evaluate(() => Promise.allSettled([
-    window.arbalete.setTheme('rouge' as never),
-    window.arbalete.setSidebar('ouvrir' as never)
-  ]).then((reponses) => reponses.map((reponse) => reponse.status)))
+  const statuts = await ui.evaluate(() =>
+    Promise.allSettled([
+      window.arbalete.setTheme('rouge' as never),
+      window.arbalete.setSidebar('ouvrir' as never)
+    ]).then((reponses) => reponses.map((reponse) => reponse.status))
+  )
   expect(statuts).toEqual(['rejected', 'rejected'])
   expect(await choix()).toBe('system')
   expect(await etatBarre()).toEqual({ open: false, pinned: false })
@@ -593,10 +701,11 @@ test('C35 : le thème s’applique à la fenêtre et à la barre ; set-theme et 
 //   no_claim=clics simulés (Playwright, sendInputEvent) adressés à la vue de la barre : l'ordre natif des vues, qui
 //   empêche la page de recevoir le clic, est vérifié par barreAuPremierPlan, pas par un vrai pointeur.
 test('C47 : le menu d’un onglet s’ouvre en overlay sur toute la fenêtre et se ferme par Échap, clic ou entrée', async () => {
-  const fenetre = () => app.evaluate(({ BrowserWindow }) => {
-    const { width, height } = BrowserWindow.getAllWindows()[0].getContentBounds()
-    return { x: 0, y: 0, width, height }
-  })
+  const fenetre = () =>
+    app.evaluate(({ BrowserWindow }) => {
+      const { width, height } = BrowserWindow.getAllWindows()[0].getContentBounds()
+      return { x: 0, y: 0, width, height }
+    })
   const overlay = () => barreUi.evaluate(() => window.arbalete.getOverlay())
   const menu = barreUi.getByRole('menu')
   const ouvrirMenu = async (titre: string) => {
@@ -606,13 +715,17 @@ test('C47 : le menu d’un onglet s’ouvre en overlay sur toute la fenêtre et 
   }
   // Touche native envoyée à la page de l'onglet actif, focus compris : before-input-event la voit comme un vrai clavier.
   const toucheDansOnglet = (keyCode: string, modifiers: Array<'control'> = []) =>
-    app.evaluate(({ BrowserWindow, WebContentsView }, { keyCode, modifiers }) => {
-      const vue = BrowserWindow.getAllWindows()[0].contentView.children.find((enfant) => enfant instanceof WebContentsView
-        && !enfant.webContents.getURL().includes('vue=barre')) as InstanceType<typeof WebContentsView>
-      vue.webContents.focus()
-      vue.webContents.sendInputEvent({ type: 'keyDown', keyCode, modifiers })
-      vue.webContents.sendInputEvent({ type: 'keyUp', keyCode, modifiers })
-    }, { keyCode, modifiers })
+    app.evaluate(
+      ({ BrowserWindow, WebContentsView }, { keyCode, modifiers }) => {
+        const vue = BrowserWindow.getAllWindows()[0].contentView.children.find(
+          (enfant) => enfant instanceof WebContentsView && !enfant.webContents.getURL().includes('vue=barre')
+        ) as InstanceType<typeof WebContentsView>
+        vue.webContents.focus()
+        vue.webContents.sendInputEvent({ type: 'keyDown', keyCode, modifiers })
+        vue.webContents.sendInputEvent({ type: 'keyUp', keyCode, modifiers })
+      },
+      { keyCode, modifiers }
+    )
   const largeurRendue = async () => expect.poll(async () => (await boundsBarre())?.width).toBe(252)
 
   await ui.evaluate((url) => window.arbalete.createTab(url), `${origine}/page-a.html`)
@@ -666,7 +779,9 @@ test('C47 : le menu d’un onglet s’ouvre en overlay sur toute la fenêtre et 
 
     // La fenêtre perd le focus (Alt+Tab) : l'overlay se ferme.
     await ouvrirMenu('Page A')
-    await app.evaluate(({ BrowserWindow }) => { BrowserWindow.getAllWindows()[0].emit('blur') })
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0].emit('blur')
+    })
     await expect.poll(overlay).toBe(false)
     await largeurRendue()
 
@@ -723,20 +838,36 @@ test('C47 : le menu d’un onglet s’ouvre en overlay sur toute la fenêtre et 
 
   // set-overlay : refusé depuis la fenêtre d'interface, avec un argument non booléen et depuis une page intruse.
   const refus = await Promise.all([
-    ui.evaluate(() => window.arbalete.setOverlay(true).then(() => 'fulfilled', () => 'rejected')),
-    barreUi.evaluate(() => window.arbalete.setOverlay('oui' as never).then(() => 'fulfilled', () => 'rejected'))
+    ui.evaluate(() =>
+      window.arbalete.setOverlay(true).then(
+        () => 'fulfilled',
+        () => 'rejected'
+      )
+    ),
+    barreUi.evaluate(() =>
+      window.arbalete.setOverlay('oui' as never).then(
+        () => 'fulfilled',
+        () => 'rejected'
+      )
+    )
   ])
   expect(refus).toEqual(['rejected', 'rejected'])
-  const intrus = await app.evaluate(async ({ BrowserWindow }, { preload, url }) => {
-    const intruse = new BrowserWindow({ show: false, webPreferences: { preload, contextIsolation: true, sandbox: true } })
-    try {
-      await intruse.loadURL(url)
-      return await intruse.webContents.executeJavaScript(`Promise.allSettled([window.arbalete.setOverlay(true),
+  const intrus = await app.evaluate(
+    async ({ BrowserWindow }, { preload, url }) => {
+      const intruse = new BrowserWindow({
+        show: false,
+        webPreferences: { preload, contextIsolation: true, sandbox: true }
+      })
+      try {
+        await intruse.loadURL(url)
+        return await intruse.webContents.executeJavaScript(`Promise.allSettled([window.arbalete.setOverlay(true),
         window.arbalete.getOverlay()]).then((r) => r.map((x) => x.status))`)
-    } finally {
-      intruse.destroy()
-    }
-  }, { preload: resolve(__dirname, '../out/preload/index.js'), url: `${origine}/page-a.html` })
+      } finally {
+        intruse.destroy()
+      }
+    },
+    { preload: resolve(__dirname, '../out/preload/index.js'), url: `${origine}/page-a.html` }
+  )
   expect(intrus).toEqual(['rejected', 'rejected'])
   expect(await overlay()).toBe(false)
   expect((await boundsBarre())?.width).toBe(6)
@@ -787,15 +918,25 @@ test('C36 : Ctrl+L, Alt+←/→, Ctrl+T et Ctrl+W fonctionnent depuis la page, l
   await resultatDansOngletActif(`window.touches = []
     addEventListener('keydown', (e) => window.touches.push(e.key)); true`)
   const presser = (cible: 'onglet' | 'barre' | 'fenetre', keyCode: string, modifiers: Array<'control' | 'alt'>) =>
-    app.evaluate(({ BrowserWindow, WebContentsView }, { cible, keyCode, modifiers }) => {
-      const fenetre = BrowserWindow.getAllWindows()[0]
-      const contenu = cible === 'fenetre' ? fenetre.webContents
-        : (fenetre.contentView.children.find((enfant) => enfant instanceof WebContentsView
-          && enfant.webContents.getURL().includes('vue=barre') === (cible === 'barre')) as InstanceType<typeof WebContentsView>).webContents
-      contenu.focus()
-      contenu.sendInputEvent({ type: 'keyDown', keyCode, modifiers })
-      contenu.sendInputEvent({ type: 'keyUp', keyCode, modifiers })
-    }, { cible, keyCode, modifiers })
+    app.evaluate(
+      ({ BrowserWindow, WebContentsView }, { cible, keyCode, modifiers }) => {
+        const fenetre = BrowserWindow.getAllWindows()[0]
+        const contenu =
+          cible === 'fenetre'
+            ? fenetre.webContents
+            : (
+                fenetre.contentView.children.find(
+                  (enfant) =>
+                    enfant instanceof WebContentsView &&
+                    enfant.webContents.getURL().includes('vue=barre') === (cible === 'barre')
+                ) as InstanceType<typeof WebContentsView>
+              ).webContents
+        contenu.focus()
+        contenu.sendInputEvent({ type: 'keyDown', keyCode, modifiers })
+        contenu.sendInputEvent({ type: 'keyUp', keyCode, modifiers })
+      },
+      { cible, keyCode, modifiers }
+    )
   const nombreOnglets = async () => (await etat()).tabs.length
 
   await presser('onglet', 'L', ['control'])
@@ -815,12 +956,20 @@ test('C36 : Ctrl+L, Alt+←/→, Ctrl+T et Ctrl+W fonctionnent depuis la page, l
   await expect.poll(async () => (await etat()).activeTabId).not.toBe(ongletInitial)
   // Le nouvel onglet donne le focus à la barre d'adresse, sans refocalisation par le test.
   await expect(ui.getByLabel('Adresse ou recherche')).toBeFocused()
-  await expect.poll(() => app.evaluate(({ BrowserWindow, webContents }) =>
-    webContents.getFocusedWebContents() === BrowserWindow.getAllWindows()[0].webContents)).toBe(true)
+  await expect
+    .poll(() =>
+      app.evaluate(
+        ({ BrowserWindow, webContents }) =>
+          webContents.getFocusedWebContents() === BrowserWindow.getAllWindows()[0].webContents
+      )
+    )
+    .toBe(true)
   await presser('onglet', 'W', ['control'])
   await expect.poll(nombreOnglets).toBe(avant)
   // Après la fermeture, l'onglet redevenu actif reçoit le clavier.
-  await expect.poll(() => app.evaluate(({ webContents }) => webContents.getFocusedWebContents()?.getURL() ?? '')).toBe(`${origine}/page-b.html`)
+  await expect
+    .poll(() => app.evaluate(({ webContents }) => webContents.getFocusedWebContents()?.getURL() ?? ''))
+    .toBe(`${origine}/page-b.html`)
 
   for (const cible of ['barre', 'fenetre'] as const) {
     await presser(cible, 'T', ['control'])
@@ -843,10 +992,15 @@ test('C36 : Ctrl+L, Alt+←/→, Ctrl+T et Ctrl+W fonctionnent depuis la page, l
     addEventListener('keydown', (e) => window.touches.push(e.key)); true`)
   await presser('onglet', 'L', ['control', 'alt'])
   await presser('onglet', 'T', ['control', 'alt'])
-  await expect.poll(() => resultatDansOngletActif<string[]>(
-    "window.touches.filter((t) => t.length === 1).map((t) => t.toLowerCase())")).toEqual(['l', 't'])
+  await expect
+    .poll(() =>
+      resultatDansOngletActif<string[]>('window.touches.filter((t) => t.length === 1).map((t) => t.toLowerCase())')
+    )
+    .toEqual(['l', 't'])
   expect(await nombreOnglets()).toBe(avant)
-  expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.isFocused())).toBe(false)
+  expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.isFocused())).toBe(
+    false
+  )
 })
 
 test('C5 : un lien target=_blank ouvre un onglet, pas une fenêtre', async () => {
@@ -879,7 +1033,9 @@ test('C6 : une navigation de la page vers un schéma non http ou vers about:blan
 
   // Un sous-cadre garde le droit d'aller sur about:blank.
   await dansOngletActif("document.getElementById('cadre').contentWindow.location.replace('about:blank')")
-  await expect.poll(() => resultatDansOngletActif("document.getElementById('cadre').contentWindow.location.href")).toBe('about:blank')
+  await expect
+    .poll(() => resultatDansOngletActif("document.getElementById('cadre').contentWindow.location.href"))
+    .toBe('about:blank')
 })
 
 // Value: protects=bouton Recharger -> pont reload -> webContents.reload() de l'onglet actif sous Electron 45;
@@ -927,7 +1083,9 @@ test('C12 : la vue de l’onglet actif couvre la zone de contenu et suit le redi
   //   redimensionnement; fails_when=le gestionnaire resize n'appelle plus placerBarre (bande figée à l'ancienne
   //   hauteur, bas du bord gauche sans survol); why_new=C31 et C33 ne regardent que x et la largeur; seam=none;
   //   no_claim=ne couvre ni la maximisation ni le facteur de zoom Windows != 100 %.
-  const hauteurFenetre = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getContentBounds().height)
+  const hauteurFenetre = await app.evaluate(
+    ({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getContentBounds().height
+  )
   await expect.poll(async () => (await boundsBarre())?.height).toBe(hauteurFenetre)
 })
 
@@ -987,7 +1145,13 @@ test('C45 : les vérifications de permission et l’accès aux périphériques s
     ['geolocation', 'notifications', 'camera', 'microphone', 'clipboard-read'].map((name) =>
       navigator.permissions.query({ name }).then((statut) => name + '=' + statut.state, () => name + '=erreur'))
   )`)
-  expect(etats).toEqual(['geolocation=denied', 'notifications=denied', 'camera=denied', 'microphone=denied', 'clipboard-read=denied'])
+  expect(etats).toEqual([
+    'geolocation=denied',
+    'notifications=denied',
+    'camera=denied',
+    'microphone=denied',
+    'clipboard-read=denied'
+  ])
 
   // Avec le geste utilisateur d'executeJavaScript : aucune demande n'aboutit à un périphérique.
   const peripheriques = await resultatDansOngletActif<string[]>(`Promise.all([
@@ -1003,8 +1167,14 @@ test('C45 : les vérifications de permission et l’accès aux périphériques s
     const reponse = (evenement: string, ...args: unknown[]) => {
       let choix: unknown = 'sans réponse'
       let empeche = false
-      const evt = { preventDefault: () => { empeche = true } }
-      ses.emit(evenement, evt, ...args, (valeur?: unknown) => { choix = valeur || 'annulé' })
+      const evt = {
+        preventDefault: () => {
+          empeche = true
+        }
+      }
+      ses.emit(evenement, evt, ...args, (valeur?: unknown) => {
+        choix = valeur || 'annulé'
+      })
       return `${evenement} ${empeche ? 'gérée' : 'non gérée'} ${String(choix)}`
     }
     return [
@@ -1040,7 +1210,8 @@ test('C9 : épingler puis libérer la barre latérale réaligne la vue web', asy
 })
 
 test('C4 : créer, activer et fermer des onglets ; seul l’onglet actif est affiché', async () => {
-  const vuesAffichees = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].contentView.children.length)
+  const vuesAffichees = () =>
+    app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].contentView.children.length)
   const vuesAvecUnOnglet = await vuesAffichees()
   // Les onglets se gèrent dans la barre latérale : on l'épingle pour la garder ouverte pendant les clics.
   await epinglerBarre(true)
@@ -1074,14 +1245,19 @@ test('C4 : créer, activer et fermer des onglets ; seul l’onglet actif est aff
 //   why_new=aucun test ne regardait la CSP, absente avant ARB-13; seam=none;
 //   no_claim=ne couvre ni la CSP assouplie du serveur de dev, ni les autres directives (style-src, connect-src…).
 test('C13 : l’interface refuse les scripts inline (Content-Security-Policy)', async () => {
-  const resultat = await ui.evaluate(() => new Promise<string>((termine) => {
-    document.addEventListener('securitypolicyviolation', (event) => termine(event.violatedDirective), { once: true })
-    const script = document.createElement('script')
-    script.textContent = 'document.documentElement.dataset.scriptInline = "exécuté"'
-    document.head.append(script)
-    // Sans CSP, le script s'exécute de façon synchrone et aucune violation n'arrive.
-    setTimeout(() => termine(document.documentElement.dataset.scriptInline ?? 'aucune violation'), 2_000)
-  }))
+  const resultat = await ui.evaluate(
+    () =>
+      new Promise<string>((termine) => {
+        document.addEventListener('securitypolicyviolation', (event) => termine(event.violatedDirective), {
+          once: true
+        })
+        const script = document.createElement('script')
+        script.textContent = 'document.documentElement.dataset.scriptInline = "exécuté"'
+        document.head.append(script)
+        // Sans CSP, le script s'exécute de façon synchrone et aucune violation n'arrive.
+        setTimeout(() => termine(document.documentElement.dataset.scriptInline ?? 'aucune violation'), 2_000)
+      })
+  )
   expect(resultat).toMatch(/^script-src/)
 })
 
@@ -1117,9 +1293,11 @@ test('C51 : la barre de contrôle est rendue à 48 px, dans l’ordre prévu, et
     return {
       hauteur: barre.getBoundingClientRect().height,
       hauteurJeton: jeton('--size-control-bar'),
-      gap: style.columnGap, gapJeton: jeton('--space-2'),
+      gap: style.columnGap,
+      gapJeton: jeton('--space-2'),
       // À droite, la place des boutons Windows (titleBarOverlay, ARB-30) s'ajoute : voir C53.
-      paddingGauche: style.paddingLeft, paddingJeton: jeton('--space-4'),
+      paddingGauche: style.paddingLeft,
+      paddingJeton: jeton('--space-4'),
       hauteurChamp: champ.getBoundingClientRect().height,
       ordre: controles.map(etiquette),
       activables: controles.filter((el) => !(el as HTMLButtonElement).disabled).map(etiquette)
@@ -1131,13 +1309,22 @@ test('C51 : la barre de contrôle est rendue à 48 px, dans l’ordre prévu, et
   expect(mesure.paddingGauche).toBe(mesure.paddingJeton)
   expect(mesure.ordre[0]).toMatch(/^(Épingler|Libérer) la barre latérale/)
   expect(mesure.ordre.slice(1, 4)).toEqual(['Précédent (Alt+←)', 'Suivant (Alt+→)', 'Recharger'])
-  expect(mesure.ordre.slice(4)).toEqual(['Adresse ou recherche', 'Ajouter aux favoris', 'Nouvel onglet', 'Thème : changer le mode'])
+  expect(mesure.ordre.slice(4)).toEqual([
+    'Adresse ou recherche',
+    'Ajouter aux favoris',
+    'Nouvel onglet',
+    'Thème : changer le mode'
+  ])
 
   // Le Tab part du premier contrôle et visite chaque contrôle activable, dans l'ordre du DOM.
   await ui.locator('.toolbar button').first().focus()
   const parcours: string[] = []
   for (let i = 0; i < mesure.activables.length; i++) {
-    parcours.push(await ui.evaluate(() => document.activeElement?.getAttribute('title') ?? document.activeElement?.getAttribute('aria-label') ?? ''))
+    parcours.push(
+      await ui.evaluate(
+        () => document.activeElement?.getAttribute('title') ?? document.activeElement?.getAttribute('aria-label') ?? ''
+      )
+    )
     await ui.keyboard.press('Tab')
   }
   expect(parcours).toEqual(mesure.activables)
@@ -1159,22 +1346,25 @@ test('C53 : la fenêtre est sans cadre, la barre de contrôle laisse la place au
   expect(Math.abs(cadre.client[0] - cadre.fenetre[0])).toBeLessThanOrEqual(1)
   expect(Math.abs(cadre.client[1] - cadre.fenetre[1])).toBeLessThanOrEqual(1)
 
-  const mesurer = () => ui.evaluate(() => {
-    const barre = document.querySelector<HTMLElement>('.toolbar')!
-    const zone = (navigator as Navigator & { windowControlsOverlay: { visible: boolean, getTitlebarAreaRect(): DOMRect } }).windowControlsOverlay
-    const region = (el: Element) => getComputedStyle(el).getPropertyValue('-webkit-app-region')
-    const rect = zone.getTitlebarAreaRect()
-    return {
-      visible: zone.visible,
-      hauteur: rect.height,
-      droiteLibre: window.innerWidth - (rect.x + rect.width),
-      remplissageDroit: parseFloat(getComputedStyle(barre).paddingRight),
-      barre: region(barre),
-      boutons: [...barre.querySelectorAll('button')].map(region),
-      champ: region(barre.querySelector('input')!),
-      groupeChamp: region(barre.querySelector('.ui-field-group')!)
-    }
-  })
+  const mesurer = () =>
+    ui.evaluate(() => {
+      const barre = document.querySelector<HTMLElement>('.toolbar')!
+      const zone = (
+        navigator as Navigator & { windowControlsOverlay: { visible: boolean; getTitlebarAreaRect(): DOMRect } }
+      ).windowControlsOverlay
+      const region = (el: Element) => getComputedStyle(el).getPropertyValue('-webkit-app-region')
+      const rect = zone.getTitlebarAreaRect()
+      return {
+        visible: zone.visible,
+        hauteur: rect.height,
+        droiteLibre: window.innerWidth - (rect.x + rect.width),
+        remplissageDroit: parseFloat(getComputedStyle(barre).paddingRight),
+        barre: region(barre),
+        boutons: [...barre.querySelectorAll('button')].map(region),
+        champ: region(barre.querySelector('input')!),
+        groupeChamp: region(barre.querySelector('.ui-field-group')!)
+      }
+    })
   const mesure = await mesurer()
   expect(mesure.visible).toBe(true)
   expect(mesure.hauteur).toBe(48)
@@ -1189,12 +1379,17 @@ test('C53 : la fenêtre est sans cadre, la barre de contrôle laisse la place au
   const taille = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getSize())
   try {
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1100, 760))
-    await expect.poll(async () => {
-      const apres = await mesurer()
-      return Math.abs(apres.remplissageDroit - apres.droiteLibre) < 1 && apres.droiteLibre > 0
-    }).toBe(true)
+    await expect
+      .poll(async () => {
+        const apres = await mesurer()
+        return Math.abs(apres.remplissageDroit - apres.droiteLibre) < 1 && apres.droiteLibre > 0
+      })
+      .toBe(true)
   } finally {
-    await app.evaluate(({ BrowserWindow }, [largeur, hauteur]) => BrowserWindow.getAllWindows()[0].setSize(largeur, hauteur), taille)
+    await app.evaluate(
+      ({ BrowserWindow }, [largeur, hauteur]) => BrowserWindow.getAllWindows()[0].setSize(largeur, hauteur),
+      taille
+    )
   }
 })
 
@@ -1208,22 +1403,28 @@ test('C14 : un appel IPC venant d’une autre page que l’interface est refusé
   await attendreUrlActive(`${origine}/page-b.html`)
   await expect.poll(async () => ongletActif(await etat())?.isLoading).toBe(false)
   const avant = await etat()
-  const resultats = await app.evaluate(async ({ BrowserWindow }, { preload, url }) => {
-    const intruse = new BrowserWindow({ show: false, webPreferences: { preload, contextIsolation: true, sandbox: true } })
-    try {
-      await intruse.loadURL(url)
-      // set-content-bounds part avant les invocations : leur réponse prouve qu'il a déjà été traité.
-      return await intruse.webContents.executeJavaScript(`
+  const resultats = await app.evaluate(
+    async ({ BrowserWindow }, { preload, url }) => {
+      const intruse = new BrowserWindow({
+        show: false,
+        webPreferences: { preload, contextIsolation: true, sandbox: true }
+      })
+      try {
+        await intruse.loadURL(url)
+        // set-content-bounds part avant les invocations : leur réponse prouve qu'il a déjà été traité.
+        return await intruse.webContents.executeJavaScript(`
         window.arbalete.setContentBounds({ x: 0, y: 0, width: 10, height: 10 })
         Promise.allSettled([
           window.arbalete.getState(),
           window.arbalete.createTab('http://127.0.0.1:1/intrus'),
           window.arbalete.navigate('http://127.0.0.1:1/intrus')
         ]).then((resultats) => resultats.map((resultat) => resultat.status))`)
-    } finally {
-      intruse.destroy()
-    }
-  }, { preload: resolve(__dirname, '../out/preload/index.js'), url: `${origine}/page-a.html` })
+      } finally {
+        intruse.destroy()
+      }
+    },
+    { preload: resolve(__dirname, '../out/preload/index.js'), url: `${origine}/page-a.html` }
+  )
 
   expect(resultats).toEqual(['rejected', 'rejected', 'rejected'])
   const apres = await etat()
@@ -1252,9 +1453,12 @@ test('C15 : la fenêtre d’interface ne navigue pas et n’ouvre pas de fenêtr
       })
     })
   })
-  await ui.evaluate((url) => { location.href = url }, cible)
-  expect(await app.evaluate(() => (globalThis as { navigationEmpechee?: Promise<boolean> }).navigationEmpechee))
-    .toBe(true)
+  await ui.evaluate((url) => {
+    location.href = url
+  }, cible)
+  expect(await app.evaluate(() => (globalThis as { navigationEmpechee?: Promise<boolean> }).navigationEmpechee)).toBe(
+    true
+  )
   expect(ui.url()).toBe(urlInterface)
   expect(await ui.evaluate(() => typeof window.arbalete)).toBe('object')
 })
@@ -1305,7 +1509,10 @@ test('C17 : une page locale hors de out/renderer chargée dans l’interface ne 
 
   const resultats: Record<string, string[]> = {}
   try {
-    for (const [nom, chemin] of [['étrangère', etrangere], ['homonyme', homonyme]]) {
+    for (const [nom, chemin] of [
+      ['étrangère', etrangere],
+      ['homonyme', homonyme]
+    ]) {
       const url = pathToFileURL(chemin).href
       await chargerInterface(url)
       await expect(ui).toHaveURL(url)
@@ -1328,8 +1535,9 @@ test('C17 : une page locale hors de out/renderer chargée dans l’interface ne 
 //   no_claim=ne presse pas Ctrl+Maj+I (les accélérateurs natifs ne reçoivent pas les touches simulées par Playwright).
 test('C19 : l’app construite n’a pas de menu d’application (pas de DevTools par raccourci)', async () => {
   expect(await app.evaluate(({ Menu }) => Menu.getApplicationMenu() === null)).toBe(true)
-  expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.isDevToolsOpened()))
-    .toBe(false)
+  expect(
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.isDevToolsOpened())
+  ).toBe(false)
 })
 
 // Value: protects=filtre de schéma de setWindowOpenHandler des onglets (ARB-102) : une page http ne peut pas ouvrir
@@ -1382,12 +1590,22 @@ test('C89 : une pop-up bloquée allume l’icône et l’avis, Autoriser la lais
   await dansOngletActif("/* SANS_GESTE */ window.open('/page-b.html?bloquee')")
   await expect(ui.getByTestId('popup-blocked')).toBeVisible()
   expect((await etat()).popupsBloquees).toBe(1)
-  const cliquerAutoriser = () => app.evaluate(({ webContents }) => {
-    const avis = webContents.getAllWebContents().find((w) => w.getURL().includes('vue=popup'))!
-    return avis.executeJavaScript("[...document.querySelectorAll('button')].find((b) => b.textContent === 'Autoriser')?.click()")
-  })
-  await expect.poll(async () => app.evaluate(({ webContents }) => webContents.getAllWebContents().some((w) => w.getURL().includes('vue=popup')))).toBe(true)
-  await expect(async () => { await cliquerAutoriser(); expect((await etat()).popupsBloquees).toBe(0) }).toPass()
+  const cliquerAutoriser = () =>
+    app.evaluate(({ webContents }) => {
+      const avis = webContents.getAllWebContents().find((w) => w.getURL().includes('vue=popup'))!
+      return avis.executeJavaScript(
+        "[...document.querySelectorAll('button')].find((b) => b.textContent === 'Autoriser')?.click()"
+      )
+    })
+  await expect
+    .poll(async () =>
+      app.evaluate(({ webContents }) => webContents.getAllWebContents().some((w) => w.getURL().includes('vue=popup')))
+    )
+    .toBe(true)
+  await expect(async () => {
+    await cliquerAutoriser()
+    expect((await etat()).popupsBloquees).toBe(0)
+  }).toPass()
   await expect(ui.getByTestId('popup-blocked')).toHaveCount(0)
 
   await dansOngletActif("/* SANS_GESTE */ window.open('/page-b.html?autorisee')")
@@ -1412,7 +1630,7 @@ test('C21 : une rafale de window.open n’ouvre que 5 onglets', async () => {
 
 // Ouvre un onglet source sur page-a, y lance n window.open et attend les n onglets ouverts. Chaque ouverture
 // devient l'onglet actif : on renvoie l'identifiant de la source pour pouvoir y revenir.
-async function rafaleDepuisNouvelOnglet(n: number, marque: string): Promise<{ source: string, apres: number }> {
+async function rafaleDepuisNouvelOnglet(n: number, marque: string): Promise<{ source: string; apres: number }> {
   const source = await ui.evaluate((url) => window.arbalete.createTab(url), `${origine}/page-a.html`)
   await expect.poll(async () => (await etat()).activeTabId).toBe(source)
   await attendreUrlActive(`${origine}/page-a.html`)
@@ -1493,14 +1711,15 @@ test('C23 : la limite d’ouvertures se libère après 10 secondes', async () =>
 //   que la touche simulée atteint before-input-event; seam=none;
 //   no_claim=ne couvre ni Ctrl+Maj+I ni F12 dans une page web (ses DevTools restent possibles par d'autres voies).
 test('C24 : F12 n’ouvre pas les DevTools de l’interface dans l’app construite', async () => {
-  const devtoolsOuverts = () => app.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows()[0].webContents.isDevToolsOpened())
+  const devtoolsOuverts = () =>
+    app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.isDevToolsOpened())
   // sendInputEvent passe par le circuit d'entrée natif (before-input-event) ; ui.keyboard (CDP) ne l'atteint pas.
-  const presserF12 = () => app.evaluate(({ BrowserWindow }) => {
-    const contenu = BrowserWindow.getAllWindows()[0].webContents
-    contenu.sendInputEvent({ type: 'keyDown', keyCode: 'F12' })
-    contenu.sendInputEvent({ type: 'keyUp', keyCode: 'F12' })
-  })
+  const presserF12 = () =>
+    app.evaluate(({ BrowserWindow }) => {
+      const contenu = BrowserWindow.getAllWindows()[0].webContents
+      contenu.sendInputEvent({ type: 'keyDown', keyCode: 'F12' })
+      contenu.sendInputEvent({ type: 'keyUp', keyCode: 'F12' })
+    })
   await presserF12()
   await ui.waitForTimeout(1_000)
   expect(await devtoolsOuverts()).toBe(false)
@@ -1556,10 +1775,20 @@ test('C27 : à 50 onglets ouverts, les pages n’en ouvrent plus, l’utilisateu
 function lancerSecondeInstance(args: string[]): Promise<number | null> {
   const cheminElectron = require('electron') as string
   return new Promise((termine, echoue) => {
-    const seconde = spawn(cheminElectron, ['.', '--', ...args], { cwd: resolve(__dirname, '..'), env: envTest(), stdio: 'ignore' })
-    const delai = setTimeout(() => { seconde.kill(); echoue(new Error('La seconde instance ne s’est pas fermée')) }, 20_000)
+    const seconde = spawn(cheminElectron, ['.', '--', ...args], {
+      cwd: resolve(__dirname, '..'),
+      env: envTest(),
+      stdio: 'ignore'
+    })
+    const delai = setTimeout(() => {
+      seconde.kill()
+      echoue(new Error('La seconde instance ne s’est pas fermée'))
+    }, 20_000)
     seconde.on('error', echoue)
-    seconde.on('exit', (code) => { clearTimeout(delai); termine(code) })
+    seconde.on('exit', (code) => {
+      clearTimeout(delai)
+      termine(code)
+    })
   })
 }
 
@@ -1571,7 +1800,9 @@ function lancerSecondeInstance(args: string[]): Promise<number | null> {
 //   par Playwright; no_claim=ne vérifie pas que Windows passe la fenêtre au premier plan (focus du système).
 test('C37 : un second lancement se ferme et ouvre ses adresses dans la première instance, restaurée', async () => {
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].minimize())
-  await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isMinimized())).toBe(true)
+  await expect
+    .poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isMinimized()))
+    .toBe(true)
   const avant = await etat()
 
   const code = await lancerSecondeInstance([`${origine}/page-b.html?seconde-instance`, 'file:///C:/Windows/win.ini'])
@@ -1582,7 +1813,8 @@ test('C37 : un second lancement se ferme et ouvre ses adresses dans la première
   expect(ongletActif(apres)?.url).toBe(`${origine}/page-b.html?seconde-instance`)
   expect(apres.tabs.some((onglet) => onglet.url.startsWith('file:'))).toBe(false)
   const fenetres = await app.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows().map((fenetre) => ({ reduite: fenetre.isMinimized(), visible: fenetre.isVisible() })))
+    BrowserWindow.getAllWindows().map((fenetre) => ({ reduite: fenetre.isMinimized(), visible: fenetre.isVisible() }))
+  )
   expect(fenetres).toEqual([{ reduite: false, visible: true }])
 })
 
@@ -1608,7 +1840,11 @@ test('C38 : l’app des tests utilise son propre profil de données', async () =
 test('C39 : une instance lancée sur un autre profil démarre au lieu de se fermer', async () => {
   const autreProfil = mkdtempSync(join(tmpdir(), 'arbalete-test-'))
   const cheminElectron = require('electron') as string
-  const autre = spawn(cheminElectron, ['.'], { cwd: resolve(__dirname, '..'), env: envTest(autreProfil), stdio: 'ignore' })
+  const autre = spawn(cheminElectron, ['.'], {
+    cwd: resolve(__dirname, '..'),
+    env: envTest(autreProfil),
+    stdio: 'ignore'
+  })
   try {
     // Une instance qui n'obtient pas le verrou se ferme en quelques centaines de millisecondes (C37).
     await expect.poll(() => existsSync(join(autreProfil, 'arbalete.db')), { timeout: 15_000 }).toBe(true)
@@ -1625,13 +1861,17 @@ test('C39 : une instance lancée sur un autre profil démarre au lieu de se ferm
 
 // Session des onglets telle qu'écrite sur disque (ARB-44), lue hors de l'app : une base absente, vide ou pas encore
 // migrée (l'app vient de créer le fichier) donne [], pour que expect.poll réessaie au lieu d'échouer.
-function sessionSurDisque(dossier: string): Array<{ url: string, titre: string, actif: number }> {
+function sessionSurDisque(dossier: string): Array<{ url: string; titre: string; actif: number }> {
   const chemin = join(dossier, 'arbalete.db')
   if (!existsSync(chemin)) return []
   // timeout : l'app écrit la session en parallèle ; sans délai d'attente, SQLite répond « database is locked » (ARB-129).
   const db = new DatabaseSync(chemin, { readOnly: true, timeout: 3_000 })
   try {
-    return db.prepare('SELECT url, titre, actif FROM onglet ORDER BY position').all() as Array<{ url: string, titre: string, actif: number }>
+    return db.prepare('SELECT url, titre, actif FROM onglet ORDER BY position').all() as Array<{
+      url: string
+      titre: string
+      actif: number
+    }>
   } catch (erreur) {
     if (/no such table/.test(String(erreur))) return []
     throw erreur
@@ -1655,7 +1895,8 @@ test('C40 : la session des onglets est écrite après chaque changement et à la
     const pageA = `${origine}/page-a.html`
     await fenetre.evaluate((url) => window.arbalete.createTab(url), pageA)
     // Écriture différée : la session arrive sur disque, titre compris, sans fermer l'app.
-    await expect.poll(() => sessionSurDisque(autreProfil).at(-1), { timeout: 10_000 })
+    await expect
+      .poll(() => sessionSurDisque(autreProfil).at(-1), { timeout: 10_000 })
       .toEqual({ url: pageA, titre: 'Page A', actif: 1 })
     expect(sessionSurDisque(autreProfil)).toHaveLength(2)
 
@@ -1693,7 +1934,8 @@ test('C41 : au redémarrage, les onglets reviennent et un onglet inactif ne char
   let autreApp = await lancer(['--', pageA, pageB])
   try {
     let fenetre = await fenetreInterface(autreApp)
-    await expect.poll(async () => (await ongletsDe(fenetre)).map((onglet) => onglet.title), { timeout: 10_000 })
+    await expect
+      .poll(async () => (await ongletsDe(fenetre)).map((onglet) => onglet.title), { timeout: 10_000 })
       .toEqual(['Page A', 'Page B'])
     const premier = await fenetre.evaluate(() => window.arbalete.getState())
     await fenetre.evaluate((id) => window.arbalete.activateTab(id), premier.tabs[0].id)
@@ -1705,10 +1947,12 @@ test('C41 : au redémarrage, les onglets reviennent et un onglet inactif ne char
     const requetesB = requetes['/page-b.html'] ?? 0
     autreApp = await lancer()
     fenetre = await fenetreInterface(autreApp)
-    await expect.poll(() => ongletsDe(fenetre), { timeout: 10_000 }).toEqual([
-      { url: pageA, title: 'Page A', actif: true },
-      { url: pageB, title: 'Page B', actif: false }
-    ])
+    await expect
+      .poll(() => ongletsDe(fenetre), { timeout: 10_000 })
+      .toEqual([
+        { url: pageA, title: 'Page A', actif: true },
+        { url: pageB, title: 'Page B', actif: false }
+      ])
     // L'onglet actif a rechargé sa page ; l'onglet inactif, jamais affiché, pas encore.
     await expect.poll(() => requetes['/page-a.html'] ?? 0).toBe(requetesA + 1)
     expect(requetes['/page-b.html'] ?? 0).toBe(requetesB)
@@ -1716,7 +1960,9 @@ test('C41 : au redémarrage, les onglets reviennent et un onglet inactif ne char
     const restaure = await fenetre.evaluate(() => window.arbalete.getState())
     await fenetre.evaluate((id) => window.arbalete.activateTab(id), restaure.tabs[1].id)
     await expect.poll(() => requetes['/page-b.html'] ?? 0).toBe(requetesB + 1)
-    await expect.poll(async () => (await fenetre.evaluate(() => window.arbalete.getState())).tabs[1].isLoading).toBe(false)
+    await expect
+      .poll(async () => (await fenetre.evaluate(() => window.arbalete.getState())).tabs[1].isLoading)
+      .toBe(false)
     expect(pageDeLHistorique(autreProfil, pageA)?.visites).toBe(1)
     expect(pageDeLHistorique(autreProfil, pageB)?.visites).toBe(1)
   } finally {
@@ -1760,23 +2006,30 @@ test('C42 : après un arrêt forcé, une invite propose de restaurer la session 
     // s'ouvrirait alors en « disk I/O error » et l'invite n'apparaîtrait pas (ARB-129). Un dossier ne se renomme que
     // lorsque plus aucun de ses fichiers n'est tenu.
     const provisoire = `${autreProfil}-libre`
-    await expect.poll(() => {
-      try {
-        renameSync(autreProfil, provisoire)
-        renameSync(provisoire, autreProfil)
-        return true
-      } catch {
-        return false
-      }
-    }, { timeout: 20_000 }).toBe(true)
+    await expect
+      .poll(
+        () => {
+          try {
+            renameSync(autreProfil, provisoire)
+            renameSync(provisoire, autreProfil)
+            return true
+          } catch {
+            return false
+          }
+        },
+        { timeout: 20_000 }
+      )
+      .toBe(true)
   }
   const offre = (fenetre: Page) => fenetre.evaluate(() => window.arbalete.getRestoreOffer())
   let autreApp = await lancer(['--', pageA, pageB])
   try {
-    await expect.poll(() => sessionSurDisque(autreProfil), { timeout: 10_000 }).toEqual([
-      { url: pageA, titre: 'Page A', actif: 0 },
-      { url: pageB, titre: 'Page B', actif: 1 }
-    ])
+    await expect
+      .poll(() => sessionSurDisque(autreProfil), { timeout: 10_000 })
+      .toEqual([
+        { url: pageA, titre: 'Page A', actif: 0 },
+        { url: pageB, titre: 'Page B', actif: 1 }
+      ])
     await arreterDeForce(autreApp)
 
     // Après l'arrêt forcé : un onglet de démarrage, l'invite, et la session interrompue intacte sur disque.
@@ -1790,10 +2043,12 @@ test('C42 : après un arrêt forcé, une invite propose de restaurer la session 
     expect(sessionSurDisque(autreProfil).map((onglet) => onglet.url)).toEqual([pageA, pageB])
 
     await fenetre.getByRole('button', { name: 'Restaurer' }).click()
-    await expect.poll(() => ongletsDe(fenetre), { timeout: 10_000 }).toEqual([
-      { url: pageA, title: 'Page A', actif: false },
-      { url: pageB, title: 'Page B', actif: true }
-    ])
+    await expect
+      .poll(() => ongletsDe(fenetre), { timeout: 10_000 })
+      .toEqual([
+        { url: pageA, title: 'Page A', actif: false },
+        { url: pageB, title: 'Page B', actif: true }
+      ])
     await expect(fenetre.getByTestId('restore-banner')).toHaveCount(0)
     expect(await offre(fenetre)).toBe(false)
     // ARB-20 : l'onglet de démarrage remplacé par la session n'est pas un onglet fermé par l'utilisateur, et la pile est
@@ -1816,7 +2071,8 @@ test('C42 : après un arrêt forcé, une invite propose de restaurer la session 
     await fenetre.getByRole('button', { name: 'Ignorer' }).click()
     await expect(fenetre.getByTestId('restore-banner')).toHaveCount(0)
     expect(await ongletsDe(fenetre)).toHaveLength(1)
-    await expect.poll(() => sessionSurDisque(autreProfil).filter((onglet) => onglet.url.startsWith(origine)), { timeout: 10_000 })
+    await expect
+      .poll(() => sessionSurDisque(autreProfil).filter((onglet) => onglet.url.startsWith(origine)), { timeout: 10_000 })
       .toEqual([])
     expect(sessionSurDisque(autreProfil)).toHaveLength(1)
     await autreApp.close()
@@ -1847,7 +2103,10 @@ test('C43 : une base illisible est mise de côté, remplacée, et l’utilisateu
   try {
     const fenetre = await fenetreInterface(autreApp)
     const incident = await fenetre.evaluate(() => window.arbalete.getDataIncident())
-    expect(incident).toMatchObject({ kind: 'corrupted', backup: expect.stringMatching(/^arbalete\.db\.corrompue-[\dT.Z-]+$/) })
+    expect(incident).toMatchObject({
+      kind: 'corrupted',
+      backup: expect.stringMatching(/^arbalete\.db\.corrompue-[\dT.Z-]+$/)
+    })
     const copie = (incident as { backup: string }).backup
     expect(readFileSync(join(autreProfil, copie))).toEqual(contenu)
     await expect(fenetre.getByTestId('data-incident-banner')).toContainText(copie)
@@ -1876,7 +2135,9 @@ test('C52 : une base corrompue revient de la copie de secours, session comprise'
     electron.launch({ args: ['.', ...args], cwd: resolve(__dirname, '..'), env: envTest(autreProfil) })
   let autreApp = await lancer(['--', pageA])
   try {
-    await expect.poll(() => sessionSurDisque(autreProfil).map((onglet) => onglet.url), { timeout: 10_000 }).toEqual([pageA])
+    await expect
+      .poll(() => sessionSurDisque(autreProfil).map((onglet) => onglet.url), { timeout: 10_000 })
+      .toEqual([pageA])
     await autreApp.close()
     expect(existsSync(join(autreProfil, 'arbalete.db.sauvegarde'))).toBe(true)
 
@@ -1888,7 +2149,9 @@ test('C52 : une base corrompue revient de la copie de secours, session comprise'
     const incident = await fenetre.evaluate(() => window.arbalete.getDataIncident())
     expect(incident).toMatchObject({ kind: 'corrupted', restored: true })
     await expect(fenetre.getByTestId('data-incident-banner')).toContainText('copie de secours')
-    await expect.poll(async () => (await ongletsDe(fenetre)).map((onglet) => onglet.url), { timeout: 10_000 }).toEqual([pageA])
+    await expect
+      .poll(async () => (await ongletsDe(fenetre)).map((onglet) => onglet.url), { timeout: 10_000 })
+      .toEqual([pageA])
   } finally {
     await autreApp.close().catch(() => {})
     rmSync(autreProfil, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
@@ -1922,11 +2185,18 @@ test('C44 : une base plus récente reste intacte et l’utilisateur est prévenu
 })
 
 // Page de l'historique (ARB-51) telle qu'écrite sur disque, lue hors de l'app ; undefined si elle n'y est pas encore.
-function pageDeLHistorique(dossier: string, url: string): { titre: string, visites: number, dates: number } | undefined {
+function pageDeLHistorique(
+  dossier: string,
+  url: string
+): { titre: string; visites: number; dates: number } | undefined {
   const db = new DatabaseSync(join(dossier, 'arbalete.db'), { readOnly: true })
   try {
-    return db.prepare(`SELECT titre, visites, (SELECT count(*) FROM visite WHERE visite.page = page.id) AS dates
-      FROM page WHERE url = ?`).get(url) as { titre: string, visites: number, dates: number } | undefined
+    return db
+      .prepare(
+        `SELECT titre, visites, (SELECT count(*) FROM visite WHERE visite.page = page.id) AS dates
+      FROM page WHERE url = ?`
+      )
+      .get(url) as { titre: string; visites: number; dates: number } | undefined
   } finally {
     db.close()
   }
@@ -1948,12 +2218,16 @@ test('C46 : chaque navigation est enregistrée dans l’historique, un rechargem
   const avantB = visitesAvant(pageB)
 
   await ui.evaluate((url) => window.arbalete.createTab(url), pageA)
-  await expect.poll(() => pageDeLHistorique(profil, pageA)).toEqual({ titre: 'Page A', visites: avantA + 1, dates: avantA + 1 })
+  await expect
+    .poll(() => pageDeLHistorique(profil, pageA))
+    .toEqual({ titre: 'Page A', visites: avantA + 1, dates: avantA + 1 })
 
   // Lien suivi par la page, puis rechargement et ancre dans la même page : une seule visite de page-b.
   await dansOngletActif("document.getElementById('suivante').click()")
   await attendreUrlActive(pageB)
-  await expect.poll(() => pageDeLHistorique(profil, pageB)).toEqual({ titre: 'Page B', visites: avantB + 1, dates: avantB + 1 })
+  await expect
+    .poll(() => pageDeLHistorique(profil, pageB))
+    .toEqual({ titre: 'Page B', visites: avantB + 1, dates: avantB + 1 })
   const requetesB = requetes['/page-b.html'] ?? 0
   await ui.evaluate(() => window.arbalete.reload())
   await expect.poll(() => requetes['/page-b.html'] ?? 0).toBeGreaterThan(requetesB)
@@ -2029,7 +2303,9 @@ test('C50 : l’onglet affiche le favicon du site sans violation de la CSP, et l
   await expect.poll(async () => ongletActif(await etat())?.favicon).toBeUndefined()
   await expect(barreUi.locator('.tab-item--active .tab-favicon-img')).toHaveCount(0)
 
-  const csp = await barreUi.evaluate(() => document.querySelector<HTMLMetaElement>('meta[http-equiv="Content-Security-Policy"]')?.content ?? '')
+  const csp = await barreUi.evaluate(
+    () => document.querySelector<HTMLMetaElement>('meta[http-equiv="Content-Security-Policy"]')?.content ?? ''
+  )
   expect(csp).toMatch(/img-src 'self' data: https:(;|$)/)
   expect(csp).toMatch(/script-src 'self'(;|$)/)
   expect(csp).toMatch(/style-src 'self'(;|$)/)
@@ -2050,7 +2326,7 @@ test('C54 : un rectangle aberrant reçu par set-content-bounds est borné à la 
   // un poll peut ne jamais le voir. On enregistre donc chaque setBounds du processus principal, sans dépendre du moment.
   await app.evaluate(({ WebContentsView }) => {
     const proto = WebContentsView.prototype as unknown as { setBounds: (r: unknown) => void }
-    const g = globalThis as unknown as { __appelsBounds?: unknown[], __setBoundsOrigine?: (r: unknown) => void }
+    const g = globalThis as unknown as { __appelsBounds?: unknown[]; __setBoundsOrigine?: (r: unknown) => void }
     g.__appelsBounds = []
     g.__setBoundsOrigine ??= proto.setBounds
     proto.setBounds = function (this: unknown, rectangle: unknown) {
@@ -2061,9 +2337,14 @@ test('C54 : un rectangle aberrant reçu par set-content-bounds est borné à la 
   try {
     await ui.evaluate(() => window.arbalete.setContentBounds({ x: -50, y: 48, width: 1e300, height: 1e300 }))
     const attendu = { x: 0, y: 48, width: fenetre.width, height: fenetre.height - 48 }
-    await expect.poll(() => app.evaluate(() => (globalThis as unknown as { __appelsBounds: unknown[] }).__appelsBounds))
+    await expect
+      .poll(() => app.evaluate(() => (globalThis as unknown as { __appelsBounds: unknown[] }).__appelsBounds))
       .toContainEqual(attendu)
-    const appels = await app.evaluate(() => (globalThis as unknown as { __appelsBounds: Array<{ x: number, y: number, width: number, height: number }> }).__appelsBounds)
+    const appels = await app.evaluate(
+      () =>
+        (globalThis as unknown as { __appelsBounds: Array<{ x: number; y: number; width: number; height: number }> })
+          .__appelsBounds
+    )
     // Aucune vue ne sort de la fenêtre, y compris le temps du rectangle aberrant.
     for (const r of appels) {
       expect(r.x).toBeGreaterThanOrEqual(0)
@@ -2075,7 +2356,8 @@ test('C54 : un rectangle aberrant reçu par set-content-bounds est borné à la 
   } finally {
     await app.evaluate(({ WebContentsView }) => {
       const g = globalThis as unknown as { __setBoundsOrigine?: (r: unknown) => void }
-      if (g.__setBoundsOrigine) (WebContentsView.prototype as unknown as { setBounds: unknown }).setBounds = g.__setBoundsOrigine
+      if (g.__setBoundsOrigine)
+        (WebContentsView.prototype as unknown as { setBounds: unknown }).setBounds = g.__setBoundsOrigine
     })
     await ui.evaluate((rectangle) => window.arbalete.setContentBounds(rectangle), zone)
   }
@@ -2103,8 +2385,11 @@ test('C56 : le thème choisi revient au redémarrage', async () => {
     fenetre = await fenetreInterface(autreApp)
     expect(await fenetre.evaluate(() => window.arbalete.getTheme())).toBe('dark')
     await expect(fenetre.locator('html')).toHaveAttribute('data-theme', 'dark')
-    expect(await autreApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getBackgroundColor().toLowerCase()))
-      .toBe('#111820')
+    expect(
+      await autreApp.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()[0].getBackgroundColor().toLowerCase()
+      )
+    ).toBe('#111820')
     expect(await (await vueBarre(autreApp)).evaluate(() => window.arbalete.getTheme())).toBe('dark')
   } finally {
     await autreApp.close()
@@ -2122,11 +2407,25 @@ test('C56 : le thème choisi revient au redémarrage', async () => {
 test('C59 : barre latérale étendue, compacte, largeur réglable et conservée au redémarrage', async () => {
   const autreProfil = mkdtempSync(join(tmpdir(), 'arbalete-test-'))
   const lancer = () => electron.launch({ args: ['.'], cwd: resolve(__dirname, '..'), env: envTest(autreProfil) })
-  const largeurVue = (a: ElectronApplication) => a.evaluate(({ BrowserWindow, WebContentsView }) => BrowserWindow.getAllWindows()[0].contentView.children
-    .find((enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=barre'))?.getBounds().width)
+  const largeurVue = (a: ElectronApplication) =>
+    a.evaluate(
+      ({ BrowserWindow, WebContentsView }) =>
+        BrowserWindow.getAllWindows()[0]
+          .contentView.children.find(
+            (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=barre')
+          )
+          ?.getBounds().width
+    )
   // Bord gauche de la vue web de l'onglet actif : marge de 8 px (ARB-32) après la barre épinglée.
-  const xPage = (a: ElectronApplication) => a.evaluate(({ BrowserWindow, WebContentsView }) => BrowserWindow.getAllWindows()[0].contentView.children
-    .find((enfant) => enfant instanceof WebContentsView && !enfant.webContents.getURL().includes('vue=barre'))?.getBounds().x)
+  const xPage = (a: ElectronApplication) =>
+    a.evaluate(
+      ({ BrowserWindow, WebContentsView }) =>
+        BrowserWindow.getAllWindows()[0]
+          .contentView.children.find(
+            (enfant) => enfant instanceof WebContentsView && !enfant.webContents.getURL().includes('vue=barre')
+          )
+          ?.getBounds().x
+    )
   let autreApp = await lancer()
   try {
     let fenetre = await fenetreInterface(autreApp)
@@ -2142,9 +2441,16 @@ test('C59 : barre latérale étendue, compacte, largeur réglable et conservée 
     await fenetre.evaluate(() => window.arbalete.setSidebar('toggle-compact'))
     await expect.poll(() => largeurVue(autreApp)).toBe(68)
     await expect.poll(() => xPage(autreApp)).toBe(76)
-    await expect.poll(() => fenetre.locator('.sidebar-reserve').evaluate((el) => el.getBoundingClientRect().width)).toBe(68)
+    await expect
+      .poll(() => fenetre.locator('.sidebar-reserve').evaluate((el) => el.getBoundingClientRect().width))
+      .toBe(68)
 
-    for (const [demande, obtenu] of [[300, 300], [10, 200], [1e9, 400], [250.6, 251]]) {
+    for (const [demande, obtenu] of [
+      [300, 300],
+      [10, 200],
+      [1e9, 400],
+      [250.6, 251]
+    ]) {
       await fenetre.evaluate((largeur) => window.arbalete.setSidebarWidth(largeur), demande)
       expect((await barre()).width).toBe(obtenu)
     }
@@ -2170,7 +2476,7 @@ test('C59 : barre latérale étendue, compacte, largeur réglable et conservée 
 //   fails_when=closeTab rend l'onglet actif au dernier de la liste (ancien comportement), ou ne rend aucun onglet actif;
 //   why_new=C36 ferme par Ctrl+W mais ne vérifie pas quel onglet devient actif; seam=none (getState, activateTab et
 //   closeTab de l'IPC); no_claim=ne couvre pas l'ordre de la liste affichée, tenu par voisin.test.ts.
-test('C57 : fermer l\'onglet actif active son voisin', async () => {
+test("C57 : fermer l'onglet actif active son voisin", async () => {
   const ids: string[] = []
   for (const page of ['page-a.html', 'page-b.html', 'page-a.html', 'page-b.html']) {
     ids.push(await ui.evaluate((url) => window.arbalete.createTab(url), `${origine}/${page}`))
@@ -2192,10 +2498,16 @@ test('C57 : fermer l\'onglet actif active son voisin', async () => {
 //   ajoute un écouteur 'focus' par rechargement; why_new=C31 ne couvre que le premier chargement, fenêtre active;
 //   seam=isFocused de la fenêtre remplacé par un faux, Windows ne laissant pas Playwright quitter le premier plan;
 //   no_claim=ne prouve pas que Windows ramène la fenêtre au premier plan sans le correctif.
-test('C58 : la barre rechargée en arrière-plan rend le focus à la page au retour de la fenêtre, sans empiler d\'écouteurs', async () => {
-  const pageFocalisee = () => app.evaluate(({ BrowserWindow, WebContentsView }) => BrowserWindow.getAllWindows()[0].contentView.children
-    .some((enfant) => enfant instanceof WebContentsView && /^https?:/.test(enfant.webContents.getURL())
-      && enfant.webContents.isFocused()))
+test("C58 : la barre rechargée en arrière-plan rend le focus à la page au retour de la fenêtre, sans empiler d'écouteurs", async () => {
+  const pageFocalisee = () =>
+    app.evaluate(({ BrowserWindow, WebContentsView }) =>
+      BrowserWindow.getAllWindows()[0].contentView.children.some(
+        (enfant) =>
+          enfant instanceof WebContentsView &&
+          /^https?:/.test(enfant.webContents.getURL()) &&
+          enfant.webContents.isFocused()
+      )
+    )
   const ecouteurs = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].listenerCount('focus'))
   const avant = await ecouteurs()
   await app.evaluate(({ BrowserWindow }) => {
@@ -2205,13 +2517,23 @@ test('C58 : la barre rechargée en arrière-plan rend le focus à la page au ret
   try {
     for (let i = 0; i < 3; i++) {
       await app.evaluate(({ BrowserWindow, WebContentsView }) => {
-        const barre = BrowserWindow.getAllWindows()[0].contentView.children
-          .find((enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=barre')) as InstanceType<typeof WebContentsView>
+        const barre = BrowserWindow.getAllWindows()[0].contentView.children.find(
+          (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=barre')
+        ) as InstanceType<typeof WebContentsView>
         barre.webContents.reload()
       })
-      await expect.poll(() => app.evaluate(({ BrowserWindow, WebContentsView }) => BrowserWindow.getAllWindows()[0].contentView.children
-        .some((enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=barre')
-          && !enfant.webContents.isLoading()))).toBe(true)
+      await expect
+        .poll(() =>
+          app.evaluate(({ BrowserWindow, WebContentsView }) =>
+            BrowserWindow.getAllWindows()[0].contentView.children.some(
+              (enfant) =>
+                enfant instanceof WebContentsView &&
+                enfant.webContents.getURL().includes('vue=barre') &&
+                !enfant.webContents.isLoading()
+            )
+          )
+        )
+        .toBe(true)
     }
     expect(await pageFocalisee()).toBe(false)
     expect(await ecouteurs()).toBe(avant + 1)
@@ -2240,19 +2562,28 @@ function bulle() {
 }
 function texteBulle() {
   return app.evaluate(async ({ BrowserWindow, WebContentsView }) => {
-    const vue = (BrowserWindow.getAllWindows()[0].contentView.children as InstanceType<typeof WebContentsView>[])
-      .find((enfant) => enfant.webContents.getURL().startsWith('data:text/html'))
+    const vue = (BrowserWindow.getAllWindows()[0].contentView.children as InstanceType<typeof WebContentsView>[]).find(
+      (enfant) => enfant.webContents.getURL().startsWith('data:text/html')
+    )
     return vue ? vue.webContents.executeJavaScript("document.getElementById('t').textContent") : null
   })
 }
 // Survol simulé dans la page de l'onglet actif (coordonnées de la page).
 function survolerPage(x: number, y: number) {
-  return app.evaluate(({ BrowserWindow, WebContentsView }, { x, y }) => {
-    const vue = (BrowserWindow.getAllWindows()[0].contentView.children as InstanceType<typeof WebContentsView>[])
-      .find((enfant) => enfant instanceof WebContentsView && !enfant.webContents.getURL().includes('vue=barre')
-        && !enfant.webContents.getURL().startsWith('data:')) as InstanceType<typeof WebContentsView>
-    vue.webContents.sendInputEvent({ type: 'mouseMove', x, y })
-  }, { x, y })
+  return app.evaluate(
+    ({ BrowserWindow, WebContentsView }, { x, y }) => {
+      const vue = (
+        BrowserWindow.getAllWindows()[0].contentView.children as InstanceType<typeof WebContentsView>[]
+      ).find(
+        (enfant) =>
+          enfant instanceof WebContentsView &&
+          !enfant.webContents.getURL().includes('vue=barre') &&
+          !enfant.webContents.getURL().startsWith('data:')
+      ) as InstanceType<typeof WebContentsView>
+      vue.webContents.sendInputEvent({ type: 'mouseMove', x, y })
+    },
+    { x, y }
+  )
 }
 async function bulleAffichee() {
   await survolerPage(200, 150)
@@ -2308,11 +2639,13 @@ test('C62 : la bulle suit le thème et la place de la page quand la barre est é
   await saisirAdresse(`${origine}/page-survol.html`)
   await attendreUrlActive(`${origine}/page-survol.html`)
   await bulleAffichee()
-  const classe = () => app.evaluate(async ({ BrowserWindow, WebContentsView }) => {
-    const vue = (BrowserWindow.getAllWindows()[0].contentView.children as InstanceType<typeof WebContentsView>[])
-      .find((enfant) => enfant.webContents.getURL().startsWith('data:text/html'))
-    return vue ? vue.webContents.executeJavaScript('document.body.className') : null
-  })
+  const classe = () =>
+    app.evaluate(async ({ BrowserWindow, WebContentsView }) => {
+      const vue = (
+        BrowserWindow.getAllWindows()[0].contentView.children as InstanceType<typeof WebContentsView>[]
+      ).find((enfant) => enfant.webContents.getURL().startsWith('data:text/html'))
+      return vue ? vue.webContents.executeJavaScript('document.body.className') : null
+    })
   const themeInitial = await ui.evaluate(() => window.arbalete.getTheme())
   try {
     await ui.evaluate(() => window.arbalete.setTheme('light'))
@@ -2345,51 +2678,98 @@ test('C63 : la vue de la bulle est verrouillée et passe de côté sous la souri
   await attendreUrlActive(`${origine}/page-survol.html`)
   await bulleAffichee()
   const sonde = await app.evaluate(async ({ BrowserWindow, WebContentsView }) => {
-    const vue = (BrowserWindow.getAllWindows()[0].contentView.children as InstanceType<typeof WebContentsView>[])
-      .find((enfant) => enfant.webContents.getURL().startsWith('data:text/html'))!
-    const prefs = (vue.webContents as unknown as { getLastWebPreferences: () => { sandbox: boolean, contextIsolation: boolean, nodeIntegration: boolean } }).getLastWebPreferences()
+    const vue = (BrowserWindow.getAllWindows()[0].contentView.children as InstanceType<typeof WebContentsView>[]).find(
+      (enfant) => enfant.webContents.getURL().startsWith('data:text/html')
+    )!
+    const prefs = (
+      vue.webContents as unknown as {
+        getLastWebPreferences: () => { sandbox: boolean; contextIsolation: boolean; nodeIntegration: boolean }
+      }
+    ).getLastWebPreferences()
     const ouverte = await vue.webContents.executeJavaScript("window.open('https://example.com') === null")
     vue.webContents.executeJavaScript("location.href = 'https://example.com/'").catch(() => {})
     await new Promise((resolution) => setTimeout(resolution, 300))
-    return { sandbox: prefs.sandbox, isolation: prefs.contextIsolation, node: prefs.nodeIntegration, ouverte,
-      adresse: vue.webContents.getURL().slice(0, 15), fenetres: BrowserWindow.getAllWindows().length }
+    return {
+      sandbox: prefs.sandbox,
+      isolation: prefs.contextIsolation,
+      node: prefs.nodeIntegration,
+      ouverte,
+      adresse: vue.webContents.getURL().slice(0, 15),
+      fenetres: BrowserWindow.getAllWindows().length
+    }
   })
-  expect(sonde).toEqual({ sandbox: true, isolation: true, node: false, ouverte: true, adresse: 'data:text/html;', fenetres: 1 })
+  expect(sonde).toEqual({
+    sandbox: true,
+    isolation: true,
+    node: false,
+    ouverte: true,
+    adresse: 'data:text/html;',
+    fenetres: 1
+  })
 
   const zone = (await boundsVueActive())!
   const gauche = (await bulle())!
   expect(gauche.x).toBe(zone.x + 8)
-  const bouger = () => app.evaluate(({ BrowserWindow, WebContentsView }) => {
-    const vue = (BrowserWindow.getAllWindows()[0].contentView.children as InstanceType<typeof WebContentsView>[])
-      .find((enfant) => enfant.webContents.getURL().startsWith('data:text/html'))!
-    vue.webContents.sendInputEvent({ type: 'mouseMove', x: 10, y: 10 })
-  })
+  const bouger = () =>
+    app.evaluate(({ BrowserWindow, WebContentsView }) => {
+      const vue = (
+        BrowserWindow.getAllWindows()[0].contentView.children as InstanceType<typeof WebContentsView>[]
+      ).find((enfant) => enfant.webContents.getURL().startsWith('data:text/html'))!
+      vue.webContents.sendInputEvent({ type: 'mouseMove', x: 10, y: 10 })
+    })
   await bouger()
-  await expect.poll(async () => { const b = await bulle(); return b ? b.x + b.width : 0 }).toBe(zone.x + zone.width - 8)
+  await expect
+    .poll(async () => {
+      const b = await bulle()
+      return b ? b.x + b.width : 0
+    })
+    .toBe(zone.x + zone.width - 8)
   await bouger()
   await expect.poll(async () => (await bulle())?.x).toBe(zone.x + 8)
 })
 
 // Zoom de page et plein écran (ARB-107) : les raccourcis que portait le menu d'application retiré (ARB-101) sont gérés
 // par le processus principal, comme ceux d'ARB-18, quel que soit le webContents qui a le focus.
-function presserSur(cible: 'onglet' | 'barre' | 'fenetre', keyCode: string, modifiers: Array<'control' | 'alt' | 'shift'>) {
-  return app.evaluate(({ BrowserWindow, WebContentsView }, { cible, keyCode, modifiers }) => {
-    const fenetre = BrowserWindow.getAllWindows()[0]
-    const contenu = cible === 'fenetre' ? fenetre.webContents
-      : (fenetre.contentView.children.find((enfant) => enfant instanceof WebContentsView
-        && !enfant.webContents.getURL().startsWith('data:')
-        && enfant.webContents.getURL().includes('vue=barre') === (cible === 'barre')) as InstanceType<typeof WebContentsView>).webContents
-    contenu.focus()
-    contenu.sendInputEvent({ type: 'keyDown', keyCode, modifiers })
-    contenu.sendInputEvent({ type: 'keyUp', keyCode, modifiers })
-  }, { cible, keyCode, modifiers })
+function presserSur(
+  cible: 'onglet' | 'barre' | 'fenetre',
+  keyCode: string,
+  modifiers: Array<'control' | 'alt' | 'shift'>
+) {
+  return app.evaluate(
+    ({ BrowserWindow, WebContentsView }, { cible, keyCode, modifiers }) => {
+      const fenetre = BrowserWindow.getAllWindows()[0]
+      const contenu =
+        cible === 'fenetre'
+          ? fenetre.webContents
+          : (
+              fenetre.contentView.children.find(
+                (enfant) =>
+                  enfant instanceof WebContentsView &&
+                  !enfant.webContents.getURL().startsWith('data:') &&
+                  enfant.webContents.getURL().includes('vue=barre') === (cible === 'barre')
+              ) as InstanceType<typeof WebContentsView>
+            ).webContents
+      contenu.focus()
+      contenu.sendInputEvent({ type: 'keyDown', keyCode, modifiers })
+      contenu.sendInputEvent({ type: 'keyUp', keyCode, modifiers })
+    },
+    { cible, keyCode, modifiers }
+  )
 }
 function zoomDe(cible: 'onglet' | 'fenetre') {
   return app.evaluate(({ BrowserWindow, WebContentsView }, cible) => {
     const fenetre = BrowserWindow.getAllWindows()[0]
-    const contenu = cible === 'fenetre' ? fenetre.webContents
-      : (fenetre.contentView.children.find((enfant) => enfant instanceof WebContentsView
-        && !enfant.webContents.getURL().startsWith('data:') && !enfant.webContents.getURL().includes('vue=barre')) as InstanceType<typeof WebContentsView>).webContents
+    const contenu =
+      cible === 'fenetre'
+        ? fenetre.webContents
+        : (
+            fenetre.contentView.children.find(
+              (enfant) =>
+                enfant instanceof WebContentsView &&
+                !enfant.webContents.getURL().startsWith('data:') &&
+                !enfant.webContents.getURL().includes('vue=barre')
+            ) as InstanceType<typeof WebContentsView>
+          ).webContents
     return Math.round(contenu.getZoomFactor() * 100) / 100
   }, cible)
 }
@@ -2490,7 +2870,9 @@ test('C66 : Ctrl+Tab et Ctrl+1…9 changent d’onglet, F5 et Ctrl+R rechargent,
     await presserSur('barre', 'Tab', ['control'])
     await expect.poll(actif).toBe(ids[1])
     const urlActive = async () => (await ongletActif(await etat()))?.url
-    await expect.poll(() => app.evaluate(({ webContents }) => webContents.getFocusedWebContents()?.getURL() ?? null)).toBe(await urlActive())
+    await expect
+      .poll(() => app.evaluate(({ webContents }) => webContents.getFocusedWebContents()?.getURL() ?? null))
+      .toBe(await urlActive())
     await presserSur('onglet', 'Tab', ['control', 'shift'])
     await expect.poll(actif).toBe(ids[0])
 
@@ -2509,10 +2891,17 @@ test('C66 : Ctrl+Tab et Ctrl+1…9 changent d’onglet, F5 et Ctrl+R rechargent,
     // Rechargement : la page repart de zéro (nouvelle origine des temps).
     await saisirAdresse(`${origine}/page-survol.html`)
     await attendreUrlActive(`${origine}/page-survol.html`)
-    for (const [cible, touche, modifiers] of [['onglet', 'F5', []], ['barre', 'R', ['control']], ['fenetre', 'F5', ['control']], ['onglet', 'R', ['control', 'shift']]] as const) {
+    for (const [cible, touche, modifiers] of [
+      ['onglet', 'F5', []],
+      ['barre', 'R', ['control']],
+      ['fenetre', 'F5', ['control']],
+      ['onglet', 'R', ['control', 'shift']]
+    ] as const) {
       const avant = await resultatDansOngletActif<number>('performance.timeOrigin')
       await presserSur(cible, touche, [...modifiers])
-      await expect.poll(async () => resultatDansOngletActif<number>('performance.timeOrigin').catch(() => avant)).not.toBe(avant)
+      await expect
+        .poll(async () => resultatDansOngletActif<number>('performance.timeOrigin').catch(() => avant))
+        .not.toBe(avant)
     }
   } finally {
     for (const id of nouveaux) await ui.evaluate((i) => window.arbalete.closeTab(i), id)
@@ -2537,13 +2926,19 @@ test('C67 : Ctrl+Maj+T rouvre le dernier onglet fermé et l’active', async () 
     }
     const actif = async () => (await ongletActif(await etat()))?.url
     // Du plus récent au plus ancien, depuis la page, la barre puis la fenêtre ; la page rouverte reprend le clavier.
-    for (const [cible, url] of [['onglet', urlC], ['barre', urlB], ['fenetre', urlA]] as const) {
+    for (const [cible, url] of [
+      ['onglet', urlC],
+      ['barre', urlB],
+      ['fenetre', urlA]
+    ] as const) {
       const avant = (await etat()).tabs.length
       await presserSur(cible, 'T', ['control', 'shift'])
       await expect.poll(async () => (await etat()).tabs.length).toBe(avant + 1)
       await expect.poll(actif).toBe(url)
       ouverts.push((await etat()).activeTabId!)
-      await expect.poll(() => app.evaluate(({ webContents }) => webContents.getFocusedWebContents()?.getURL() ?? null)).toBe(url)
+      await expect
+        .poll(() => app.evaluate(({ webContents }) => webContents.getFocusedWebContents()?.getURL() ?? null))
+        .toBe(url)
     }
   } finally {
     for (const id of ouverts) await ui.evaluate((i) => window.arbalete.closeTab(i), id)
@@ -2551,30 +2946,41 @@ test('C67 : Ctrl+Maj+T rouvre le dernier onglet fermé et l’active', async () 
 })
 
 // Recherche dans la page (ARB-70) : la vue ?vue=recherche, si elle est affichée, ses bornes et son document.
-const vueRecherche = () => app.evaluate(({ BrowserWindow, WebContentsView }) => {
-  const fenetre = BrowserWindow.getAllWindows()[0]
-  const vue = fenetre.contentView.children.find((enfant) => enfant instanceof WebContentsView
-    && enfant.webContents.getURL().includes('vue=recherche')) as InstanceType<typeof WebContentsView> | undefined
-  return vue ? { ...vue.getBounds(), fenetre: fenetre.getContentBounds().width } : null
-})
-const dansRecherche = <T>(code: string) => app.evaluate(({ BrowserWindow, WebContentsView }, code) => {
-  const fenetre = BrowserWindow.getAllWindows()[0]
-  const vue = fenetre.contentView.children.find((enfant) => enfant instanceof WebContentsView
-    && enfant.webContents.getURL().includes('vue=recherche')) as InstanceType<typeof WebContentsView>
-  return vue.webContents.executeJavaScript(code)
-}, code) as Promise<T>
-const saisirDansRecherche = (texte: string) => app.evaluate(({ BrowserWindow, WebContentsView }, texte) => {
-  const vue = BrowserWindow.getAllWindows()[0].contentView.children.find((enfant) => enfant instanceof WebContentsView
-    && enfant.webContents.getURL().includes('vue=recherche')) as InstanceType<typeof WebContentsView>
-  return vue.webContents.insertText(texte)
-}, texte)
+const vueRecherche = () =>
+  app.evaluate(({ BrowserWindow, WebContentsView }) => {
+    const fenetre = BrowserWindow.getAllWindows()[0]
+    const vue = fenetre.contentView.children.find(
+      (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=recherche')
+    ) as InstanceType<typeof WebContentsView> | undefined
+    return vue ? { ...vue.getBounds(), fenetre: fenetre.getContentBounds().width } : null
+  })
+const dansRecherche = <T>(code: string) =>
+  app.evaluate(({ BrowserWindow, WebContentsView }, code) => {
+    const fenetre = BrowserWindow.getAllWindows()[0]
+    const vue = fenetre.contentView.children.find(
+      (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=recherche')
+    ) as InstanceType<typeof WebContentsView>
+    return vue.webContents.executeJavaScript(code)
+  }, code) as Promise<T>
+const saisirDansRecherche = (texte: string) =>
+  app.evaluate(({ BrowserWindow, WebContentsView }, texte) => {
+    const vue = BrowserWindow.getAllWindows()[0].contentView.children.find(
+      (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=recherche')
+    ) as InstanceType<typeof WebContentsView>
+    return vue.webContents.insertText(texte)
+  }, texte)
 const compteurRecherche = () => dansRecherche<string>("document.querySelector('.find-count')?.textContent ?? ''")
-const toucheRecherche = (keyCode: string, modifiers: Array<'shift'> = []) => app.evaluate(({ BrowserWindow, WebContentsView }, { keyCode, modifiers }) => {
-  const vue = BrowserWindow.getAllWindows()[0].contentView.children.find((enfant) => enfant instanceof WebContentsView
-    && enfant.webContents.getURL().includes('vue=recherche')) as InstanceType<typeof WebContentsView>
-  vue.webContents.sendInputEvent({ type: 'keyDown', keyCode, modifiers })
-  vue.webContents.sendInputEvent({ type: 'keyUp', keyCode, modifiers })
-}, { keyCode, modifiers })
+const toucheRecherche = (keyCode: string, modifiers: Array<'shift'> = []) =>
+  app.evaluate(
+    ({ BrowserWindow, WebContentsView }, { keyCode, modifiers }) => {
+      const vue = BrowserWindow.getAllWindows()[0].contentView.children.find(
+        (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=recherche')
+      ) as InstanceType<typeof WebContentsView>
+      vue.webContents.sendInputEvent({ type: 'keyDown', keyCode, modifiers })
+      vue.webContents.sendInputEvent({ type: 'keyUp', keyCode, modifiers })
+    },
+    { keyCode, modifiers }
+  )
 
 // Value: protects=Ctrl+F ouvre la recherche dans une petite vue au coin haut-droit de la page, qui reste à la page (la vue
 //   ne la couvre pas), compte les résultats, parcourt dans les deux sens (Entrée, Maj+Entrée), efface au champ vidé et se
@@ -2614,10 +3020,20 @@ test('C68 : Ctrl+F ouvre la recherche dans la page sans couvrir la page ; Entré
   await saisirDansRecherche('ananas')
   await expect.poll(compteurRecherche).toBe('1/3')
   await presserSur('onglet', 'F', ['control'])
-  await expect.poll(() => dansRecherche<boolean>(`(() => { const c = document.querySelector('.find-input')
-    return document.activeElement === c && c.selectionStart === 0 && c.selectionEnd === c.value.length })()`)).toBe(true)
-  expect(await app.evaluate(({ BrowserWindow, WebContentsView }) => BrowserWindow.getAllWindows()[0].contentView.children
-    .filter((enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=recherche')).length)).toBe(1)
+  await expect
+    .poll(() =>
+      dansRecherche<boolean>(`(() => { const c = document.querySelector('.find-input')
+    return document.activeElement === c && c.selectionStart === 0 && c.selectionEnd === c.value.length })()`)
+    )
+    .toBe(true)
+  expect(
+    await app.evaluate(
+      ({ BrowserWindow, WebContentsView }) =>
+        BrowserWindow.getAllWindows()[0].contentView.children.filter(
+          (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=recherche')
+        ).length
+    )
+  ).toBe(1)
 
   await toucheRecherche('Escape')
   await expect.poll(vueRecherche).toBeNull()
@@ -2626,7 +3042,7 @@ test('C68 : Ctrl+F ouvre la recherche dans la page sans couvrir la page ; Entré
   // La croix ferme aussi et rend le clavier à la page.
   await presserSur('onglet', 'F', ['control'])
   await expect.poll(vueRecherche).not.toBeNull()
-  await dansRecherche<void>("document.querySelector('button[aria-label^=\"Fermer\"]').click()")
+  await dansRecherche<void>('document.querySelector(\'button[aria-label^="Fermer"]\').click()')
   await expect.poll(vueRecherche).toBeNull()
   await expect.poll(clavierPage).toBe(url)
 
@@ -2652,12 +3068,15 @@ test('C69 : seule la vue de recherche la pilote ; elle suit la page au redimensi
   const initial = (await etat()).activeTabId!
   const autre = await ui.evaluate((u) => window.arbalete.createTab(u), `${origine}/page-b.html`)
   // La fenêtre ne descend pas sous sa largeur minimale : on rétrécit de 200 px si elle le permet, sinon on l'agrandit.
-  const redimensionner = (delta: number) => app.evaluate(({ BrowserWindow }, delta) => {
-    const fenetre = BrowserWindow.getAllWindows()[0]
-    const [largeur, hauteur] = fenetre.getContentSize()
-    fenetre.setContentSize(largeur + delta, hauteur)
-  }, delta)
-  const largeurMinimale = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getMinimumSize()[0])
+  const redimensionner = (delta: number) =>
+    app.evaluate(({ BrowserWindow }, delta) => {
+      const fenetre = BrowserWindow.getAllWindows()[0]
+      const [largeur, hauteur] = fenetre.getContentSize()
+      fenetre.setContentSize(largeur + delta, hauteur)
+    }, delta)
+  const largeurMinimale = await app.evaluate(
+    ({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getMinimumSize()[0]
+  )
   const largeurFenetre = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getContentSize()[0])
   const delta = largeurFenetre - 200 >= largeurMinimale ? -200 : 200
   let redimensionnee = false
@@ -2667,12 +3086,29 @@ test('C69 : seule la vue de recherche la pilote ; elle suit la page au redimensi
     await expect.poll(vueRecherche).not.toBeNull()
 
     // La fenêtre d'interface n'est pas l'émetteur autorisé : l'appel est refusé et la recherche reste ouverte.
-    expect(await ui.evaluate(() => window.arbalete.findInPage('ananas', true, false).then(() => 'accepte', () => 'refuse'))).toBe('refuse')
-    expect(await ui.evaluate(() => window.arbalete.closeFind().then(() => 'accepte', () => 'refuse'))).toBe('refuse')
+    expect(
+      await ui.evaluate(() =>
+        window.arbalete.findInPage('ananas', true, false).then(
+          () => 'accepte',
+          () => 'refuse'
+        )
+      )
+    ).toBe('refuse')
+    expect(
+      await ui.evaluate(() =>
+        window.arbalete.closeFind().then(
+          () => 'accepte',
+          () => 'refuse'
+        )
+      )
+    ).toBe('refuse')
     expect(await vueRecherche()).not.toBeNull()
 
     // Le bord droit de la vue suit celui de la page quand la fenêtre change de taille.
-    const bordDroit = async () => { const b = (await vueRecherche())!; return b.x + b.width }
+    const bordDroit = async () => {
+      const b = (await vueRecherche())!
+      return b.x + b.width
+    }
     const avant = await bordDroit()
     await redimensionner(delta)
     redimensionnee = true
@@ -2682,11 +3118,15 @@ test('C69 : seule la vue de recherche la pilote ; elle suit la page au redimensi
     await ui.evaluate((i) => window.arbalete.activateTab(i), initial)
     expect(await vueRecherche()).not.toBeNull()
     // Réactivée, la page ne passe pas devant : la vue de recherche reste au-dessus d'elle dans la fenêtre.
-    expect(await app.evaluate(({ BrowserWindow, WebContentsView }) => {
-      const enfants = BrowserWindow.getAllWindows()[0].contentView.children.filter((e): e is InstanceType<typeof WebContentsView> => e instanceof WebContentsView)
-      const rang = (filtre: (url: string) => boolean) => enfants.findIndex((e) => filtre(e.webContents.getURL()))
-      return rang((u) => u.includes('vue=recherche')) > rang((u) => u.includes('/page-recherche.html'))
-    })).toBe(true)
+    expect(
+      await app.evaluate(({ BrowserWindow, WebContentsView }) => {
+        const enfants = BrowserWindow.getAllWindows()[0].contentView.children.filter(
+          (e): e is InstanceType<typeof WebContentsView> => e instanceof WebContentsView
+        )
+        const rang = (filtre: (url: string) => boolean) => enfants.findIndex((e) => filtre(e.webContents.getURL()))
+        return rang((u) => u.includes('vue=recherche')) > rang((u) => u.includes('/page-recherche.html'))
+      })
+    ).toBe(true)
     await ui.evaluate((i) => window.arbalete.activateTab(i), autre)
     await expect.poll(vueRecherche).toBeNull()
   } finally {
@@ -2707,7 +3147,10 @@ test('C69 : seule la vue de recherche la pilote ; elle suit la page au redimensi
 test('C70 : les suggestions de la barre d’adresse s’ouvrent sous le champ, se parcourent aux flèches et s’ouvrent à Entrée ou au clic', async () => {
   const urlA = `${origine}/page-a.html`
   const urlB = `${origine}/page-suggestion.html`
-  for (const url of [urlA, urlB]) { await saisirAdresse(url); await attendreUrlActive(url) }
+  for (const url of [urlA, urlB]) {
+    await saisirAdresse(url)
+    await attendreUrlActive(url)
+  }
   const adresse = ui.getByLabel('Adresse ou recherche')
   const lignes = barreUi.locator('.suggestion')
   const overlay = () => ui.evaluate(() => window.arbalete.getOverlay())
@@ -2764,8 +3207,14 @@ test('C70 : les suggestions de la barre d’adresse s’ouvrent sous le champ, s
   await expect(lignes).toHaveCount(2)
   await barreUi.mouse.click(600, 500)
   await expect.poll(overlay).toBe(false)
-  await expect.poll(() => app.evaluate(({ BrowserWindow, webContents }) =>
-    webContents.getFocusedWebContents()?.id === BrowserWindow.getAllWindows()[0].webContents.id)).toBe(true)
+  await expect
+    .poll(() =>
+      app.evaluate(
+        ({ BrowserWindow, webContents }) =>
+          webContents.getFocusedWebContents()?.id === BrowserWindow.getAllWindows()[0].webContents.id
+      )
+    )
+    .toBe(true)
 
   // Entrée sans ligne choisie navigue vers le texte tapé, comme avant les suggestions.
   await taper(urlA)
@@ -2775,7 +3224,12 @@ test('C70 : les suggestions de la barre d’adresse s’ouvrent sous le champ, s
   await expect.poll(overlay).toBe(false)
 
   // Seule la fenêtre envoie le texte et les flèches : la vue de la barre est refusée.
-  const refus = await barreUi.evaluate(() => window.arbalete.suggest('page', { x: 0, y: 0, width: 100, height: 0 }).then(() => 'accepte', () => 'refuse'))
+  const refus = await barreUi.evaluate(() =>
+    window.arbalete.suggest('page', { x: 0, y: 0, width: 100, height: 0 }).then(
+      () => 'accepte',
+      () => 'refuse'
+    )
+  )
   expect(refus).toBe('refuse')
   expect(await overlay()).toBe(false)
 })
@@ -2795,13 +3249,48 @@ test('C71 : les suggestions refusent les arguments aberrants, Tab les ferme et u
   const liste = () => ui.evaluate(() => window.arbalete.getSuggestions().then((etat) => etat?.items.length ?? 0))
 
   // Arguments aberrants : refusés, rien d'ouvert.
-  expect(await ui.evaluate(() => window.arbalete.suggest('page', { x: 'a', y: NaN, width: 10, height: 0 } as never).then(() => 'accepte', () => 'refuse'))).toBe('refuse')
-  expect(await ui.evaluate(() => window.arbalete.moveSuggestion(2 as never).then(() => 'accepte', () => 'refuse'))).toBe('refuse')
-  expect(await ui.evaluate(() => window.arbalete.moveSuggestion(0 as never).then(() => 'accepte', () => 'refuse'))).toBe('refuse')
+  expect(
+    await ui.evaluate(() =>
+      window.arbalete.suggest('page', { x: 'a', y: NaN, width: 10, height: 0 } as never).then(
+        () => 'accepte',
+        () => 'refuse'
+      )
+    )
+  ).toBe('refuse')
+  expect(
+    await ui.evaluate(() =>
+      window.arbalete.moveSuggestion(2 as never).then(
+        () => 'accepte',
+        () => 'refuse'
+      )
+    )
+  ).toBe('refuse')
+  expect(
+    await ui.evaluate(() =>
+      window.arbalete.moveSuggestion(0 as never).then(
+        () => 'accepte',
+        () => 'refuse'
+      )
+    )
+  ).toBe('refuse')
   expect(await overlay()).toBe(false)
   // Sans liste, déplacer ou choisir ne fait rien.
-  expect(await ui.evaluate(() => window.arbalete.moveSuggestion(1).then(() => 'accepte', () => 'refuse'))).toBe('accepte')
-  expect(await ui.evaluate(() => window.arbalete.chooseSuggestion(0).then(() => 'accepte', () => 'refuse'))).toBe('accepte')
+  expect(
+    await ui.evaluate(() =>
+      window.arbalete.moveSuggestion(1).then(
+        () => 'accepte',
+        () => 'refuse'
+      )
+    )
+  ).toBe('accepte')
+  expect(
+    await ui.evaluate(() =>
+      window.arbalete.chooseSuggestion(0).then(
+        () => 'accepte',
+        () => 'refuse'
+      )
+    )
+  ).toBe('accepte')
 
   // get-suggestions rend la liste courante ; un index hors liste ne navigue pas et ne ferme rien.
   await adresse.focus()
@@ -2845,11 +3334,16 @@ test('C72 : l’étoile ajoute et retire un favori, inactive hors du web, conser
   const favori = async (fenetre: Page) => (await fenetre.evaluate(() => window.arbalete.getState())).favorite
   const ouvrir = async (fenetre: Page, adresse: string) => {
     await fenetre.evaluate((u) => window.arbalete.createTab(u), adresse)
-    await expect.poll(async () => (await fenetre.evaluate(() => window.arbalete.getState())).tabs.some((t) => t.url === adresse && !t.isLoading)).toBe(true)
+    await expect
+      .poll(async () =>
+        (await fenetre.evaluate(() => window.arbalete.getState())).tabs.some((t) => t.url === adresse && !t.isLoading)
+      )
+      .toBe(true)
   }
   const autreProfil = mkdtempSync(join(tmpdir(), 'arbalete-test-'))
   // Premier lancement sur une page locale (pas de google.com) ; le second, sans adresse, restaure la session.
-  const lancer = (args: string[] = []) => electron.launch({ args: ['.', ...args], cwd: resolve(__dirname, '..'), env: envTest(autreProfil) })
+  const lancer = (args: string[] = []) =>
+    electron.launch({ args: ['.', ...args], cwd: resolve(__dirname, '..'), env: envTest(autreProfil) })
   let autreApp = await lancer(['--', `${origine}/demarrage.html`])
   try {
     let fenetre = await fenetreInterface(autreApp)
@@ -2862,7 +3356,11 @@ test('C72 : l’étoile ajoute et retire un favori, inactive hors du web, conser
     await expect(etoile(fenetre)).toHaveAccessibleName('Retirer des favoris')
     // Le fragment n'est pas une autre page.
     await fenetre.evaluate((u) => window.arbalete.navigate(u), `${url}#ancre`)
-    await expect.poll(async () => (await fenetre.evaluate(() => window.arbalete.getState())).tabs.some((t) => t.url.endsWith('#ancre'))).toBe(true)
+    await expect
+      .poll(async () =>
+        (await fenetre.evaluate(() => window.arbalete.getState())).tabs.some((t) => t.url.endsWith('#ancre'))
+      )
+      .toBe(true)
     expect(await favori(fenetre)).toBe(true)
     await fenetre.evaluate((u) => window.arbalete.navigate(u), url)
 
@@ -2873,11 +3371,17 @@ test('C72 : l’étoile ajoute et retire un favori, inactive hors du web, conser
     expect(await favori(fenetre)).toBe(false)
 
     // La session s'écrit une seconde après le dernier changement : la fermer trop tôt la perdrait.
-    await expect.poll(() => sessionSurDisque(autreProfil).some((onglet) => onglet.url === url), { timeout: 10_000 }).toBe(true)
+    await expect
+      .poll(() => sessionSurDisque(autreProfil).some((onglet) => onglet.url === url), { timeout: 10_000 })
+      .toBe(true)
     await autreApp.close()
     autreApp = await lancer()
     fenetre = await fenetreInterface(autreApp)
-    await expect.poll(async () => (await fenetre.evaluate(() => window.arbalete.getState())).tabs.some((t) => t.url === url), { timeout: 10_000 }).toBe(true)
+    await expect
+      .poll(async () => (await fenetre.evaluate(() => window.arbalete.getState())).tabs.some((t) => t.url === url), {
+        timeout: 10_000
+      })
+      .toBe(true)
     await fenetre.evaluate((u) => window.arbalete.createTab(u), url)
     await expect.poll(() => favori(fenetre), { timeout: 10_000 }).toBe(true)
     await etoile(fenetre).click()
@@ -2917,10 +3421,12 @@ test('C73 : openFavorite active l’onglet ouvert, rouvre la page fermée, refus
     await ouvrir(autre)
     const avant = (await etat()).tabs.length
     await fenetre.evaluate((u) => window.arbalete.openFavorite(u), url)
-    await expect.poll(async () => {
-      const s = await etat()
-      return s.tabs.find((t) => t.id === s.activeTabId)?.url
-    }).toBe(url)
+    await expect
+      .poll(async () => {
+        const s = await etat()
+        return s.tabs.find((t) => t.id === s.activeTabId)?.url
+      })
+      .toBe(url)
     expect((await etat()).tabs.length).toBe(avant)
 
     // Onglet fermé : la page se rouvre dans un nouvel onglet actif.
@@ -3059,7 +3565,12 @@ test('C76 : créer, renommer, réordonner et supprimer un espace', async () => {
     // Une page ouverte dans le nouvel espace : sa fermeture à la suppression de l'espace est vérifiée plus bas.
     const survol = `${origine}/page-survol.html`
     await fenetre.evaluate((u) => window.arbalete.createTab(u), survol)
-    await expect.poll(async () => { const s = await lire(); return s.tabs.find((t) => t.id === s.activeTabId)?.url }).toBe(survol)
+    await expect
+      .poll(async () => {
+        const s = await lire()
+        return s.tabs.find((t) => t.id === s.activeTabId)?.url
+      })
+      .toBe(survol)
 
     // Renommage, puis déplacement d'un cran vers le haut ; un bord et un sens aberrant ne changent rien.
     await fenetre.evaluate((id) => window.arbalete.renameWorkspace(id, 'Boulot'), nouveau)
@@ -3068,7 +3579,9 @@ test('C76 : créer, renommer, réordonner et supprimer un espace', async () => {
     await fenetre.evaluate((id) => window.arbalete.moveWorkspace(id, -1), nouveau)
     await expect.poll(noms).toEqual(['Développement', 'Personnel', 'Boulot', 'Recherche'])
     await fenetre.evaluate((id) => window.arbalete.moveWorkspace(id, -1), premier)
-    await expect(fenetre.evaluate((id) => window.arbalete.moveWorkspace(id, 0 as unknown as 1), premier)).rejects.toThrow()
+    await expect(
+      fenetre.evaluate((id) => window.arbalete.moveWorkspace(id, 0 as unknown as 1), premier)
+    ).rejects.toThrow()
     await expect(fenetre.evaluate(() => window.arbalete.deleteWorkspace(1.5))).rejects.toThrow()
     await fenetre.evaluate(() => window.arbalete.renameWorkspace(99999, 'Inconnu'))
     await fenetre.evaluate(() => window.arbalete.moveWorkspace(99999, 1))
@@ -3085,7 +3598,11 @@ test('C76 : créer, renommer, réordonner et supprimer un espace', async () => {
 
     // Suppression de l'espace affiché : le voisin du dessous (Recherche) le remplace, ses pages se ferment ; un espace
     // inconnu ne fait rien.
-    const pagesOuvertes = () => autreApp.evaluate(({ webContents }, u) => webContents.getAllWebContents().filter((w) => w.getURL() === u).length, survol)
+    const pagesOuvertes = () =>
+      autreApp.evaluate(
+        ({ webContents }, u) => webContents.getAllWebContents().filter((w) => w.getURL() === u).length,
+        survol
+      )
     await expect.poll(pagesOuvertes, { timeout: 10_000 }).toBe(1)
     await fenetre.evaluate((id) => window.arbalete.deleteWorkspace(id), nouveau)
     await expect.poll(pagesOuvertes).toBe(0)
@@ -3118,24 +3635,30 @@ test('C76 : créer, renommer, réordonner et supprimer un espace', async () => {
 //   no_claim=ni le rendu des pastilles ni la variante du thème clair (aperçu web et contrastes en test unitaire), ni la
 //   persistance au redémarrage (la couche de données est testée en unitaire, le même chemin que le renommage de C76).
 test('C77 : clic droit sur un espace, modale de couleur, choix appliqué, Échap sans effet, nom hors palette refusé', async () => {
-  const fenetre = () => app.evaluate(({ BrowserWindow }) => {
-    const { width, height } = BrowserWindow.getAllWindows()[0].getContentBounds()
-    return { x: 0, y: 0, width, height }
-  })
+  const fenetre = () =>
+    app.evaluate(({ BrowserWindow }) => {
+      const { width, height } = BrowserWindow.getAllWindows()[0].getContentBounds()
+      return { x: 0, y: 0, width, height }
+    })
   const overlay = () => barreUi.evaluate(() => window.arbalete.getOverlay())
-  const espace = async () => { const s = await etat(); return s.workspaces.find((e) => e.id === s.activeWorkspaceId)! }
+  const espace = async () => {
+    const s = await etat()
+    return s.workspaces.find((e) => e.id === s.activeWorkspaceId)!
+  }
   const menu = barreUi.getByRole('menu')
   const modale = barreUi.getByRole('dialog')
   const departEspace = await espace()
   await epinglerBarre(true)
   try {
     // Touche native envoyée à la vue de la barre, focus dans la modale : before-input-event la voit comme un vrai clavier.
-    const echapNatif = () => app.evaluate(({ BrowserWindow, WebContentsView }) => {
-      const vue = BrowserWindow.getAllWindows()[0].contentView.children.find((enfant) => enfant instanceof WebContentsView
-        && enfant.webContents.getURL().includes('vue=barre')) as InstanceType<typeof WebContentsView>
-      vue.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' })
-      vue.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' })
-    })
+    const echapNatif = () =>
+      app.evaluate(({ BrowserWindow, WebContentsView }) => {
+        const vue = BrowserWindow.getAllWindows()[0].contentView.children.find(
+          (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=barre')
+        ) as InstanceType<typeof WebContentsView>
+        vue.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' })
+        vue.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' })
+      })
     const ouvrirModale = async () => {
       await barreUi.locator('.workspace-switcher').click({ button: 'right' })
       await expect(menu).toBeVisible()
@@ -3155,7 +3678,9 @@ test('C77 : clic droit sur un espace, modale de couleur, choix appliqué, Échap
 
     // Échap ferme la modale (le processus principal le traite) sans changer la couleur.
     // Parcours au clavier de la grille : le focus part de la couleur actuelle, les flèches, Début et Fin bouclent.
-    const couleurs = await modale.getByRole('radio').evaluateAll((pastilles) => pastilles.map((p) => (p as HTMLElement).dataset.couleur))
+    const couleurs = await modale
+      .getByRole('radio')
+      .evaluateAll((pastilles) => pastilles.map((p) => (p as HTMLElement).dataset.couleur))
     const focus = () => barreUi.evaluate(() => document.activeElement?.getAttribute('data-couleur'))
     const depart = couleurs.indexOf(departEspace.couleur)
     await expect.poll(focus).toBe(departEspace.couleur)
@@ -3196,15 +3721,24 @@ test('C77 : clic droit sur un espace, modale de couleur, choix appliqué, Échap
     await expect(barreUi.locator('aside.sidebar')).toHaveAttribute('style', new RegExp(`--color-workspace-${choix}`))
 
     // Un nom hors palette, un argument aberrant ou un espace inconnu ne changent rien.
-    await expect(ui.evaluate((id) => window.arbalete.setWorkspaceColor(id, '#ff0000'), departEspace.id)).rejects.toThrow()
-    await expect(ui.evaluate((id) => window.arbalete.setWorkspaceColor(id, 'Glacier'), departEspace.id)).rejects.toThrow()
-    await expect(ui.evaluate((id) => window.arbalete.setWorkspaceColor(id, 3 as unknown as string), departEspace.id)).rejects.toThrow()
+    await expect(
+      ui.evaluate((id) => window.arbalete.setWorkspaceColor(id, '#ff0000'), departEspace.id)
+    ).rejects.toThrow()
+    await expect(
+      ui.evaluate((id) => window.arbalete.setWorkspaceColor(id, 'Glacier'), departEspace.id)
+    ).rejects.toThrow()
+    await expect(
+      ui.evaluate((id) => window.arbalete.setWorkspaceColor(id, 3 as unknown as string), departEspace.id)
+    ).rejects.toThrow()
     await ui.evaluate(() => window.arbalete.setWorkspaceColor(99999, 'rose'))
     // gstack-timing-ok: vérification négative (rien ne doit changer) ; l'effet serait immédiat.
     await ui.waitForTimeout(300)
     expect((await espace()).couleur).toBe(choix)
   } finally {
-    await ui.evaluate(({ id, couleur }) => window.arbalete.setWorkspaceColor(id, couleur), { id: departEspace.id, couleur: departEspace.couleur })
+    await ui.evaluate(({ id, couleur }) => window.arbalete.setWorkspaceColor(id, couleur), {
+      id: departEspace.id,
+      couleur: departEspace.couleur
+    })
     await epinglerBarre(false)
   }
 })
@@ -3231,7 +3765,7 @@ test('C75 : raccourcis, fermeture d’onglet et favoris ne regardent que l’esp
     await ui.evaluate((id) => window.arbalete.setWorkspace(id), second)
     await expect.poll(async () => (await etat()).activeWorkspaceId).toBe(second)
     await expect.poll(async () => (await ordre()).length).toBe(1)
-    dansEspace2.push(...await ordre(), await creer(pageA), await creer(pageB))
+    dansEspace2.push(...(await ordre()), await creer(pageA), await creer(pageB))
     await expect.poll(ordre).toEqual(dansEspace2)
 
     // Raccourcis : en boucle dans l'espace 2 seulement (les onglets de l'espace 1 précèdent les siens dans l'ordre global).
@@ -3323,8 +3857,12 @@ test('C65 : F11 bascule le plein écran depuis la page, la barre et la fenêtre,
   await resultatDansOngletActif(`window.touches = []
     addEventListener('keydown', (e) => window.touches.push(e.key)); true`)
   const pleinEcran = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isFullScreen())
-  const devToolsOuverts = () => app.evaluate(({ BrowserWindow, webContents }) =>
-    webContents.getAllWebContents().some((contenu) => contenu.isDevToolsOpened()) || BrowserWindow.getAllWindows()[0].webContents.isDevToolsOpened())
+  const devToolsOuverts = () =>
+    app.evaluate(
+      ({ BrowserWindow, webContents }) =>
+        webContents.getAllWebContents().some((contenu) => contenu.isDevToolsOpened()) ||
+        BrowserWindow.getAllWindows()[0].webContents.isDevToolsOpened()
+    )
   expect(await pleinEcran()).toBe(false)
   try {
     for (const cible of ['onglet', 'barre', 'fenetre'] as const) {
@@ -3340,7 +3878,8 @@ test('C65 : F11 bascule le plein écran depuis la page, la barre et la fenêtre,
     await presserSur('onglet', 'I', ['control', 'shift'])
     await presserSur('fenetre', 'I', ['control', 'shift'])
     // F11 avec un modificateur n'est pas le raccourci : la garde de actionDuRaccourci ne bascule pas le plein écran.
-    for (const modifiers of [['control'], ['alt'], ['shift']] as const) await presserSur('fenetre', 'F11', [...modifiers])
+    for (const modifiers of [['control'], ['alt'], ['shift']] as const)
+      await presserSur('fenetre', 'F11', [...modifiers])
     // gstack-timing-ok: vérification négative (rien ne doit s'ouvrir ni basculer) ; l'effet serait immédiat.
     await ui.waitForTimeout(500)
     expect(await devToolsOuverts()).toBe(false)
@@ -3362,16 +3901,20 @@ test('C65 : F11 bascule le plein écran depuis la page, la barre et la fenêtre,
 test('C78 : téléchargement de 100 Mo avec progression, pause, reprise, annulation, liste et retrait', async () => {
   test.setTimeout(90_000)
   const liste = () => ui.evaluate(() => window.arbalete.getDownloads())
-  const lancer = (ms: number) => app.evaluate(({ BrowserWindow, WebContentsView }, url) => {
-    const vue = BrowserWindow.getAllWindows()[0].contentView.children
-      .find((enfant) => enfant instanceof WebContentsView && /^https?:/.test(enfant.webContents.getURL())) as InstanceType<typeof WebContentsView>
-    vue.webContents.downloadURL(url)
-  }, `${origine}/gros-fichier.bin?ms=${ms}`)
+  const lancer = (ms: number) =>
+    app.evaluate(({ BrowserWindow, WebContentsView }, url) => {
+      const vue = BrowserWindow.getAllWindows()[0].contentView.children.find(
+        (enfant) => enfant instanceof WebContentsView && /^https?:/.test(enfant.webContents.getURL())
+      ) as InstanceType<typeof WebContentsView>
+      vue.webContents.downloadURL(url)
+    }, `${origine}/gros-fichier.bin?ms=${ms}`)
   const dossier = join(profil, 'telechargements')
 
   // Premier téléchargement, rapide : progression en cours puis pause.
   await lancer(30)
-  await expect.poll(async () => (await liste())[0]).toMatchObject({ nom: 'gros-fichier.bin', etat: 'en-cours', total: TAILLE_GROS_FICHIER })
+  await expect
+    .poll(async () => (await liste())[0])
+    .toMatchObject({ nom: 'gros-fichier.bin', etat: 'en-cours', total: TAILLE_GROS_FICHIER })
   await expect.poll(async () => (await liste())[0].recu).toBeGreaterThan(0)
   const premier = (await liste())[0]
   expect(premier.chemin).toBe(join(dossier, 'gros-fichier.bin'))
@@ -3379,12 +3922,17 @@ test('C78 : téléchargement de 100 Mo avec progression, pause, reprise, annulat
   await expect.poll(async () => (await liste())[0].etat).toBe('en-pause')
   // L'envoi s'arrête : les octets reçus ne bougent plus (quelques blocs déjà en route peuvent encore arriver).
   let recuEnPause = (await liste())[0].recu
-  await expect.poll(async () => {
-    const maintenant = (await liste())[0].recu
-    const stable = maintenant === recuEnPause
-    recuEnPause = maintenant
-    return stable
-  }, { timeout: 15_000, intervals: [500] }).toBe(true)
+  await expect
+    .poll(
+      async () => {
+        const maintenant = (await liste())[0].recu
+        const stable = maintenant === recuEnPause
+        recuEnPause = maintenant
+        return stable
+      },
+      { timeout: 15_000, intervals: [500] }
+    )
+    .toBe(true)
   expect(recuEnPause).toBeLessThan(TAILLE_GROS_FICHIER)
   expect((await liste())[0].etat).toBe('en-pause')
 
@@ -3421,7 +3969,8 @@ test('C78 : téléchargement de 100 Mo avec progression, pause, reprise, annulat
     await expect(lignes).toHaveCount(1)
     expect((await liste()).map((t) => t.nom)).toEqual(['gros-fichier.bin'])
   } finally {
-    if (await barreUi.evaluate(() => window.arbalete.getOverlay())) await barreUi.evaluate(() => window.arbalete.setOverlay(false))
+    if (await barreUi.evaluate(() => window.arbalete.getOverlay()))
+      await barreUi.evaluate(() => window.arbalete.setOverlay(false))
     await epinglerBarre(false)
   }
 })
@@ -3436,11 +3985,17 @@ test('C78 : téléchargement de 100 Mo avec progression, pause, reprise, annulat
 //   no_claim=les liens sont émis par le test (context-menu) ; seul le clic droit sur page nue est un événement souris
 //   envoyé à la page : Précédent, Suivant, Enregistrer l'image, Copier et Inspecter restent manuels.
 test('C79 : le menu d’un lien de page ouvre le lien dans un nouvel onglet ou copie son adresse', async () => {
-  const clicDroit = (linkURL: string) => app.evaluate(({ BrowserWindow, WebContentsView }, linkURL) => {
-    const vue = BrowserWindow.getAllWindows()[0].contentView.children.find((enfant) => enfant instanceof WebContentsView
-      && enfant.webContents.getURL().includes('page-a.html')) as InstanceType<typeof WebContentsView>
-    vue.webContents.emit('context-menu', {}, { x: 30, y: 40, linkURL, srcURL: '', mediaType: 'none', selectionText: '', editFlags: { canCopy: false } })
-  }, linkURL)
+  const clicDroit = (linkURL: string) =>
+    app.evaluate(({ BrowserWindow, WebContentsView }, linkURL) => {
+      const vue = BrowserWindow.getAllWindows()[0].contentView.children.find(
+        (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('page-a.html')
+      ) as InstanceType<typeof WebContentsView>
+      vue.webContents.emit(
+        'context-menu',
+        {},
+        { x: 30, y: 40, linkURL, srcURL: '', mediaType: 'none', selectionText: '', editFlags: { canCopy: false } }
+      )
+    }, linkURL)
   const overlay = () => barreUi.evaluate(() => window.arbalete.getOverlay())
   const cible = `${origine}/page-b.html`
 
@@ -3470,7 +4025,11 @@ test('C79 : le menu d’un lien de page ouvre le lien dans un nouvel onglet ou c
   expect(await overlay()).toBe(false)
 
   // Seule la vue de la barre choisit une entrée : la fenêtre, comme une entrée inconnue, est refusée.
-  const action = (cible: Page, entree: string) => cible.evaluate((e) => (window.arbalete as unknown as { pageMenuAction: (e: string) => Promise<void> }).pageMenuAction(e), entree)
+  const action = (cible: Page, entree: string) =>
+    cible.evaluate(
+      (e) => (window.arbalete as unknown as { pageMenuAction: (e: string) => Promise<void> }).pageMenuAction(e),
+      entree
+    )
   await expect(action(barreUi, 'rm')).rejects.toThrow()
   await expect(action(ui, 'recharger')).rejects.toThrow()
   // Aucun menu ouvert : une entrée valide ne fait rien.
@@ -3480,12 +4039,14 @@ test('C79 : le menu d’un lien de page ouvre le lien dans un nouvel onglet ou c
   await ui.evaluate((url) => window.arbalete.navigate(url), `${origine}/page-a.html`)
   await attendreUrlActive(`${origine}/page-a.html`)
   await resultatDansOngletActif('window.marque = 1; true')
-  const clicDroitReel = () => app.evaluate(({ BrowserWindow, WebContentsView }) => {
-    const vue = BrowserWindow.getAllWindows()[0].contentView.children.find((enfant) => enfant instanceof WebContentsView
-      && enfant.webContents.getURL().includes('page-a.html')) as InstanceType<typeof WebContentsView>
-    vue.webContents.sendInputEvent({ type: 'mouseDown', x: 400, y: 300, button: 'right', clickCount: 1 })
-    vue.webContents.sendInputEvent({ type: 'mouseUp', x: 400, y: 300, button: 'right', clickCount: 1 })
-  })
+  const clicDroitReel = () =>
+    app.evaluate(({ BrowserWindow, WebContentsView }) => {
+      const vue = BrowserWindow.getAllWindows()[0].contentView.children.find(
+        (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('page-a.html')
+      ) as InstanceType<typeof WebContentsView>
+      vue.webContents.sendInputEvent({ type: 'mouseDown', x: 400, y: 300, button: 'right', clickCount: 1 })
+      vue.webContents.sendInputEvent({ type: 'mouseUp', x: 400, y: 300, button: 'right', clickCount: 1 })
+    })
   await clicDroitReel()
   await expect(barreUi.getByRole('menuitem', { name: 'Recharger' })).toBeVisible()
   // Un menu déjà ouvert n'est pas remplacé par un second clic droit.
@@ -3536,7 +4097,9 @@ test('C80 : le menu d’un onglet duplique, épingle, copie l’adresse et ferme
     await entree('Page A', 'Épingler')
     await expect.poll(async () => (await etat()).tabs.filter((tab) => tab.pinned).length).toBe(1)
     // Depuis ARB-64, les épinglés sont en tête de liste : l'onglet épinglé est le premier « Page A », le dernier est l'autre.
-    await (await onglet('Page A', (await barreUi.locator('.tab-item').filter({ hasText: 'Page A' }).count()) - 1)).click({ button: 'right' })
+    await (
+      await onglet('Page A', (await barreUi.locator('.tab-item').filter({ hasText: 'Page A' }).count()) - 1)
+    ).click({ button: 'right' })
     await expect(menu.getByRole('menuitem', { name: 'Désépingler', exact: true })).toBeVisible()
     await barreUi.evaluate(() => window.arbalete.setOverlay(false))
     await expect.poll(overlay).toBe(false)
@@ -3549,7 +4112,12 @@ test('C80 : le menu d’un onglet duplique, épingle, copie l’adresse et ferme
     expect((await etat()).tabs.map((tab) => tab.id).sort()).toEqual([epingle.id, restant.id].sort())
 
     // Action inconnue ou argument invalide : refusés par le processus principal.
-    const tabAction = (id: unknown, action: unknown) => ui.evaluate(([i, a]) => (window.arbalete as unknown as { tabAction: (i: unknown, a: unknown) => Promise<void> }).tabAction(i, a), [id, action])
+    const tabAction = (id: unknown, action: unknown) =>
+      ui.evaluate(
+        ([i, a]) =>
+          (window.arbalete as unknown as { tabAction: (i: unknown, a: unknown) => Promise<void> }).tabAction(i, a),
+        [id, action]
+      )
     await expect(tabAction(restant.id, 'supprimer')).rejects.toThrow()
     await expect(tabAction(42, 'dupliquer')).rejects.toThrow()
     // Onglet inconnu : sans effet.
@@ -3596,7 +4164,12 @@ test('C82 : Ctrl+K ouvre la palette, « page a » active l’onglet Page A, Éch
   expect(ongletActif(await etat())?.id).toBe(actif)
 
   // Seule la vue de la barre pilote la palette ; un index hors liste ne fait rien.
-  const appel = (canal: string, ...args: unknown[]) => ui.evaluate(([c, a]) => (window.arbalete as unknown as Record<string, (...x: unknown[]) => Promise<void>>)[c](...(a as unknown[])), [canal, args] as const)
+  const appel = (canal: string, ...args: unknown[]) =>
+    ui.evaluate(
+      ([c, a]) =>
+        (window.arbalete as unknown as Record<string, (...x: unknown[]) => Promise<void>>)[c](...(a as unknown[])),
+      [canal, args] as const
+    )
   await expect(appel('openPalette')).rejects.toThrow()
   await presserSur('onglet', 'K', ['control'])
   await expect.poll(overlay).toBe(true)
@@ -3641,7 +4214,11 @@ test('C83 : Autoriser est mémorisé pour le site et relu par les vérifications
   await expect.poll(async () => ongletActif(await etat())?.isLoading).toBe(false)
   await resultatDansOngletActif('navigator.geolocation.getCurrentPosition(() => {}, () => {}, { timeout: 1000 }); 0')
   await barreUi.getByTestId('permission-modal').getByRole('button', { name: 'Autoriser' }).click()
-  await expect.poll(() => resultatDansOngletActif<string>("navigator.permissions.query({ name: 'geolocation' }).then((s) => s.state)")).toBe('granted')
+  await expect
+    .poll(() =>
+      resultatDansOngletActif<string>("navigator.permissions.query({ name: 'geolocation' }).then((s) => s.state)")
+    )
+    .toBe('granted')
 })
 
 // Value: protects=le plein écran demandé par la page (YouTube) est accordé sans invite : la fenêtre passe en plein écran, la vue
@@ -3652,15 +4229,23 @@ test('C84 : requestFullscreen met la page et la fenêtre en plein écran, la sor
   await saisirAdresse(`${origine}/page-a.html`)
   await attendreUrlActive(`${origine}/page-a.html`)
   await expect.poll(async () => ongletActif(await etat())?.isLoading).toBe(false)
-  const mesure = () => app.evaluate(({ BrowserWindow, WebContentsView }) => {
-    const fenetre = BrowserWindow.getAllWindows()[0]
-    const vue = fenetre.contentView.children.find((enfant) => enfant instanceof WebContentsView && !enfant.webContents.getURL().includes('vue=barre')) as InstanceType<typeof WebContentsView>
-    return { pleinEcran: fenetre.isFullScreen(), vue: vue.getBounds(), zone: fenetre.getContentBounds() }
-  })
+  const mesure = () =>
+    app.evaluate(({ BrowserWindow, WebContentsView }) => {
+      const fenetre = BrowserWindow.getAllWindows()[0]
+      const vue = fenetre.contentView.children.find(
+        (enfant) => enfant instanceof WebContentsView && !enfant.webContents.getURL().includes('vue=barre')
+      ) as InstanceType<typeof WebContentsView>
+      return { pleinEcran: fenetre.isFullScreen(), vue: vue.getBounds(), zone: fenetre.getContentBounds() }
+    })
 
   await resultatDansOngletActif('document.documentElement.requestFullscreen().then(() => 0)')
   await expect.poll(async () => (await mesure()).pleinEcran).toBe(true)
-  await expect.poll(async () => { const m = await mesure(); return [m.vue.x, m.vue.y, m.vue.width, m.vue.height] }).toEqual(await mesure().then((m) => [0, 0, m.zone.width, m.zone.height]))
+  await expect
+    .poll(async () => {
+      const m = await mesure()
+      return [m.vue.x, m.vue.y, m.vue.width, m.vue.height]
+    })
+    .toEqual(await mesure().then((m) => [0, 0, m.zone.width, m.zone.height]))
 
   await resultatDansOngletActif('document.exitFullscreen().then(() => 0)')
   await expect.poll(async () => (await mesure()).pleinEcran).toBe(false)
@@ -3727,10 +4312,17 @@ test('C86 : F11 et un changement d’onglet sortent du plein écran de la page',
 })
 
 // Fenêtres filles ouvertes par les pages (pop-ups, ARB-16) : getAllWindows ne garde pas l'ordre de création.
-const popups = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().filter((fenetre) => fenetre.getParentWindow()).map((fenetre) => ({
-  titre: fenetre.getTitle(), fille: true,
-  largeur: fenetre.getSize()[0], web: fenetre.webContents.getURL().startsWith('http')
-})))
+const popups = () =>
+  app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()
+      .filter((fenetre) => fenetre.getParentWindow())
+      .map((fenetre) => ({
+        titre: fenetre.getTitle(),
+        fille: true,
+        largeur: fenetre.getSize()[0],
+        web: fenetre.webContents.getURL().startsWith('http')
+      }))
+  )
 // C27 laisse plus de 50 onglets, et ses ouvertures datées dans le futur (Date.now avancé puis restauré) comptent encore
 // dans la fenêtre de 10 s : les pages n'ouvrent alors plus rien (ARB-102). On repart d'un onglet et on avance l'horloge.
 async function viderOnglets() {
@@ -3738,7 +4330,12 @@ async function viderOnglets() {
   for (const tab of (await etat()).tabs.slice(1)) await ui.evaluate((id) => window.arbalete.closeTab(id), tab.id)
   await expect.poll(async () => (await etat()).tabs.length).toBe(1)
 }
-const fermerPopups = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().filter((fenetre) => fenetre.getParentWindow()).forEach((fenetre) => fenetre.destroy()))
+const fermerPopups = () =>
+  app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()
+      .filter((fenetre) => fenetre.getParentWindow())
+      .forEach((fenetre) => fenetre.destroy())
+  )
 
 // Value: protects=une pop-up de connexion (window.open avec dimensions) est une fenêtre fille qui garde window.opener
 //   et peut prévenir sa page (postMessage), alors que target=_blank reste un onglet; au plus 3 ouvertes, la suivante tombe en onglet;
@@ -3753,7 +4350,13 @@ test('C87 : une pop-up de connexion garde window.opener, le target=_blank reste 
   try {
     await dansOngletActif(`window.__recu = null; addEventListener('message', (e) => { window.__recu = e.data });
       void window.open('/page-popup.html', 'connexion', 'width=420,height=520')`)
-    await expect.poll(popups).toEqual([expect.objectContaining({ titre: expect.stringMatching(/^127\.0\.0\.1:\d+ — avec-opener$/), fille: true, web: true })])
+    await expect.poll(popups).toEqual([
+      expect.objectContaining({
+        titre: expect.stringMatching(/^127\.0\.0\.1:\d+ — avec-opener$/),
+        fille: true,
+        web: true
+      })
+    ])
     expect((await popups())[0].largeur).toBeLessThan(500)
     expect((await etat()).tabs.length).toBe(avant)
     await expect.poll(() => resultatDansOngletActif('window.__recu')).toBe('connecte')
@@ -3778,14 +4381,21 @@ test('C87 : les options hostiles d’une pop-up sont ignorées, un onglet d’ar
   await attendreUrlActive(`${origine}/page-a.html`)
   const fond = ongletActif(await etat())!.id
   try {
-    await dansOngletActif("void window.open('/page-popup.html', 'h', 'width=300,height=300,frame=no,alwaysOnTop=yes,modal=yes,x=-5000,y=-5000,fullscreen=yes')")
+    await dansOngletActif(
+      "void window.open('/page-popup.html', 'h', 'width=300,height=300,frame=no,alwaysOnTop=yes,modal=yes,x=-5000,y=-5000,fullscreen=yes')"
+    )
     await expect.poll(async () => (await popups()).length).toBe(1)
     const etatPopup = await app.evaluate(({ BrowserWindow }) => {
       const fille = BrowserWindow.getAllWindows().find((f) => f.getParentWindow())!
       const parent = fille.getParentWindow()!
       const [x, y] = fille.getPosition()
       const p = parent.getBounds()
-      return { dansParent: x >= p.x && y >= p.y && x <= p.x + p.width && y <= p.y + p.height, haut: fille.isAlwaysOnTop(), modal: fille.isModal(), plein: fille.isFullScreen() }
+      return {
+        dansParent: x >= p.x && y >= p.y && x <= p.x + p.width && y <= p.y + p.height,
+        haut: fille.isAlwaysOnTop(),
+        modal: fille.isModal(),
+        plein: fille.isFullScreen()
+      }
     })
     expect(etatPopup).toEqual({ dansParent: true, haut: false, modal: false, plein: false })
     await fermerPopups()
@@ -3814,7 +4424,9 @@ test('C87 : au plus 3 pop-ups ouvertes, la suivante s’ouvre en onglet', async 
   await attendreUrlActive(`${origine}/page-a.html`)
   const avant = (await etat()).tabs.length
   try {
-    await dansOngletActif("for (let n = 0; n < 4; n++) window.open('/page-popup.html?n=' + n, 'p' + n, 'width=300,height=300')")
+    await dansOngletActif(
+      "for (let n = 0; n < 4; n++) window.open('/page-popup.html?n=' + n, 'p' + n, 'width=300,height=300')"
+    )
     await expect.poll(async () => (await etat()).tabs.length).toBe(avant + 1)
     await expect.poll(async () => (await popups()).length).toBe(3)
     await fermerPopups()
@@ -3836,19 +4448,31 @@ test('C87 : au plus 3 pop-ups ouvertes, la suivante s’ouvre en onglet', async 
 //   no_claim=ne couvre ni la boîte de choix du dossier, ni l'enregistrement d'un téléchargement dans le dossier choisi
 //   (tests unitaires de preferences.test.ts), ni le rendu de la modale (aperçu web), ni le retour au redémarrage.
 test('C90 : page d’accueil, animations et dossier de téléchargement des Paramètres', async () => {
-  const defaut = { accueil: 'https://www.google.com', animationsReduites: false, dossierTelechargements: null, archivageHeures: 12, veilleMinutes: 30 }
+  const defaut = {
+    accueil: 'https://www.google.com',
+    animationsReduites: false,
+    dossierTelechargements: null,
+    archivageHeures: 12,
+    veilleMinutes: 30
+  }
   expect(await ui.evaluate(() => window.arbalete.getSettings())).toEqual(defaut)
 
   // Page d'accueil : http(s) seulement, normalisée ; un nouvel onglet l'ouvre.
-  const refus = await ui.evaluate(() => Promise.allSettled([
-    window.arbalete.setHomePage('javascript:alert(1)'), window.arbalete.setHomePage('file:///C:/secret.html'),
-    window.arbalete.setHomePage(''), window.arbalete.setHomePage(42 as unknown as string)
-  ]).then((reponses) => reponses.map((reponse) => reponse.status)))
+  const refus = await ui.evaluate(() =>
+    Promise.allSettled([
+      window.arbalete.setHomePage('javascript:alert(1)'),
+      window.arbalete.setHomePage('file:///C:/secret.html'),
+      window.arbalete.setHomePage(''),
+      window.arbalete.setHomePage(42 as unknown as string)
+    ]).then((reponses) => reponses.map((reponse) => reponse.status))
+  )
   expect(refus).toEqual(['rejected', 'rejected', 'rejected', 'rejected'])
   await ui.evaluate((url) => window.arbalete.setHomePage(url), `${origine}/page-b.html`)
   expect((await ui.evaluate(() => window.arbalete.getSettings())).accueil).toBe(`${origine}/page-b.html`)
   const idNouveau = await ui.evaluate(() => window.arbalete.createTab())
-  await expect.poll(async () => (await etat()).tabs.find((tab) => tab.id === idNouveau)?.url).toBe(`${origine}/page-b.html`)
+  await expect
+    .poll(async () => (await etat()).tabs.find((tab) => tab.id === idNouveau)?.url)
+    .toBe(`${origine}/page-b.html`)
   await ui.evaluate((id) => window.arbalete.closeTab(id), idNouveau)
 
   // Réduction des animations : un booléen, diffusé à la fenêtre et à la barre.
@@ -3857,22 +4481,61 @@ test('C90 : page d’accueil, animations et dossier de téléchargement des Para
   await expect(barreUi.locator('html')).toHaveAttribute('data-motion', 'reduit')
   await ui.evaluate(() => window.arbalete.setReducedMotion(false))
   await expect(ui.locator('html')).not.toHaveAttribute('data-motion', /.*/)
-  expect(await ui.evaluate(() => window.arbalete.setReducedMotion('oui' as unknown as boolean).then(() => 'ok', () => 'refuse'))).toBe('refuse')
+  expect(
+    await ui.evaluate(() =>
+      window.arbalete.setReducedMotion('oui' as unknown as boolean).then(
+        () => 'ok',
+        () => 'refuse'
+      )
+    )
+  ).toBe('refuse')
 
   // Dossier : la fenêtre ne l'atteint pas, la vue de la barre revient au défaut, toute autre action est refusée.
-  expect(await ui.evaluate(() => window.arbalete.setDownloadFolder('defaut').then(() => 'ok', () => 'refuse'))).toBe('refuse')
-  expect(await barreUi.evaluate(() => window.arbalete.setDownloadFolder('C:\Windows' as unknown as 'defaut').then(() => 'ok', () => 'refuse'))).toBe('refuse')
+  expect(
+    await ui.evaluate(() =>
+      window.arbalete.setDownloadFolder('defaut').then(
+        () => 'ok',
+        () => 'refuse'
+      )
+    )
+  ).toBe('refuse')
+  expect(
+    await barreUi.evaluate(() =>
+      window.arbalete.setDownloadFolder('C:\\Windows' as unknown as 'defaut').then(
+        () => 'ok',
+        () => 'refuse'
+      )
+    )
+  ).toBe('refuse')
   await barreUi.evaluate(() => window.arbalete.setDownloadFolder('defaut'))
   expect((await ui.evaluate(() => window.arbalete.getSettings())).dossierTelechargements).toBeNull()
 
   await ui.evaluate(() => window.arbalete.setHomePage('https://www.google.com'))
-  expect(await ui.evaluate(() => window.arbalete.getSettings())).toEqual({ ...defaut, accueil: 'https://www.google.com/' })
+  expect(await ui.evaluate(() => window.arbalete.getSettings())).toEqual({
+    ...defaut,
+    accueil: 'https://www.google.com/'
+  })
 })
 
 test('C91 : le délai d’archivage valide son argument ; la liste et la restauration de l’archive sont réservées à la barre', async () => {
-  const refuse = (promesse: Promise<unknown>) => promesse.then(() => 'ok', () => 'refuse')
+  const refuse = (promesse: Promise<unknown>) =>
+    promesse.then(
+      () => 'ok',
+      () => 'refuse'
+    )
   // Délai : liste fermée (12, 24, 168, 720, 0), le reste est refusé et ne change rien.
-  expect(await ui.evaluate(() => Promise.all([5, -12, '12', null].map((v) => window.arbalete.setArchiveDelay(v as unknown as number).then(() => 'ok', () => 'refuse'))))).toEqual(['refuse', 'refuse', 'refuse', 'refuse'])
+  expect(
+    await ui.evaluate(() =>
+      Promise.all(
+        [5, -12, '12', null].map((v) =>
+          window.arbalete.setArchiveDelay(v as unknown as number).then(
+            () => 'ok',
+            () => 'refuse'
+          )
+        )
+      )
+    )
+  ).toEqual(['refuse', 'refuse', 'refuse', 'refuse'])
   expect((await ui.evaluate(() => window.arbalete.getSettings())).archivageHeures).toBe(12)
   await ui.evaluate(() => window.arbalete.setArchiveDelay(168))
   expect((await ui.evaluate(() => window.arbalete.getSettings())).archivageHeures).toBe(168)
@@ -3882,7 +4545,18 @@ test('C91 : le délai d’archivage valide son argument ; la liste et la restaur
   expect(await refuse(ui.evaluate(() => window.arbalete.listArchive()))).toBe('refuse')
   expect(await refuse(ui.evaluate(() => window.arbalete.restoreArchived(1)))).toBe('refuse')
   expect(await barreUi.evaluate(() => window.arbalete.listArchive())).toEqual([])
-  expect(await barreUi.evaluate(() => Promise.all(['1', 1.5, NaN, null].map((v) => window.arbalete.restoreArchived(v as unknown as number).then(() => 'ok', () => 'refuse'))))).toEqual(['refuse', 'refuse', 'refuse', 'refuse'])
+  expect(
+    await barreUi.evaluate(() =>
+      Promise.all(
+        ['1', 1.5, NaN, null].map((v) =>
+          window.arbalete.restoreArchived(v as unknown as number).then(
+            () => 'ok',
+            () => 'refuse'
+          )
+        )
+      )
+    )
+  ).toEqual(['refuse', 'refuse', 'refuse', 'refuse'])
   const avant = (await etat()).tabs.length
   await barreUi.evaluate(() => window.arbalete.restoreArchived(999999)).catch(() => undefined)
   expect((await etat()).tabs.length).toBe(avant)
@@ -3890,7 +4564,18 @@ test('C91 : le délai d’archivage valide son argument ; la liste et la restaur
 
 test('C94 : le délai de mise en veille valide son argument et la mesure de mémoire répond', async () => {
   // Délai : liste fermée (15, 30, 60, 240, 0), le reste est refusé et ne change rien.
-  expect(await ui.evaluate(() => Promise.all([5, -30, '30', null].map((v) => window.arbalete.setSleepDelay(v as unknown as number).then(() => 'ok', () => 'refuse'))))).toEqual(['refuse', 'refuse', 'refuse', 'refuse'])
+  expect(
+    await ui.evaluate(() =>
+      Promise.all(
+        [5, -30, '30', null].map((v) =>
+          window.arbalete.setSleepDelay(v as unknown as number).then(
+            () => 'ok',
+            () => 'refuse'
+          )
+        )
+      )
+    )
+  ).toEqual(['refuse', 'refuse', 'refuse', 'refuse'])
   expect((await ui.evaluate(() => window.arbalete.getSettings())).veilleMinutes).toBe(30)
   await ui.evaluate(() => window.arbalete.setSleepDelay(60))
   expect((await ui.evaluate(() => window.arbalete.getSettings())).veilleMinutes).toBe(60)
@@ -3902,7 +4587,11 @@ test('C94 : le délai de mise en veille valide son argument et la mesure de mém
 })
 
 test('C95 : le navigateur par défaut ne se lit ni ne s’ouvre que depuis la vue de la barre', async () => {
-  const refuse = (promesse: Promise<unknown>) => promesse.then(() => 'ok', () => 'refuse')
+  const refuse = (promesse: Promise<unknown>) =>
+    promesse.then(
+      () => 'ok',
+      () => 'refuse'
+    )
   // La fenêtre ne lit pas le navigateur actuel et n'ouvre pas les paramètres Windows (shell.openExternal).
   expect(await refuse(ui.evaluate(() => window.arbalete.getDefaultBrowser()))).toBe('refuse')
   expect(await refuse(ui.evaluate(() => window.arbalete.openDefaultApps()))).toBe('refuse')
@@ -3912,7 +4601,11 @@ test('C95 : le navigateur par défaut ne se lit ni ne s’ouvre que depuis la vu
 })
 
 test('C96 : les mises à jour ne se lisent ni ne se lancent que depuis la vue de la barre, inactives hors app empaquetée', async () => {
-  const refuse = (promesse: Promise<unknown>) => promesse.then(() => 'ok', () => 'refuse')
+  const refuse = (promesse: Promise<unknown>) =>
+    promesse.then(
+      () => 'ok',
+      () => 'refuse'
+    )
   expect(await refuse(ui.evaluate(() => window.arbalete.getUpdateState()))).toBe('refuse')
   expect(await refuse(ui.evaluate(() => window.arbalete.checkForUpdates()))).toBe('refuse')
   expect(await refuse(ui.evaluate(() => window.arbalete.installUpdate()))).toBe('refuse')
@@ -3923,11 +4616,16 @@ test('C96 : les mises à jour ne se lisent ni ne se lancent que depuis la vue de
 })
 
 test('C97 : l’infobulle s’affiche au-dessus de la barre (vue native), se retire en fondu, et refuse un texte vide', async () => {
-  const vuesData = () => app.evaluate(({ BrowserWindow, WebContentsView }) => {
-    const enfants = BrowserWindow.getAllWindows()[0].contentView.children.filter((e) => e instanceof WebContentsView) as InstanceType<typeof WebContentsView>[]
-    return { nombre: enfants.filter((e) => e.webContents.getURL().startsWith('data:')).length,
-      derniereEstData: enfants[enfants.length - 1].webContents.getURL().startsWith('data:') }
-  })
+  const vuesData = () =>
+    app.evaluate(({ BrowserWindow, WebContentsView }) => {
+      const enfants = BrowserWindow.getAllWindows()[0].contentView.children.filter(
+        (e) => e instanceof WebContentsView
+      ) as InstanceType<typeof WebContentsView>[]
+      return {
+        nombre: enfants.filter((e) => e.webContents.getURL().startsWith('data:')).length,
+        derniereEstData: enfants[enfants.length - 1].webContents.getURL().startsWith('data:')
+      }
+    })
   await barreUi.evaluate(() => window.arbalete.showTooltip('Nouvel onglet', { x: 20, y: 60, width: 32, height: 32 }))
   await expect.poll(vuesData).toMatchObject({ nombre: 1, derniereEstData: true })
   await barreUi.evaluate(() => window.arbalete.hideTooltip())
@@ -3957,8 +4655,9 @@ test('C98 : le focus reste piégé dans la modale (Tab boucle) et Échap la ferm
       expect(await dansModale()).toBe(true)
     }
     await app.evaluate(({ BrowserWindow, WebContentsView }) => {
-      const vue = BrowserWindow.getAllWindows()[0].contentView.children.find((e) => e instanceof WebContentsView
-        && e.webContents.getURL().includes('vue=barre')) as InstanceType<typeof WebContentsView>
+      const vue = BrowserWindow.getAllWindows()[0].contentView.children.find(
+        (e) => e instanceof WebContentsView && e.webContents.getURL().includes('vue=barre')
+      ) as InstanceType<typeof WebContentsView>
       vue.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' })
       vue.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' })
     })
@@ -3969,13 +4668,25 @@ test('C98 : le focus reste piégé dans la modale (Tab boucle) et Échap la ferm
 })
 
 test('C99 : l’infobulle refuse une ancre aberrante, se place sous l’ancre dans la fenêtre et cède la place à un overlay', async () => {
-  const bulles = () => app.evaluate(({ BrowserWindow, WebContentsView }) => {
-    const fenetre = BrowserWindow.getAllWindows()[0]
-    const vues = fenetre.contentView.children.filter((e) => e instanceof WebContentsView && e.webContents.getURL().startsWith('data:')) as InstanceType<typeof WebContentsView>[]
-    return { nombre: vues.length, bounds: vues[0]?.getBounds() ?? null, fenetre: fenetre.getContentBounds() }
-  })
+  const bulles = () =>
+    app.evaluate(({ BrowserWindow, WebContentsView }) => {
+      const fenetre = BrowserWindow.getAllWindows()[0]
+      const vues = fenetre.contentView.children.filter(
+        (e) => e instanceof WebContentsView && e.webContents.getURL().startsWith('data:')
+      ) as InstanceType<typeof WebContentsView>[]
+      return { nombre: vues.length, bounds: vues[0]?.getBounds() ?? null, fenetre: fenetre.getContentBounds() }
+    })
   // Ancres aberrantes : rien ne s'affiche.
-  await barreUi.evaluate(() => Promise.all([{ x: NaN, y: 0, width: 10, height: 10 }, { x: 'a', y: 0, width: 10, height: 10 }, null].map((a) => window.arbalete.showTooltip('Test', a as never).then(() => 'ok', () => 'refuse'))))
+  await barreUi.evaluate(() =>
+    Promise.all(
+      [{ x: NaN, y: 0, width: 10, height: 10 }, { x: 'a', y: 0, width: 10, height: 10 }, null].map((a) =>
+        window.arbalete.showTooltip('Test', a as never).then(
+          () => 'ok',
+          () => 'refuse'
+        )
+      )
+    )
+  )
   expect((await bulles()).nombre).toBe(0)
   // Une ancre valide : la bulle est sous l'ancre (si la place existe) et dans la fenêtre.
   await ui.evaluate(() => window.arbalete.showTooltip('Barre de contrôle', { x: 20, y: 10, width: 32, height: 32 }))
@@ -3999,9 +4710,12 @@ test('C99 : l’infobulle refuse une ancre aberrante, se place sous l’ancre da
 //   risque=le placement des deux pages, l'onglet actif au clic dans l'autre page et la fin de la vue à la fermeture;
 //   why_new=aucun test ne regarde plus d'une vue de page à la fois; seam=none; no_claim=ni glisser-déposer, ni clavier réel, ni rendu.
 test('C100 : la vue partagée met deux onglets côte à côte, un clic active l’autre page, fermer une page la termine', async () => {
-  const pages = () => app.evaluate(({ BrowserWindow, WebContentsView }) => BrowserWindow.getAllWindows()[0].contentView.children
-    .filter((e) => e instanceof WebContentsView && e.webContents.getURL().startsWith('http'))
-    .map((e) => ({ url: (e as InstanceType<typeof WebContentsView>).webContents.getURL(), ...e.getBounds() })))
+  const pages = () =>
+    app.evaluate(({ BrowserWindow, WebContentsView }) =>
+      BrowserWindow.getAllWindows()[0]
+        .contentView.children.filter((e) => e instanceof WebContentsView && e.webContents.getURL().startsWith('http'))
+        .map((e) => ({ url: (e as InstanceType<typeof WebContentsView>).webContents.getURL(), ...e.getBounds() }))
+    )
   const premier = (await etat()).activeTabId!
   const second = await ui.evaluate((url) => window.arbalete.createTab(url), `${origine}/page-survol.html`)
   await attendreUrlActive(`${origine}/page-survol.html`)
@@ -4021,8 +4735,8 @@ test('C100 : la vue partagée met deux onglets côte à côte, un clic active l�
     expect([gauche.y, gauche.height]).toEqual([droite.y, droite.height])
     // Un clic dans la page de droite la rend active, sans mettre fin à la vue.
     await app.evaluate(({ BrowserWindow, WebContentsView }) => {
-      const droite = BrowserWindow.getAllWindows()[0].contentView.children
-        .filter((e) => e instanceof WebContentsView && e.webContents.getURL().startsWith('http'))
+      const droite = BrowserWindow.getAllWindows()[0]
+        .contentView.children.filter((e) => e instanceof WebContentsView && e.webContents.getURL().startsWith('http'))
         .sort((a, b) => b.getBounds().x - a.getBounds().x)[0] as InstanceType<typeof WebContentsView>
       droite.webContents.sendInputEvent({ type: 'mouseDown', x: 20, y: 20, button: 'left', clickCount: 1 })
       droite.webContents.sendInputEvent({ type: 'mouseUp', x: 20, y: 20, button: 'left', clickCount: 1 })

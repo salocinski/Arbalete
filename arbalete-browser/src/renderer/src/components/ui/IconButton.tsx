@@ -10,7 +10,14 @@ type IconButtonProps = Omit<ButtonProps, 'icon' | 'children' | 'title'> & { titl
 export function IconButton({ title, children, className, variant = 'ghost', ...reste }: IconButtonProps) {
   const bulle = useTooltip(title)
   return (
-    <Button variant={variant} title={INFOBULLE_NATIVE ? title : undefined} aria-label={title} className={`ui-button--icon${className ? ` ${className}` : ''}`} {...(INFOBULLE_NATIVE ? {} : bulle)} {...reste}>
+    <Button
+      variant={variant}
+      title={INFOBULLE_NATIVE ? title : undefined}
+      aria-label={title}
+      className={`ui-button--icon${className ? ` ${className}` : ''}`}
+      {...(INFOBULLE_NATIVE ? {} : bulle)}
+      {...reste}
+    >
       {children}
     </Button>
   )

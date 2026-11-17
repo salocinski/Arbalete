@@ -1,6 +1,24 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { Archive, ChevronDown, Clock3, Download, FolderPlus, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings2, Star } from 'lucide-react'
-import { LARGEUR_ETENDUE_MAX, LARGEUR_ETENDUE_MIN, barreCompacte, largeurApresTouche, largeurBarre } from '../../../shared/barre'
+import {
+  Archive,
+  ChevronDown,
+  Clock3,
+  Download,
+  FolderPlus,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  Search,
+  Settings2,
+  Star
+} from 'lucide-react'
+import {
+  LARGEUR_ETENDUE_MAX,
+  LARGEUR_ETENDUE_MIN,
+  barreCompacte,
+  largeurApresTouche,
+  largeurBarre
+} from '../../../shared/barre'
 import type { BrowserState, SidebarState } from '../../../shared/types'
 import { LIBELLES_MENU_PAGE } from '../../../shared/menuPage'
 import { useDownloads, useOverlay, usePageMenu } from '../state'
@@ -22,16 +40,26 @@ import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 function SidebarResizer({ width }: { width: number }) {
   const regler = (valeur: number) => void window.arbalete.setSidebarWidth(valeur)
   return (
-    <div className="sidebar-resizer" role="separator" aria-orientation="vertical" aria-label="Largeur de la barre latérale" tabIndex={0}
-      aria-valuemin={LARGEUR_ETENDUE_MIN} aria-valuemax={LARGEUR_ETENDUE_MAX} aria-valuenow={width}
+    <div
+      className="sidebar-resizer"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Largeur de la barre latérale"
+      tabIndex={0}
+      aria-valuemin={LARGEUR_ETENDUE_MIN}
+      aria-valuemax={LARGEUR_ETENDUE_MAX}
+      aria-valuenow={width}
       onPointerDown={(event) => event.currentTarget.setPointerCapture(event.pointerId)}
-      onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) regler(event.clientX) }}
+      onPointerMove={(event) => {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) regler(event.clientX)
+      }}
       onKeyDown={(event) => {
         const valeur = largeurApresTouche(event.key, width)
         if (valeur === undefined) return
         event.preventDefault()
         regler(valeur)
-      }} />
+      }}
+    />
   )
 }
 
@@ -39,7 +67,12 @@ function SidebarResizer({ width }: { width: number }) {
 // `favori` gardera l'icône (ARB-48).
 function initialeFavori(url: string): string {
   try {
-    return new URL(url).hostname.replace(/^www\./, '').charAt(0).toUpperCase() || '?'
+    return (
+      new URL(url).hostname
+        .replace(/^www\./, '')
+        .charAt(0)
+        .toUpperCase() || '?'
+    )
   } catch {
     return '?'
   }
@@ -64,7 +97,15 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
   const espaceActif = state.workspaces.find((e) => e.id === state.activeWorkspaceId)
 
   useEffect(() => {
-    if (!overlay) { setMenuOnglet(null); setMenuEspace(null); setModaleEspace(null); setPanneauTelechargements(null); setPanneauHistorique(false); setPanneauFavoris(false); setPanneauParametres(false) }
+    if (!overlay) {
+      setMenuOnglet(null)
+      setMenuEspace(null)
+      setModaleEspace(null)
+      setPanneauTelechargements(null)
+      setPanneauHistorique(false)
+      setPanneauFavoris(false)
+      setPanneauParametres(false)
+    }
   }, [overlay])
 
   // L'espace a été supprimé pendant que son menu ou sa modale était ouvert : ils n'ont plus d'objet.
@@ -80,14 +121,28 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
   const ouvrirMenuOnglet = (tabId: string, x: number, y: number) => {
     setMenuOnglet({ tabId, x, y })
     // Overlay refusé ou non ouvert : le menu ne doit pas ressurgir avec le prochain overlay.
-    void window.arbalete.setOverlay(true).then(() => window.arbalete.getOverlay())
-      .then((ouvert) => { if (!ouvert) setMenuOnglet(null) }, () => setMenuOnglet(null))
+    void window.arbalete
+      .setOverlay(true)
+      .then(() => window.arbalete.getOverlay())
+      .then(
+        (ouvert) => {
+          if (!ouvert) setMenuOnglet(null)
+        },
+        () => setMenuOnglet(null)
+      )
   }
   const ouvrirMenuEspace = (id: number, x: number, y: number) => {
     setShowWorkspaceMenu(false)
     setMenuEspace({ id, x, y })
-    void window.arbalete.setOverlay(true).then(() => window.arbalete.getOverlay())
-      .then((ouvert) => { if (!ouvert) setMenuEspace(null) }, () => setMenuEspace(null))
+    void window.arbalete
+      .setOverlay(true)
+      .then(() => window.arbalete.getOverlay())
+      .then(
+        (ouvert) => {
+          if (!ouvert) setMenuEspace(null)
+        },
+        () => setMenuEspace(null)
+      )
   }
   // Liste des téléchargements (ARB-55) : ouverte à droite du bouton, retournée vers le haut par Overlay faute de place en bas.
   const downloads = useDownloads()
@@ -95,36 +150,71 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
   const ouvrirTelechargements = (event: React.MouseEvent<HTMLButtonElement>) => {
     const { right, bottom } = event.currentTarget.getBoundingClientRect()
     setPanneauTelechargements({ x: right + 8, y: bottom })
-    void window.arbalete.setOverlay(true).then(() => window.arbalete.getOverlay())
-      .then((ouvert) => { if (!ouvert) setPanneauTelechargements(null) }, () => setPanneauTelechargements(null))
+    void window.arbalete
+      .setOverlay(true)
+      .then(() => window.arbalete.getOverlay())
+      .then(
+        (ouvert) => {
+          if (!ouvert) setPanneauTelechargements(null)
+        },
+        () => setPanneauTelechargements(null)
+      )
   }
   // Panneau Historique (ARB-52) : modale centrée de la couche d'overlays.
   const [panneauHistorique, setPanneauHistorique] = useState(false)
   const ouvrirHistorique = () => {
     setPanneauHistorique(true)
-    void window.arbalete.setOverlay(true).then(() => window.arbalete.getOverlay())
-      .then((ouvert) => { if (!ouvert) setPanneauHistorique(false) }, () => setPanneauHistorique(false))
+    void window.arbalete
+      .setOverlay(true)
+      .then(() => window.arbalete.getOverlay())
+      .then(
+        (ouvert) => {
+          if (!ouvert) setPanneauHistorique(false)
+        },
+        () => setPanneauHistorique(false)
+      )
   }
   // Panneau des onglets archivés (ARB-64) : modale centrée, comme l'historique.
   const [panneauArchive, setPanneauArchive] = useState(false)
   const ouvrirArchive = () => {
     setPanneauArchive(true)
-    void window.arbalete.setOverlay(true).then(() => window.arbalete.getOverlay())
-      .then((ouvert) => { if (!ouvert) setPanneauArchive(false) }, () => setPanneauArchive(false))
+    void window.arbalete
+      .setOverlay(true)
+      .then(() => window.arbalete.getOverlay())
+      .then(
+        (ouvert) => {
+          if (!ouvert) setPanneauArchive(false)
+        },
+        () => setPanneauArchive(false)
+      )
   }
   // Panneau des favoris (ARB-48) : modale centrée, comme l'historique.
   const [panneauFavoris, setPanneauFavoris] = useState(false)
   const ouvrirFavoris = () => {
     setPanneauFavoris(true)
-    void window.arbalete.setOverlay(true).then(() => window.arbalete.getOverlay())
-      .then((ouvert) => { if (!ouvert) setPanneauFavoris(false) }, () => setPanneauFavoris(false))
+    void window.arbalete
+      .setOverlay(true)
+      .then(() => window.arbalete.getOverlay())
+      .then(
+        (ouvert) => {
+          if (!ouvert) setPanneauFavoris(false)
+        },
+        () => setPanneauFavoris(false)
+      )
   }
   // Page Paramètres (ARB-57) : modale centrée, comme l'historique ; elle reprend le moteur de recherche (ARB-58).
   const [panneauParametres, setPanneauParametres] = useState(false)
   const ouvrirParametres = () => {
     setPanneauParametres(true)
-    void window.arbalete.setOverlay(true).then(() => window.arbalete.getOverlay())
-      .then((ouvert) => { if (!ouvert) setPanneauParametres(false) }, () => setPanneauParametres(false))
+    void window.arbalete
+      .setOverlay(true)
+      .then(() => window.arbalete.getOverlay())
+      .then(
+        (ouvert) => {
+          if (!ouvert) setPanneauParametres(false)
+        },
+        () => setPanneauParametres(false)
+      )
   }
   const fermerOverlay = () => void window.arbalete.setOverlay(false)
   const menuPage = usePageMenu()
@@ -133,7 +223,10 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
   // (onglet, nouvel onglet) ne la retient pas : sinon elle resterait sur la page après le geste principal.
   const keepOpen = () => {
     const active = document.activeElement
-    return showWorkspaceMenu || (!!active && active.matches('input, textarea, select') && !!zoneRef.current?.contains(active))
+    return (
+      showWorkspaceMenu ||
+      (!!active && active.matches('input, textarea, select') && !!zoneRef.current?.contains(active))
+    )
   }
 
   useEffect(() => {
@@ -147,30 +240,63 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
   // Sans tester sidebar.open : juste après un retrait, cette vue peut ne pas avoir encore reçu l'état fermé, et une
   // entrée rapide de la souris serait ignorée. Le processus principal ne fait rien si la barre est déjà ouverte.
   return (
-    <div ref={zoneRef} className="sidebar-zone"
+    <div
+      ref={zoneRef}
+      className="sidebar-zone"
       onMouseEnter={() => void window.arbalete.setSidebar('open')}
-      onMouseLeave={onMouseLeave}>
-      {!sidebar.open ? <div className="sidebar-hover-strip" data-testid="sidebar-hover-strip" /> : (
-        <aside className={compacte ? 'sidebar sidebar--compact' : 'sidebar'} style={{ width: largeurBarre(sidebar), ...(espaceActif && { '--espace-couleur': `var(--color-workspace-${espaceActif.couleur})` }) } as CSSProperties}>
+      onMouseLeave={onMouseLeave}
+    >
+      {!sidebar.open ? (
+        <div className="sidebar-hover-strip" data-testid="sidebar-hover-strip" />
+      ) : (
+        <aside
+          className={compacte ? 'sidebar sidebar--compact' : 'sidebar'}
+          style={
+            {
+              width: largeurBarre(sidebar),
+              ...(espaceActif && { '--espace-couleur': `var(--color-workspace-${espaceActif.couleur})` })
+            } as CSSProperties
+          }
+        >
           <div className="brand-row">
-            <div className="brand-mark">a<span>.</span></div>
+            <div className="brand-mark">
+              a<span>.</span>
+            </div>
             <span className="brand-name">arbalète</span>
             {sidebar.pinned && (
-              <IconButton className="sidebar-toggle" title={compacte ? 'Étendre la barre latérale' : 'Réduire la barre latérale'} onClick={() => void window.arbalete.setSidebar('toggle-compact')}>
+              <IconButton
+                className="sidebar-toggle"
+                title={compacte ? 'Étendre la barre latérale' : 'Réduire la barre latérale'}
+                onClick={() => void window.arbalete.setSidebar('toggle-compact')}
+              >
                 {compacte ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
               </IconButton>
             )}
-            {!compacte && <PinButton pinned={sidebar.pinned} className={sidebar.pinned ? undefined : 'sidebar-toggle'} />}
+            {!compacte && (
+              <PinButton pinned={sidebar.pinned} className={sidebar.pinned ? undefined : 'sidebar-toggle'} />
+            )}
           </div>
 
-          <WorkspaceSwitcher workspaces={state.workspaces} active={state.activeWorkspaceId} onWorkspaceChange={(id) => void window.arbalete.setWorkspace(id)} menuOpen={showWorkspaceMenu} onMenuOpenChange={setShowWorkspaceMenu} compact={compacte} onEspaceMenu={ouvrirMenuEspace} />
+          <WorkspaceSwitcher
+            workspaces={state.workspaces}
+            active={state.activeWorkspaceId}
+            onWorkspaceChange={(id) => void window.arbalete.setWorkspace(id)}
+            menuOpen={showWorkspaceMenu}
+            onMenuOpenChange={setShowWorkspaceMenu}
+            compact={compacte}
+            onEspaceMenu={ouvrirMenuEspace}
+          />
 
           {state.favorites.length > 0 && (
             <ul className="favorites-grid" aria-label="Favoris">
               {state.favorites.map((favori) => (
                 <li key={favori.url}>
-                  <button className="favorite-tile" title={favori.title || favori.url} aria-label={favori.title || favori.url}
-                    onClick={() => void window.arbalete.openFavorite(favori.url)}>
+                  <button
+                    className="favorite-tile"
+                    title={favori.title || favori.url}
+                    aria-label={favori.title || favori.url}
+                    onClick={() => void window.arbalete.openFavorite(favori.url)}
+                  >
                     {initialeFavori(favori.url)}
                   </button>
                 </li>
@@ -179,73 +305,188 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
           )}
 
           <nav className="sidebar-nav">
-            <button className="nav-item" title="Rechercher (Ctrl K)" onClick={() => void window.arbalete.openPalette()}><Search size={16} /><span>Rechercher</span><kbd>Ctrl K</kbd></button>
-            <button className="nav-item" title="Favoris" onClick={ouvrirFavoris}><Star size={16} /><span>Favoris</span></button>
-            <button className="nav-item" title="Historique" onClick={ouvrirHistorique}><Clock3 size={16} /><span>Historique</span></button>
-            <button className="nav-item" title="Onglets archivés" onClick={ouvrirArchive}><Archive size={16} /><span>Archive</span></button>
+            <button className="nav-item" title="Rechercher (Ctrl K)" onClick={() => void window.arbalete.openPalette()}>
+              <Search size={16} />
+              <span>Rechercher</span>
+              <kbd>Ctrl K</kbd>
+            </button>
+            <button className="nav-item" title="Favoris" onClick={ouvrirFavoris}>
+              <Star size={16} />
+              <span>Favoris</span>
+            </button>
+            <button className="nav-item" title="Historique" onClick={ouvrirHistorique}>
+              <Clock3 size={16} />
+              <span>Historique</span>
+            </button>
+            <button className="nav-item" title="Onglets archivés" onClick={ouvrirArchive}>
+              <Archive size={16} />
+              <span>Archive</span>
+            </button>
           </nav>
 
           {state.tabs.some((tab) => tab.pinned) && (
             <>
-              <div className="section-heading"><span>ÉPINGLÉS</span></div>
+              <div className="section-heading">
+                <span>ÉPINGLÉS</span>
+              </div>
               <TabList state={state} onMenu={ouvrirMenuOnglet} groupe="epingles" />
             </>
           )}
           {/* Un onglet déposé sur ce titre sort de son dossier (ARB-69). */}
-          <div className="section-heading" onDragOver={(event) => event.preventDefault()}
-            onDrop={(event) => { event.preventDefault(); const id = event.dataTransfer.getData(TYPE_GLISSE); if (id) void window.arbalete.setTabFolder(id, null) }}>
+          <div
+            className="section-heading"
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault()
+              const id = event.dataTransfer.getData(TYPE_GLISSE)
+              if (id) void window.arbalete.setTabFolder(id, null)
+            }}
+          >
             <span>AUJOURD’HUI</span>
             <span>
-              <IconButton size="sm" title="Nouveau dossier" onClick={() => void window.arbalete.createTabFolder().then((id) => setDossierRenomme(id))}><FolderPlus size={14}/></IconButton>
-              <IconButton size="sm" title="Nouvel onglet" onClick={() => void window.arbalete.createTab()}><Plus size={14}/></IconButton>
+              <IconButton
+                size="sm"
+                title="Nouveau dossier"
+                onClick={() => void window.arbalete.createTabFolder().then((id) => setDossierRenomme(id))}
+              >
+                <FolderPlus size={14} />
+              </IconButton>
+              <IconButton size="sm" title="Nouvel onglet" onClick={() => void window.arbalete.createTab()}>
+                <Plus size={14} />
+              </IconButton>
             </span>
           </div>
-          <TabList state={state} onMenu={ouvrirMenuOnglet} groupe="jour" renomme={dossierRenomme} onRenommer={setDossierRenomme} />
-          <button className="new-tab-button" title="Nouvel onglet (Ctrl T)" onClick={() => void window.arbalete.createTab()}><Plus size={16}/><span>Nouvel onglet</span><kbd>Ctrl T</kbd></button>
+          <TabList
+            state={state}
+            onMenu={ouvrirMenuOnglet}
+            groupe="jour"
+            renomme={dossierRenomme}
+            onRenommer={setDossierRenomme}
+          />
+          <button
+            className="new-tab-button"
+            title="Nouvel onglet (Ctrl T)"
+            onClick={() => void window.arbalete.createTab()}
+          >
+            <Plus size={16} />
+            <span>Nouvel onglet</span>
+            <kbd>Ctrl T</kbd>
+          </button>
           <div className="sidebar-spacer" />
           <div className="sidebar-bottom">
-            <button className="nav-item" title="Téléchargements" onClick={ouvrirTelechargements}><Download size={16}/><span>Téléchargements</span></button>
-            <button className="nav-item" title="Paramètres" onClick={ouvrirParametres}><Settings2 size={16}/><span>Paramètres</span></button>
-            <div className="profile-row" title="Profil local"><div className="avatar">A</div><div className="profile-copy"><strong>Profil local</strong><span>Synchronisation inactive</span></div><ChevronDown size={14}/></div>
+            <button className="nav-item" title="Téléchargements" onClick={ouvrirTelechargements}>
+              <Download size={16} />
+              <span>Téléchargements</span>
+            </button>
+            <button className="nav-item" title="Paramètres" onClick={ouvrirParametres}>
+              <Settings2 size={16} />
+              <span>Paramètres</span>
+            </button>
+            <div className="profile-row" title="Profil local">
+              <div className="avatar">A</div>
+              <div className="profile-copy">
+                <strong>Profil local</strong>
+                <span>Synchronisation inactive</span>
+              </div>
+              <ChevronDown size={14} />
+            </div>
           </div>
           {sidebar.pinned && !compacte && <SidebarResizer width={sidebar.width} />}
         </aside>
       )}
       {overlay && menuOnglet && ongletDuMenu && (
-        <MenuOverlay x={menuOnglet.x} y={menuOnglet.y} label={`Onglet ${ongletDuMenu.title}`} onClose={fermerOverlay} entrees={[
-          { label: 'Nouvel onglet', action: () => void window.arbalete.createTab() },
-          { label: 'Dupliquer', action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'dupliquer') },
-          { label: ongletDuMenu.pinned ? 'Désépingler' : 'Épingler', action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'epingler') },
-          { label: 'Copier l’adresse', action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'copier-adresse') },
-          ...(state.split?.includes(ongletDuMenu.id)
-            ? [{ label: 'Quitter la vue partagée', action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'vue-partagee') }]
-            : ongletDuMenu.id !== state.activeTabId
-              ? [{ label: 'Vue partagée avec l’onglet actif', action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'vue-partagee') }]
-              : []),
-          { label: 'Fermer les autres onglets', action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'fermer-autres') },
-          { label: 'Fermer l’onglet', action: () => void window.arbalete.closeTab(ongletDuMenu.id) }
-        ]} />
+        <MenuOverlay
+          x={menuOnglet.x}
+          y={menuOnglet.y}
+          label={`Onglet ${ongletDuMenu.title}`}
+          onClose={fermerOverlay}
+          entrees={[
+            { label: 'Nouvel onglet', action: () => void window.arbalete.createTab() },
+            { label: 'Dupliquer', action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'dupliquer') },
+            {
+              label: ongletDuMenu.pinned ? 'Désépingler' : 'Épingler',
+              action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'epingler')
+            },
+            {
+              label: 'Copier l’adresse',
+              action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'copier-adresse')
+            },
+            ...(state.split?.includes(ongletDuMenu.id)
+              ? [
+                  {
+                    label: 'Quitter la vue partagée',
+                    action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'vue-partagee')
+                  }
+                ]
+              : ongletDuMenu.id !== state.activeTabId
+                ? [
+                    {
+                      label: 'Vue partagée avec l’onglet actif',
+                      action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'vue-partagee')
+                    }
+                  ]
+                : []),
+            {
+              label: 'Fermer les autres onglets',
+              action: () => void window.arbalete.tabAction(ongletDuMenu.id, 'fermer-autres')
+            },
+            { label: 'Fermer l’onglet', action: () => void window.arbalete.closeTab(ongletDuMenu.id) }
+          ]}
+        />
       )}
       {overlay && menuPage && (
         // `remplace` : le processus principal ferme l'overlay en agissant, après avoir lu l'adresse qu'il a gardée.
-        <MenuOverlay x={menuPage.x} y={menuPage.y} label="Page" onClose={fermerOverlay}
-          entrees={menuPage.entrees.map((entree) => ({ label: LIBELLES_MENU_PAGE[entree], remplace: true, action: () => void window.arbalete.pageMenuAction(entree) }))} />
+        <MenuOverlay
+          x={menuPage.x}
+          y={menuPage.y}
+          label="Page"
+          onClose={fermerOverlay}
+          entrees={menuPage.entrees.map((entree) => ({
+            label: LIBELLES_MENU_PAGE[entree],
+            remplace: true,
+            action: () => void window.arbalete.pageMenuAction(entree)
+          }))}
+        />
       )}
       {overlay && menuEspace && espaceDuMenu && (
-        <MenuOverlay x={menuEspace.x} y={menuEspace.y} label={`Espace ${espaceDuMenu.nom}`} onClose={fermerOverlay} entrees={[
-          { label: 'Changer la couleur…', remplace: true, action: () => { setModaleEspace(menuEspace.id); setMenuEspace(null) } }
-        ]} />
+        <MenuOverlay
+          x={menuEspace.x}
+          y={menuEspace.y}
+          label={`Espace ${espaceDuMenu.nom}`}
+          onClose={fermerOverlay}
+          entrees={[
+            {
+              label: 'Changer la couleur…',
+              remplace: true,
+              action: () => {
+                setModaleEspace(menuEspace.id)
+                setMenuEspace(null)
+              }
+            }
+          ]}
+        />
       )}
       {overlay && panneauTelechargements && (
-        <DownloadsOverlay x={panneauTelechargements.x} y={panneauTelechargements.y} downloads={downloads} onClose={fermerOverlay} />
+        <DownloadsOverlay
+          x={panneauTelechargements.x}
+          y={panneauTelechargements.y}
+          downloads={downloads}
+          onClose={fermerOverlay}
+        />
       )}
       {overlay && panneauFavoris && <FavoritesPanel onClose={fermerOverlay} />}
       {overlay && panneauHistorique && <HistoryPanel onClose={fermerOverlay} />}
       {overlay && panneauArchive && <ArchivePanel onClose={fermerOverlay} />}
       {overlay && panneauParametres && <SettingsModal sidebar={sidebar} onClose={fermerOverlay} />}
       {overlay && modaleEspace !== null && espaceDuMenu && (
-        <ColorModal espace={espaceDuMenu} onClose={fermerOverlay}
-          onChoisir={(couleur) => { void window.arbalete.setWorkspaceColor(espaceDuMenu.id, couleur); fermerOverlay() }} />
+        <ColorModal
+          espace={espaceDuMenu}
+          onClose={fermerOverlay}
+          onChoisir={(couleur) => {
+            void window.arbalete.setWorkspaceColor(espaceDuMenu.id, couleur)
+            fermerOverlay()
+          }}
+        />
       )}
     </div>
   )

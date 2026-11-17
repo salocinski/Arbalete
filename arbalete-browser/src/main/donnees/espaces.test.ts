@@ -3,7 +3,16 @@ import { DatabaseSync } from 'node:sqlite'
 import { test } from 'node:test'
 import { COULEURS_ESPACE, LONGUEUR_MAX_ICONE_ESPACE, LONGUEUR_MAX_NOM_ESPACE } from '../../shared/espaces.ts'
 import { ouvrirBase } from './base.ts'
-import { creerEspace, ecrireEspaceActif, lireEspaceActif, lireEspaces, modifierEspace, ordonnerEspaces, semerEspaces, supprimerEspace } from './espaces.ts'
+import {
+  creerEspace,
+  ecrireEspaceActif,
+  lireEspaceActif,
+  lireEspaces,
+  modifierEspace,
+  ordonnerEspaces,
+  semerEspaces,
+  supprimerEspace
+} from './espaces.ts'
 import { MIGRATIONS, appliquerMigrations, versionDuSchema } from './migrations.ts'
 import { actifsParEspace, lireSession, rattacherAuxEspaces, sauverSession } from './session.ts'
 
@@ -17,7 +26,10 @@ test('les espaces se créent à la suite et se relisent dans leur ordre', () => 
   deepStrictEqual(lireEspaces(db), [])
   const a = creerEspace(db, dev)
   const b = creerEspace(db, perso)
-  deepStrictEqual(lireEspaces(db), [{ id: a, ...dev }, { id: b, ...perso }])
+  deepStrictEqual(lireEspaces(db), [
+    { id: a, ...dev },
+    { id: b, ...perso }
+  ])
 })
 
 test('modifier change nom, couleur et icône, et ignore un id inconnu', () => {
@@ -77,11 +89,17 @@ test('ordonner réécrit l’ordre et refuse une liste qui n’est pas exactemen
   const a = creerEspace(db, dev)
   const b = creerEspace(db, perso)
   ordonnerEspaces(db, [b, a])
-  deepStrictEqual(lireEspaces(db).map((espace) => espace.id), [b, a])
+  deepStrictEqual(
+    lireEspaces(db).map((espace) => espace.id),
+    [b, a]
+  )
   throws(() => ordonnerEspaces(db, [a]))
   throws(() => ordonnerEspaces(db, [a, a]))
   throws(() => ordonnerEspaces(db, [a, b, b + 1]))
-  deepStrictEqual(lireEspaces(db).map((espace) => espace.id), [b, a])
+  deepStrictEqual(
+    lireEspaces(db).map((espace) => espace.id),
+    [b, a]
+  )
 })
 
 test('la session garde l’espace de chaque onglet, et supprimer l’espace libère ses onglets', () => {
@@ -114,20 +132,29 @@ test('une base au schéma 4 (avant ARB-60) gagne les espaces sans perdre sa sess
 test('les espaces d’origine sont semés une fois, jamais par-dessus ceux de l’utilisateur', () => {
   const db = ouvrirBase(':memory:')
   semerEspaces(db)
-  deepStrictEqual(lireEspaces(db).map((espace) => espace.nom), ['Développement', 'Personnel', 'Recherche'])
+  deepStrictEqual(
+    lireEspaces(db).map((espace) => espace.nom),
+    ['Développement', 'Personnel', 'Recherche']
+  )
   semerEspaces(db)
   strictEqual(lireEspaces(db).length, 3)
   const vide = ouvrirBase(':memory:')
   creerEspace(vide, perso)
   semerEspaces(vide)
-  deepStrictEqual(lireEspaces(vide).map((espace) => espace.nom), ['Personnel'])
+  deepStrictEqual(
+    lireEspaces(vide).map((espace) => espace.nom),
+    ['Personnel']
+  )
 })
 
 // Value: protects=ARB-61, une couleur inconnue en base ne casse pas l'interface (token CSS introuvable); fails_when=lireEspaces renvoie la couleur brute; why_new=ARB-60 ne testait que les couleurs valides; seam=none; no_claim=le rendu
 test('lireEspaces remplace une couleur inconnue par « personal »', () => {
   const db = ouvrirBase(':memory:')
   db.prepare("INSERT INTO espace (nom, couleur, icone, position) VALUES ('Ancien', 'magenta', '◆', 0)").run()
-  deepStrictEqual(lireEspaces(db).map((espace) => espace.couleur), ['personal'])
+  deepStrictEqual(
+    lireEspaces(db).map((espace) => espace.couleur),
+    ['personal']
+  )
 })
 
 // Value: protects=ARB-61, l'espace affiché au démarrage est le dernier choisi, ou le premier s'il a disparu; fails_when=lireEspaceActif renvoie un id supprimé (aucun onglet visible) ou ignore le choix; why_new=aucune préférence d'espace avant ARB-61; seam=none; no_claim=l'écriture déclenchée par le changement d'espace
@@ -145,13 +172,36 @@ test('l’espace actif se relit, avec repli sur le premier', () => {
 
 // Value: protects=ARB-61, un onglet sans espace ou d'un espace supprimé est rattaché au premier espace, et deux onglets « actifs » dans un espace ne donnent qu'un seul actif; fails_when=rattacherAuxEspaces laisse l'espace périmé (onglet invisible pour toujours) ou actifsParEspace garde plusieurs actifs/aucun; why_new=nouvelles règles de restauration; seam=none; no_claim=l'ouverture des vues
 test('la restauration rattache les onglets orphelins et répare les onglets actifs de chaque espace', () => {
-  const onglet = (url: string, actif: boolean, espace?: number) => ({ url, titre: '', actif, ...(espace === undefined ? {} : { espace }) })
-  const session = [onglet('https://a/', false, 1), onglet('https://b/', true, 2), onglet('https://c/', true, 2), onglet('https://d/', false), onglet('https://e/', false, 9)]
+  const onglet = (url: string, actif: boolean, espace?: number) => ({
+    url,
+    titre: '',
+    actif,
+    ...(espace === undefined ? {} : { espace })
+  })
+  const session = [
+    onglet('https://a/', false, 1),
+    onglet('https://b/', true, 2),
+    onglet('https://c/', true, 2),
+    onglet('https://d/', false),
+    onglet('https://e/', false, 9)
+  ]
   const rattaches = rattacherAuxEspaces(session, [1, 2])
-  deepStrictEqual(rattaches.map((o) => o.espace), [1, 2, 2, 1, 1])
+  deepStrictEqual(
+    rattaches.map((o) => o.espace),
+    [1, 2, 2, 1, 1]
+  )
   // Espace 2 : deux marqués, le premier gagne. Espace 1 : aucun marqué, le dernier gagne.
-  deepStrictEqual([...actifsParEspace(rattaches)], [[1, 4], [2, 1]])
-  deepStrictEqual(rattacherAuxEspaces(session, []).map((o) => o.espace), [undefined, undefined, undefined, undefined, undefined])
+  deepStrictEqual(
+    [...actifsParEspace(rattaches)],
+    [
+      [1, 4],
+      [2, 1]
+    ]
+  )
+  deepStrictEqual(
+    rattacherAuxEspaces(session, []).map((o) => o.espace),
+    [undefined, undefined, undefined, undefined, undefined]
+  )
 })
 
 test('chaque couleur de la palette se choisit et se relit, un nom hors liste est refusé (ARB-134)', () => {

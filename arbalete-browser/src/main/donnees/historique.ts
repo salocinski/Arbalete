@@ -30,12 +30,16 @@ export function adresseHistorique(url: string): string | null {
 // d'ordinaire après la navigation, par nommerPage.
 export function ajouterVisite(db: DatabaseSync, url: string, titre = '', date = Date.now()): void {
   enTransaction(db, () => {
-    const page = db.prepare(`INSERT INTO page (url, titre, visites, derniere_visite) VALUES (?, ?, 1, ?)
+    const page = db
+      .prepare(
+        `INSERT INTO page (url, titre, visites, derniere_visite) VALUES (?, ?, 1, ?)
       ON CONFLICT (url) DO UPDATE SET
         visites = visites + 1,
         derniere_visite = excluded.derniere_visite,
         titre = CASE WHEN excluded.titre <> '' THEN excluded.titre ELSE titre END
-      RETURNING id`).get(url, titre.slice(0, LONGUEUR_MAX_TITRE), date) as { id: number }
+      RETURNING id`
+      )
+      .get(url, titre.slice(0, LONGUEUR_MAX_TITRE), date) as { id: number }
     db.prepare('INSERT INTO visite (page, date) VALUES (?, ?)').run(page.id, date)
   })
 }
@@ -47,7 +51,7 @@ export function nommerPage(db: DatabaseSync, url: string, titre: string): void {
 
 export function lirePage(db: DatabaseSync, url: string): PageVisitee | undefined {
   const ligne = db.prepare('SELECT url, titre, visites, derniere_visite FROM page WHERE url = ?').get(url) as
-    { url: string, titre: string, visites: number, derniere_visite: number } | undefined
+    { url: string; titre: string; visites: number; derniere_visite: number } | undefined
   return ligne && { url: ligne.url, titre: ligne.titre, visites: ligne.visites, derniereVisite: ligne.derniere_visite }
 }
 
@@ -61,15 +65,20 @@ export const LONGUEUR_MOT_MAX = 64
 
 // Le schéma tapé (https://) est retiré du mot : l'adresse est cherchée sans le sien, sinon « ht » ou « tps » ramèneraient toutes les pages.
 function motsDeRecherche(texte: string): string[] {
-  return texte.split(/\s+/).map((mot) => mot.replace(/^https?:\/\//i, '')).filter(Boolean)
-    .slice(0, MOTS_MAX).map((mot) => mot.slice(0, LONGUEUR_MOT_MAX))
+  return texte
+    .split(/\s+/)
+    .map((mot) => mot.replace(/^https?:\/\//i, ''))
+    .filter(Boolean)
+    .slice(0, MOTS_MAX)
+    .map((mot) => mot.slice(0, LONGUEUR_MOT_MAX))
 }
 
 // ! protège %, _ et lui-même (ESCAPE '!') : sans lui, « 100% » ou « a_b » chercheraient autre chose que ce qui est tapé.
 const echapperLike = (mot: string) => mot.replace(/[!%_]/g, '!$&')
 
 // Une condition par mot : dans l'adresse (sans son schéma) ou le titre. Deux paramètres par mot, le même motif.
-const filtreMots = (n: number) => Array(n).fill(`(substr(url, instr(url, '://') + 3) LIKE ? ESCAPE '!' OR titre LIKE ? ESCAPE '!')`).join(' AND ')
+const filtreMots = (n: number) =>
+  Array(n).fill(`(substr(url, instr(url, '://') + 3) LIKE ? ESCAPE '!' OR titre LIKE ? ESCAPE '!')`).join(' AND ')
 
 export function rechercherPages(db: DatabaseSync, texte: string, limite = 5): PageVisitee[] {
   const mots = motsDeRecherche(texte)
@@ -77,14 +86,25 @@ export function rechercherPages(db: DatabaseSync, texte: string, limite = 5): Pa
   const motifs = mots.map((mot) => `%${echapperLike(mot)}%`)
   const debut = echapperLike(mots[0])
   const filtre = filtreMots(motifs.length)
-  const lignes = db.prepare(`SELECT url, titre, visites, derniere_visite FROM page WHERE ${filtre}
+  const lignes = db
+    .prepare(
+      `SELECT url, titre, visites, derniere_visite FROM page WHERE ${filtre}
     ORDER BY (url LIKE ? ESCAPE '!' OR url LIKE ? ESCAPE '!' OR url LIKE ? ESCAPE '!') DESC, visites DESC, derniere_visite DESC
-    LIMIT ?`).all(
-    ...motifs.flatMap((motif) => [motif, motif]),
-    `http://${debut}%`, `https://${debut}%`, `%://www.${debut}%`,
-    Math.max(0, Math.min(limite, 20))
-  ) as Array<{ url: string, titre: string, visites: number, derniere_visite: number }>
-  return lignes.map((ligne) => ({ url: ligne.url, titre: ligne.titre, visites: ligne.visites, derniereVisite: ligne.derniere_visite }))
+    LIMIT ?`
+    )
+    .all(
+      ...motifs.flatMap((motif) => [motif, motif]),
+      `http://${debut}%`,
+      `https://${debut}%`,
+      `%://www.${debut}%`,
+      Math.max(0, Math.min(limite, 20))
+    ) as Array<{ url: string; titre: string; visites: number; derniere_visite: number }>
+  return lignes.map((ligne) => ({
+    url: ligne.url,
+    titre: ligne.titre,
+    visites: ligne.visites,
+    derniereVisite: ligne.derniere_visite
+  }))
 }
 
 // Panneau Historique (ARB-52) : les visites les plus récentes d'abord, filtrées par les mêmes mots que les suggestions (sans
@@ -93,15 +113,17 @@ export function rechercherPages(db: DatabaseSync, texte: string, limite = 5): Pa
 // shortcut: 200 lignes au plus, sans pagination ni suppression d'une entrée isolée (l'effacement se fait par période, ARB-54).
 export const HISTORIQUE_MAX = 200
 
-export type VisiteJour = { url: string, titre: string, date: number }
+export type VisiteJour = { url: string; titre: string; date: number }
 
 export function listerHistorique(db: DatabaseSync, texte: string, limite = HISTORIQUE_MAX): VisiteJour[] {
   const motifs = motsDeRecherche(texte).map((mot) => `%${echapperLike(mot)}%`)
-  return db.prepare(`SELECT url, titre, MAX(visite.date) AS date FROM visite JOIN page ON page.id = visite.page
+  return db
+    .prepare(
+      `SELECT url, titre, MAX(visite.date) AS date FROM visite JOIN page ON page.id = visite.page
     ${motifs.length ? `WHERE ${filtreMots(motifs.length)}` : ''}
-    GROUP BY page.id, date(visite.date / 1000, 'unixepoch', 'localtime') ORDER BY date DESC LIMIT ?`).all(
-    ...motifs.flatMap((motif) => [motif, motif]), Math.max(0, Math.min(limite, HISTORIQUE_MAX))
-  ) as VisiteJour[]
+    GROUP BY page.id, date(visite.date / 1000, 'unixepoch', 'localtime') ORDER BY date DESC LIMIT ?`
+    )
+    .all(...motifs.flatMap((motif) => [motif, motif]), Math.max(0, Math.min(limite, HISTORIQUE_MAX))) as VisiteJour[]
 }
 
 // Efface les visites datées de `depuis` (ms) à maintenant (ARB-54). Une page sans visite restante disparaît ; les autres

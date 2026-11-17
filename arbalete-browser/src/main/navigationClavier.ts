@@ -1,7 +1,7 @@
 // Raccourcis de changement d'onglet et de rechargement (ARB-19, ARB-21). Ici, la partie pure : quel geste forme la
 // touche, et l'onglet visé. AltGr arrive comme Ctrl+Alt : il est écarté (comme les autres raccourcis, ARB-18).
 
-type Touche = { key: string, code: string, control: boolean, alt: boolean, meta: boolean, shift: boolean }
+type Touche = { key: string; code: string; control: boolean; alt: boolean; meta: boolean; shift: boolean }
 
 // Ctrl+Tab et Ctrl+PageDown passent à l'onglet suivant (1), Ctrl+Maj+Tab et Ctrl+PageUp au précédent (-1), comme Chrome.
 export function pasDOnglet(t: Touche): 1 | -1 | undefined {

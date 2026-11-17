@@ -75,10 +75,15 @@ test('les migrations manquantes s’appliquent dans l’ordre, une seule fois', 
 test('une migration en échec ne change ni le schéma ni la version', () => {
   const db = new DatabaseSync(':memory:')
   // La deuxième migration crée b puis échoue : b ne doit pas rester, la version doit rester à 1.
-  throws(() => appliquerMigrations(db, ['CREATE TABLE a (x)', 'CREATE TABLE b (y); INSERT INTO inexistante VALUES (1)']))
+  throws(() =>
+    appliquerMigrations(db, ['CREATE TABLE a (x)', 'CREATE TABLE b (y); INSERT INTO inexistante VALUES (1)'])
+  )
   strictEqual(versionDuSchema(db), 1)
   const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all()
-  deepStrictEqual(tables.map((ligne) => ligne.name), ['a'])
+  deepStrictEqual(
+    tables.map((ligne) => ligne.name),
+    ['a']
+  )
   strictEqual(db.isTransaction, false)
   db.close()
 })
@@ -98,10 +103,7 @@ test('une base d’une version plus récente d’Arbalète est refusée, sans ê
 })
 
 test('la restauration ne rouvre que les adresses web, en gardant l’onglet actif', () => {
-  const session: OngletSauve[] = [
-    { url: 'file:///C:/secret.html', titre: 'Fichier', actif: false },
-    ...onglets
-  ]
+  const session: OngletSauve[] = [{ url: 'file:///C:/secret.html', titre: 'Fichier', actif: false }, ...onglets]
   deepStrictEqual(ongletsARestaurer(session), { onglets: onglets.slice(0, 2), actif: 1 })
 })
 
@@ -110,8 +112,10 @@ test('sans onglet actif restauré, le dernier devient actif ; une session vide n
   // about:blank est écarté : le dernier onglet restauré est le deuxième.
   deepStrictEqual(ongletsARestaurer(sansActif).actif, 1)
   // L'onglet actif n'est pas une adresse web : il est écarté, le dernier restauré prend sa place.
-  deepStrictEqual(ongletsARestaurer([onglets[0], { url: 'about:blank', titre: '', actif: true }]),
-    { onglets: [onglets[0]], actif: 0 })
+  deepStrictEqual(ongletsARestaurer([onglets[0], { url: 'about:blank', titre: '', actif: true }]), {
+    onglets: [onglets[0]],
+    actif: 0
+  })
   deepStrictEqual(ongletsARestaurer([]), { onglets: [], actif: -1 })
 })
 
@@ -138,7 +142,11 @@ test('une base au schéma 1 (avant ARB-46) passe au schéma 2 sans perdre sa ses
   const ancienne = new DatabaseSync(chemin)
   appliquerMigrations(ancienne, MIGRATIONS.slice(0, 1))
   // Écrite à la main : sauverSession vise le schéma courant.
-  onglets.forEach((o, i) => ancienne.prepare('INSERT INTO onglet (position, url, titre, actif) VALUES (?, ?, ?, ?)').run(i, o.url, o.titre, o.actif ? 1 : 0))
+  onglets.forEach((o, i) =>
+    ancienne
+      .prepare('INSERT INTO onglet (position, url, titre, actif) VALUES (?, ?, ?, ?)')
+      .run(i, o.url, o.titre, o.actif ? 1 : 0)
+  )
   ancienne.close()
 
   const db = ouvrirBase(chemin)
@@ -229,7 +237,15 @@ test('une ouverture qui échoue toujours reste indisponible après 5 essais, san
   const chemin = join(sous, 'arbalete.db')
   writeFileSync(chemin, 'contenu')
   let appels = 0
-  const resultat = ouvrirBaseOuRecuperer(chemin, undefined, () => { appels++; throw erreurES() }, () => {})
+  const resultat = ouvrirBaseOuRecuperer(
+    chemin,
+    undefined,
+    () => {
+      appels++
+      throw erreurES()
+    },
+    () => {}
+  )
   deepStrictEqual(resultat, { db: null, incident: { type: 'indisponible' } })
   strictEqual(appels, 5)
   deepStrictEqual(readdirSync(sous), ['arbalete.db'])
@@ -241,10 +257,24 @@ test('une base illisible est rouverte 3 fois avant d’être mise de côté', ()
   writeFileSync(chemin, 'pas une base SQLite '.repeat(10))
   let appels = 0
   let pauses = 0
-  const { db, incident } = ouvrirBaseOuRecuperer(chemin, DATE_INCIDENT, (c) => { appels++; return ouvrirBase(c) }, () => { pauses++ })
+  const { db, incident } = ouvrirBaseOuRecuperer(
+    chemin,
+    DATE_INCIDENT,
+    (c) => {
+      appels++
+      return ouvrirBase(c)
+    },
+    () => {
+      pauses++
+    }
+  )
   strictEqual(appels, 3)
   strictEqual(pauses, 2)
-  deepStrictEqual(incident, { type: 'corrompue', copie: 'arbalete.db.corrompue-2026-11-03T10-20-30.400Z', restauree: false })
+  deepStrictEqual(incident, {
+    type: 'corrompue',
+    copie: 'arbalete.db.corrompue-2026-11-03T10-20-30.400Z',
+    restauree: false
+  })
   db!.close()
 })
 
@@ -262,7 +292,12 @@ test('une corruption qui ne se reproduit pas garde la base en place', () => {
   const { db, incident } = ouvrirBaseOuRecuperer(chemin, DATE_INCIDENT, ouvrir, () => {})
   strictEqual(incident, null)
   strictEqual(appels, 2)
-  deepStrictEqual(readdirSync(sous).sort().filter((f) => !f.endsWith('-wal') && !f.endsWith('-shm')), avant.filter((f) => !f.endsWith('-wal') && !f.endsWith('-shm')))
+  deepStrictEqual(
+    readdirSync(sous)
+      .sort()
+      .filter((f) => !f.endsWith('-wal') && !f.endsWith('-shm')),
+    avant.filter((f) => !f.endsWith('-wal') && !f.endsWith('-shm'))
+  )
   db!.close()
 })
 
@@ -276,7 +311,10 @@ test('la copie de secours est écrite, tournante, et seulement si elle est ancie
   strictEqual(existsSync(chemin + SUFFIXE_SAUVEGARDE), true)
   strictEqual(existsSync(chemin + SUFFIXE_SAUVEGARDE + SUFFIXE_PRECEDENTE), false)
   strictEqual(sauvegarderBase(db, chemin, { seulementSiAncienne: true }), false)
-  strictEqual(sauvegarderBase(db, chemin, { seulementSiAncienne: true, maintenant: Date.now() + 25 * 3600 * 1000 }), true)
+  strictEqual(
+    sauvegarderBase(db, chemin, { seulementSiAncienne: true, maintenant: Date.now() + 25 * 3600 * 1000 }),
+    true
+  )
   strictEqual(existsSync(chemin + SUFFIXE_SAUVEGARDE + SUFFIXE_PRECEDENTE), true)
   strictEqual(existsSync(chemin + SUFFIXE_SAUVEGARDE + '.tmp'), false)
   db.close()
@@ -294,7 +332,11 @@ test('une base corrompue confirmée est remplacée par la copie de secours, l’
   rmSync(chemin + '-shm', { force: true })
 
   const { db: ouverte, incident } = ouvrirBaseOuRecuperer(chemin, DATE_INCIDENT, ouvrirBase, () => {})
-  deepStrictEqual(incident, { type: 'corrompue', copie: 'arbalete.db.corrompue-2026-11-03T10-20-30.400Z', restauree: true })
+  deepStrictEqual(incident, {
+    type: 'corrompue',
+    copie: 'arbalete.db.corrompue-2026-11-03T10-20-30.400Z',
+    restauree: true
+  })
   deepStrictEqual(lireSession(ouverte!), onglets)
   strictEqual(existsSync(chemin + SUFFIXE_SAUVEGARDE), true)
   ouverte!.close()
@@ -326,7 +368,17 @@ test('une copie de secours illisible est écartée au profit de la précédente,
 test('une erreur autre que d’E/S (verrou occupé, droits) n’est pas réessayée', () => {
   for (const errcode of [5, 8, 14]) {
     let appels = 0
-    const resultat = ouvrirBaseOuRecuperer(join(dossier, 'x.db'), undefined, () => { appels++; throw Object.assign(new Error('refus'), { errcode }) }, () => { throw new Error('pause inattendue') })
+    const resultat = ouvrirBaseOuRecuperer(
+      join(dossier, 'x.db'),
+      undefined,
+      () => {
+        appels++
+        throw Object.assign(new Error('refus'), { errcode })
+      },
+      () => {
+        throw new Error('pause inattendue')
+      }
+    )
     deepStrictEqual(resultat, { db: null, incident: { type: 'indisponible' } })
     strictEqual(appels, 1)
   }
@@ -338,7 +390,10 @@ test('une copie de secours à la date dans le futur compte comme ancienne', () =
   const db = ouvrirBase(chemin)
   sauvegarderBase(db, chemin, { maintenant: Date.now() + 10 * 24 * 3600 * 1000 })
   // Un `maintenant` en retard sur la date de la copie : la différence est négative, la copie est à renouveler.
-  strictEqual(sauvegarderBase(db, chemin, { seulementSiAncienne: true, maintenant: Date.now() - 10 * 24 * 3600 * 1000 }), true)
+  strictEqual(
+    sauvegarderBase(db, chemin, { seulementSiAncienne: true, maintenant: Date.now() - 10 * 24 * 3600 * 1000 }),
+    true
+  )
   db.close()
 })
 

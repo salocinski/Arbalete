@@ -51,6 +51,8 @@ jobs:
           # runner.temp n'existe pas dans l'env d'un job, seulement dans celui d'une étape.
           electron_config_cache: ${{ runner.temp }}\electron-cache
       - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
       - run: npm run test:unit
       - run: npm run build
 

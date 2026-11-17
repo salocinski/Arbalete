@@ -1,6 +1,14 @@
 // Vue partagée (ARB-72, EP-13) : deux onglets de l'espace affiché côte à côte, l'onglet actif étant celui des deux qui a le clavier.
-export interface Partage { gauche: string; droite: string }
-interface Zone { x: number; y: number; width: number; height: number }
+export interface Partage {
+  gauche: string
+  droite: string
+}
+interface Zone {
+  x: number
+  y: number
+  width: number
+  height: number
+}
 
 // Espace entre les deux pages, jumeau de la marge de la page (8 px).
 export const ECART_PARTAGE = 8

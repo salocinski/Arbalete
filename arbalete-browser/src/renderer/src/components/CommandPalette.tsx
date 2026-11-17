@@ -14,7 +14,9 @@ export function CommandPalette({ lignes, onClose }: { lignes: EntreePalette[]; o
   const [selection, setSelection] = useState(0)
 
   // Une nouvelle liste (frappe) repart de la première ligne.
-  useEffect(() => { setSelection(0) }, [lignes])
+  useEffect(() => {
+    setSelection(0)
+  }, [lignes])
 
   const changer = (valeur: string) => {
     setTexte(valeur)
@@ -24,7 +26,8 @@ export function CommandPalette({ lignes, onClose }: { lignes: EntreePalette[]; o
     if (event.nativeEvent.isComposing) return
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault()
-      if (lignes.length) setSelection((selection + (event.key === 'ArrowDown' ? 1 : -1) + lignes.length) % lignes.length)
+      if (lignes.length)
+        setSelection((selection + (event.key === 'ArrowDown' ? 1 : -1) + lignes.length) % lignes.length)
     } else if (event.key === 'Enter' && lignes[selection]) {
       event.preventDefault()
       void window.arbalete.choosePalette(selection, lignes[selection].cle)
@@ -33,25 +36,43 @@ export function CommandPalette({ lignes, onClose }: { lignes: EntreePalette[]; o
 
   return (
     <Modal className="palette" label="Palette de commandes" onClose={onClose}>
-        <Input autoFocus value={texte} onChange={(event) => changer(event.target.value)} onKeyDown={touche}
-          placeholder="Rechercher un onglet, un favori, une page ou une action" aria-label="Rechercher" role="combobox"
-          aria-expanded={lignes.length > 0} aria-autocomplete="list" aria-controls="palette-liste" aria-activedescendant={lignes[selection] ? `palette-${selection}` : undefined}
-          leading={<Search size={14} className="muted-icon" aria-hidden="true" />} />
-        <div id="palette-liste" className="palette-liste" role="listbox" aria-label="Résultats">
-          {lignes.length === 0 && <p className="palette-vide">Aucun résultat</p>}
-          {lignes.map((ligne, index) => {
-            const Icone = icones[ligne.kind]
-            return (
-              <button key={`${ligne.kind}:${ligne.cle}`} id={`palette-${index}`} type="button" role="option" tabIndex={-1}
-                aria-selected={index === selection} className="suggestion" onMouseMove={() => setSelection(index)}
-                onClick={() => void window.arbalete.choosePalette(index, ligne.cle)}>
-                <Icone size={14} className="muted-icon" aria-hidden="true" />
-                <span className="suggestion-title">{ligne.titre}</span>
-                {ligne.detail && <span className="suggestion-url">{ligne.detail}</span>}
-              </button>
-            )
-          })}
-        </div>
-      </Modal>
+      <Input
+        autoFocus
+        value={texte}
+        onChange={(event) => changer(event.target.value)}
+        onKeyDown={touche}
+        placeholder="Rechercher un onglet, un favori, une page ou une action"
+        aria-label="Rechercher"
+        role="combobox"
+        aria-expanded={lignes.length > 0}
+        aria-autocomplete="list"
+        aria-controls="palette-liste"
+        aria-activedescendant={lignes[selection] ? `palette-${selection}` : undefined}
+        leading={<Search size={14} className="muted-icon" aria-hidden="true" />}
+      />
+      <div id="palette-liste" className="palette-liste" role="listbox" aria-label="Résultats">
+        {lignes.length === 0 && <p className="palette-vide">Aucun résultat</p>}
+        {lignes.map((ligne, index) => {
+          const Icone = icones[ligne.kind]
+          return (
+            <button
+              key={`${ligne.kind}:${ligne.cle}`}
+              id={`palette-${index}`}
+              type="button"
+              role="option"
+              tabIndex={-1}
+              aria-selected={index === selection}
+              className="suggestion"
+              onMouseMove={() => setSelection(index)}
+              onClick={() => void window.arbalete.choosePalette(index, ligne.cle)}
+            >
+              <Icone size={14} className="muted-icon" aria-hidden="true" />
+              <span className="suggestion-title">{ligne.titre}</span>
+              {ligne.detail && <span className="suggestion-url">{ligne.detail}</span>}
+            </button>
+          )
+        })}
+      </div>
+    </Modal>
   )
 }

@@ -8,11 +8,23 @@ import { lirePreference } from './preferences.ts'
 // pas l'origine (http et https d'un même site le partagent), comme le zoom (ARB-71).
 const PREFIXE = 'permission.'
 
-export function lirePermissionSite(db: DatabaseSync, hote: string, permission: PermissionSite): ReponsePermission | undefined {
+export function lirePermissionSite(
+  db: DatabaseSync,
+  hote: string,
+  permission: PermissionSite
+): ReponsePermission | undefined {
   const valeur = lirePreference(db, `${PREFIXE}${hote}.${permission}`)
   return REPONSES_PERMISSION.find((reponse) => reponse === valeur)
 }
 
-export function ecrirePermissionSite(db: DatabaseSync, hote: string, permission: PermissionSite, reponse: ReponsePermission): void {
-  db.prepare('INSERT OR REPLACE INTO etat (cle, valeur) VALUES (?, ?)').run(`pref.${PREFIXE}${hote}.${permission}`, reponse)
+export function ecrirePermissionSite(
+  db: DatabaseSync,
+  hote: string,
+  permission: PermissionSite,
+  reponse: ReponsePermission
+): void {
+  db.prepare('INSERT OR REPLACE INTO etat (cle, valeur) VALUES (?, ?)').run(
+    `pref.${PREFIXE}${hote}.${permission}`,
+    reponse
+  )
 }

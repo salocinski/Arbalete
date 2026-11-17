@@ -5,9 +5,21 @@ import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { after, test } from 'node:test'
 import { ouvrirBase } from './base.ts'
-import { LONGUEUR_MAX_TITRE, LONGUEUR_MAX_URL, adresseHistorique, ajouterVisite, effacerHistorique, lirePage, listerHistorique, nommerPage, rechercherPages, LONGUEUR_MOT_MAX, MOTS_MAX } from './historique.ts'
+import {
+  LONGUEUR_MAX_TITRE,
+  LONGUEUR_MAX_URL,
+  adresseHistorique,
+  ajouterVisite,
+  effacerHistorique,
+  lirePage,
+  listerHistorique,
+  nommerPage,
+  rechercherPages,
+  LONGUEUR_MOT_MAX,
+  MOTS_MAX
+} from './historique.ts'
 import { MIGRATIONS, appliquerMigrations, versionDuSchema } from './migrations.ts'
-import { lireSession, sauverSession } from './session.ts'
+import { lireSession } from './session.ts'
 
 // Tests unitaires de l'historique des visites (ARB-51).
 
@@ -15,8 +27,11 @@ const dossier = mkdtempSync(join(tmpdir(), 'arbalete-historique-'))
 after(() => rmSync(dossier, { recursive: true, force: true }))
 
 function datesDesVisites(db: DatabaseSync, url: string): number[] {
-  return (db.prepare('SELECT date FROM visite JOIN page ON page.id = visite.page WHERE page.url = ? ORDER BY date').all(url) as Array<{ date: number }>)
-    .map((ligne) => ligne.date)
+  return (
+    db
+      .prepare('SELECT date FROM visite JOIN page ON page.id = visite.page WHERE page.url = ? ORDER BY date')
+      .all(url) as Array<{ date: number }>
+  ).map((ligne) => ligne.date)
 }
 
 test('seules les adresses web entrent dans l’historique, sans identifiants ni fragment', () => {
@@ -26,7 +41,14 @@ test('seules les adresses web entrent dans l’historique, sans identifiants ni 
   avecIdentifiants.password = 'motdepasse'
   strictEqual(adresseHistorique(avecIdentifiants.href), 'http://example.com/')
   strictEqual(adresseHistorique('HTTPS://Example.com'), 'https://example.com/')
-  for (const url of ['file:///C:/a.html', 'about:blank', 'data:text/html,x', 'chrome://gpu', 'https://', 'pas une adresse']) {
+  for (const url of [
+    'file:///C:/a.html',
+    'about:blank',
+    'data:text/html,x',
+    'chrome://gpu',
+    'https://',
+    'pas une adresse'
+  ]) {
     strictEqual(adresseHistorique(url), null, url)
   }
   strictEqual(adresseHistorique(`https://example.com/${'a'.repeat(LONGUEUR_MAX_URL)}`), null)
@@ -37,7 +59,12 @@ test('chaque visite est datée et comptée, sur la même page', () => {
   ajouterVisite(db, 'https://example.com/', '', 1000)
   ajouterVisite(db, 'https://example.com/', 'Exemple', 2000)
   ajouterVisite(db, 'https://fr.wikipedia.org/', 'Wikipédia', 3000)
-  deepStrictEqual(lirePage(db, 'https://example.com/'), { url: 'https://example.com/', titre: 'Exemple', visites: 2, derniereVisite: 2000 })
+  deepStrictEqual(lirePage(db, 'https://example.com/'), {
+    url: 'https://example.com/',
+    titre: 'Exemple',
+    visites: 2,
+    derniereVisite: 2000
+  })
   deepStrictEqual(datesDesVisites(db, 'https://example.com/'), [1000, 2000])
   strictEqual(lirePage(db, 'https://fr.wikipedia.org/')?.visites, 1)
   db.close()
@@ -94,24 +121,42 @@ function baseAvecPages(): DatabaseSync {
 
 test('la recherche exige tous les mots, dans l’adresse ou le titre, sans tenir compte de la casse', () => {
   const db = baseAvecPages()
-  deepStrictEqual(rechercherPages(db, 'GUIDE github').map((page) => page.url), ['https://example.com/guide-github'])
-  deepStrictEqual(rechercherPages(db, 'débutants').map((page) => page.url), ['https://example.com/guide-github'])
+  deepStrictEqual(
+    rechercherPages(db, 'GUIDE github').map((page) => page.url),
+    ['https://example.com/guide-github']
+  )
+  deepStrictEqual(
+    rechercherPages(db, 'débutants').map((page) => page.url),
+    ['https://example.com/guide-github']
+  )
   deepStrictEqual(rechercherPages(db, 'introuvable'), [])
   deepStrictEqual(rechercherPages(db, '   '), [])
 })
 
 test('l’adresse qui commence par le premier mot passe devant, puis le nombre de visites', () => {
   const db = baseAvecPages()
-  deepStrictEqual(rechercherPages(db, 'git').map((page) => page.url),
-    ['https://github.com/', 'https://www.gitlab.com/', 'https://example.com/guide-github'])
-  deepStrictEqual(rechercherPages(db, 'git', 1).map((page) => page.url), ['https://github.com/'])
+  deepStrictEqual(
+    rechercherPages(db, 'git').map((page) => page.url),
+    ['https://github.com/', 'https://www.gitlab.com/', 'https://example.com/guide-github']
+  )
+  deepStrictEqual(
+    rechercherPages(db, 'git', 1).map((page) => page.url),
+    ['https://github.com/']
+  )
 })
 
 test('% et _ du texte tapé se cherchent tels quels et n’agissent pas comme jokers', () => {
   const db = baseAvecPages()
-  deepStrictEqual(rechercherPages(db, '100%_').map((page) => page.url), ['https://example.com/100%_sur'])
-  deepStrictEqual(rechercherPages(db, '%'), [{ url: 'https://example.com/100%_sur', titre: 'Taux 100%', visites: 1, derniereVisite: 5000 }])
-  deepStrictEqual(rechercherPages(db, '_'), [{ url: 'https://example.com/100%_sur', titre: 'Taux 100%', visites: 1, derniereVisite: 5000 }])
+  deepStrictEqual(
+    rechercherPages(db, '100%_').map((page) => page.url),
+    ['https://example.com/100%_sur']
+  )
+  deepStrictEqual(rechercherPages(db, '%'), [
+    { url: 'https://example.com/100%_sur', titre: 'Taux 100%', visites: 1, derniereVisite: 5000 }
+  ])
+  deepStrictEqual(rechercherPages(db, '_'), [
+    { url: 'https://example.com/100%_sur', titre: 'Taux 100%', visites: 1, derniereVisite: 5000 }
+  ])
 })
 
 test('la recherche borne les mots, la longueur d’un mot et le nombre de lignes, et ne casse pas sur une apostrophe ou un point d’exclamation', () => {
@@ -127,7 +172,10 @@ test('la recherche borne les mots, la longueur d’un mot et le nombre de lignes
   // Le schéma ne se cherche pas : « tps » ou « http » ne ramènent pas toute la base, mais une adresse tapée en entier se trouve.
   deepStrictEqual(rechercherPages(db, 'tps'), [])
   deepStrictEqual(rechercherPages(db, 'http'), [])
-  deepStrictEqual(rechercherPages(db, 'https://gitlab').map((page) => page.url), ['https://www.gitlab.com/'])
+  deepStrictEqual(
+    rechercherPages(db, 'https://gitlab').map((page) => page.url),
+    ['https://www.gitlab.com/']
+  )
 })
 
 test('le panneau liste les visites récentes d’abord, une par page et par jour, filtrées par les mots tapés (ARB-52)', () => {
@@ -137,12 +185,26 @@ test('le panneau liste les visites récentes d’abord, une par page et par jour
   ajouterVisite(db, 'https://a.test/', 'Alpha', heure(10, 9))
   ajouterVisite(db, 'https://a.test/', 'Alpha', heure(11, 8))
   ajouterVisite(db, 'https://b.test/page', 'Bravo 100%', heure(11, 10))
-  deepStrictEqual(listerHistorique(db, '').map((v) => [v.url, v.date]), [
-    ['https://b.test/page', heure(11, 10)], ['https://a.test/', heure(11, 8)], ['https://a.test/', heure(10, 9)]
-  ])
-  deepStrictEqual(listerHistorique(db, 'alpha').map((v) => v.url), ['https://a.test/', 'https://a.test/'])
-  deepStrictEqual(listerHistorique(db, 'b.test bravo').map((v) => v.url), ['https://b.test/page'])
-  deepStrictEqual(listerHistorique(db, '100%').map((v) => v.url), ['https://b.test/page'])
+  deepStrictEqual(
+    listerHistorique(db, '').map((v) => [v.url, v.date]),
+    [
+      ['https://b.test/page', heure(11, 10)],
+      ['https://a.test/', heure(11, 8)],
+      ['https://a.test/', heure(10, 9)]
+    ]
+  )
+  deepStrictEqual(
+    listerHistorique(db, 'alpha').map((v) => v.url),
+    ['https://a.test/', 'https://a.test/']
+  )
+  deepStrictEqual(
+    listerHistorique(db, 'b.test bravo').map((v) => v.url),
+    ['https://b.test/page']
+  )
+  deepStrictEqual(
+    listerHistorique(db, '100%').map((v) => v.url),
+    ['https://b.test/page']
+  )
   deepStrictEqual(listerHistorique(db, 'a_est'), [])
   strictEqual(listerHistorique(db, '', 1).length, 1)
   db.close()
@@ -169,7 +231,12 @@ test('effacer depuis une date retire les visites récentes, les pages sans visit
   ajouterVisite(db, 'https://recente.example/', 'Récente', 6000)
   effacerHistorique(db, 4000)
   strictEqual(lirePage(db, 'https://recente.example/'), undefined)
-  deepStrictEqual(lirePage(db, 'https://mixte.example/'), { url: 'https://mixte.example/', titre: 'Mixte', visites: 1, derniereVisite: 1500 })
+  deepStrictEqual(lirePage(db, 'https://mixte.example/'), {
+    url: 'https://mixte.example/',
+    titre: 'Mixte',
+    visites: 1,
+    derniereVisite: 1500
+  })
   strictEqual(lirePage(db, 'https://ancienne.example/')?.visites, 1)
   // Borne inclusive : une visite datée exactement à `depuis` est effacée, celle d'un instant avant reste.
   ajouterVisite(db, 'https://avant.example/', 'Avant', 3999)

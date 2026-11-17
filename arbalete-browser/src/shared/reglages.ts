@@ -18,7 +18,13 @@ export interface Reglages {
   veilleMinutes: number
 }
 
-export const REGLAGES_DEFAUT: Reglages = { accueil: ACCUEIL_DEFAUT, animationsReduites: false, dossierTelechargements: null, archivageHeures: DELAI_ARCHIVAGE_DEFAUT, veilleMinutes: DELAI_VEILLE_DEFAUT }
+export const REGLAGES_DEFAUT: Reglages = {
+  accueil: ACCUEIL_DEFAUT,
+  animationsReduites: false,
+  dossierTelechargements: null,
+  archivageHeures: DELAI_ARCHIVAGE_DEFAUT,
+  veilleMinutes: DELAI_VEILLE_DEFAUT
+}
 
 export type ActionDossier = 'choisir' | 'defaut'
 
@@ -33,6 +39,7 @@ export function accueilValide(texte: unknown): string | undefined {
   const adresse = web ? saisie : `https://${saisie}`
   if (!URL.canParse(adresse)) return undefined
   const url = new URL(adresse)
-  if ((url.protocol !== 'https:' && url.protocol !== 'http:') || !url.hostname || url.username || url.password) return undefined
+  if ((url.protocol !== 'https:' && url.protocol !== 'http:') || !url.hostname || url.username || url.password)
+    return undefined
   return url.href
 }

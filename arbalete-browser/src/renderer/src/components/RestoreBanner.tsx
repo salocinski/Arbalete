@@ -7,8 +7,12 @@ export function RestoreBanner() {
     <div className="app-banner" role="alert" data-testid="restore-banner">
       <span>Arbalète ne s'est pas fermé correctement. Restaurer les onglets de la session précédente ?</span>
       <div className="app-banner-actions">
-        <Button size="sm" variant="primary" onClick={() => void window.arbalete.answerRestoreOffer('restore')}>Restaurer</Button>
-        <Button size="sm" onClick={() => void window.arbalete.answerRestoreOffer('dismiss')}>Ignorer</Button>
+        <Button size="sm" variant="primary" onClick={() => void window.arbalete.answerRestoreOffer('restore')}>
+          Restaurer
+        </Button>
+        <Button size="sm" onClick={() => void window.arbalete.answerRestoreOffer('dismiss')}>
+          Ignorer
+        </Button>
       </div>
     </div>
   )

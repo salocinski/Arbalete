@@ -18,13 +18,20 @@ class FauxUpdater extends EventEmitter {
     if (this.echec) throw new Error('réseau')
     this.emit('checking-for-update')
   }
-  quitAndInstall(silencieux: boolean, relancer: boolean) { this.installations.push([silencieux, relancer]) }
+  quitAndInstall(silencieux: boolean, relancer: boolean) {
+    this.installations.push([silencieux, relancer])
+  }
 }
 
 function monter(actif = true) {
   const updater = new FauxUpdater()
   const diffusions: EtatMiseAJour[] = []
-  const mj = creerMiseAJour({ updater: updater as unknown as MiseAJourUpdater, versionSemver: '0.12.44022', actif, diffuser: (e) => diffusions.push(e) })
+  const mj = creerMiseAJour({
+    updater: updater as unknown as MiseAJourUpdater,
+    versionSemver: '0.12.44022',
+    actif,
+    diffuser: (e) => diffusions.push(e)
+  })
   return { updater, mj, diffusions }
 }
 
@@ -54,9 +61,12 @@ test('hors application empaquetée : inactive, aucune vérification, rien de ré
   assert.equal(updater.installations.length, 0)
 })
 
-test('réglage de l\'updater : téléchargement et installation à la fermeture, ni rétrogradation ni préversion', () => {
+test("réglage de l'updater : téléchargement et installation à la fermeture, ni rétrogradation ni préversion", () => {
   const { updater } = monter()
-  assert.deepEqual([updater.autoDownload, updater.autoInstallOnAppQuit, updater.allowDowngrade, updater.allowPrerelease], [true, true, false, false])
+  assert.deepEqual(
+    [updater.autoDownload, updater.autoInstallOnAppQuit, updater.allowDowngrade, updater.allowPrerelease],
+    [true, true, false, false]
+  )
 })
 
 test('recherche, version trouvée, progression puis mise à jour prête', async () => {
@@ -92,7 +102,7 @@ test('pas de nouvelle vérification pendant une recherche, un téléchargement o
   assert.equal(updater.verifications, 1)
 })
 
-test('une erreur de l\'updater ou de la vérification donne `erreur`, et une vérification suivante reste permise', async () => {
+test("une erreur de l'updater ou de la vérification donne `erreur`, et une vérification suivante reste permise", async () => {
   const { updater, mj, diffusions } = monter()
   updater.echec = true
   await mj.verifier()
@@ -106,7 +116,7 @@ test('une erreur de l\'updater ou de la vérification donne `erreur`, et une vé
   assert.ok(diffusions.length >= 2)
 })
 
-test('installer ne lance l\'installation que si la mise à jour est téléchargée', () => {
+test("installer ne lance l'installation que si la mise à jour est téléchargée", () => {
   const { updater, mj } = monter()
   mj.installer()
   assert.equal(updater.installations.length, 0)

@@ -514,7 +514,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "num": 6,
       "prio": "P2",
       "size": "S",
-      "status": "todo",
+      "status": "doing",
       "title": "Séparer les tsconfig main/preload et renderer"
     },
     {
@@ -526,8 +526,8 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "num": 7,
       "prio": "P2",
       "size": "S",
-      "status": "todo",
-      "title": "Ajouter ESLint et Prettier"
+      "status": "doing",
+      "title": "Ajouter Oxlint et Prettier"
     },
     {
       "deps": [],
@@ -2481,3 +2481,5 @@ $("#export-btn").addEventListener("click", exporterFichier);
 
 </body>
 </html>
+Fait dans la PR de ARB-7 : tsconfig.node.json (main, preload, configs), tsconfig.web.json (renderer, sans types Node) et un tsconfig.test.json en plus des deux prévus (les tests Playwright et les *.test.ts ont besoin de Node et du DOM) ; typecheck lance tsc -b sur les trois.
+Oxlint à la place d'ESLint (décision du 2026-11-16) : typescript-eslint n'accepte pas TypeScript 7 (pair < 6.1) et TS 7 n'expose plus l'API JS dont il dépend. Prettier a reformaté tout le dépôt une fois (hors CSS, Markdown, YAML, HTML) ; format:check et lint tournent dans la CI.

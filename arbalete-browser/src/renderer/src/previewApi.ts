@@ -1,5 +1,13 @@
 import { ETAT_BARRE_INITIAL, borneLargeurBarre, transitionBarre } from '../../shared/barre'
-import { COULEURS_ESPACE, ESPACES_INITIAUX, LONGUEUR_MAX_NOM_ESPACE, champsNouvelEspace, ordreApresDeplacement, type CouleurEspace, type Espace } from '../../shared/espaces'
+import {
+  COULEURS_ESPACE,
+  ESPACES_INITIAUX,
+  LONGUEUR_MAX_NOM_ESPACE,
+  champsNouvelEspace,
+  ordreApresDeplacement,
+  type CouleurEspace,
+  type Espace
+} from '../../shared/espaces'
 import { MOTEUR_DEFAUT, modeleDe, urlRecherche, type ChoixMoteur } from '../../shared/moteurs'
 import { REGLAGES_DEFAUT, accueilValide, type Reglages } from '../../shared/reglages'
 import { delaiArchivageValide, type ElementArchive } from '../../shared/archivage'
@@ -62,7 +70,13 @@ export function installPreviewApi(): boolean {
   let sidebar: SidebarState = { ...ETAT_BARRE_INITIAL }
   const sidebarListeners = new Set<(state: SidebarState) => void>()
   const setSidebarState = (next: SidebarState) => {
-    if (next.open === sidebar.open && next.pinned === sidebar.pinned && next.compact === sidebar.compact && next.width === sidebar.width) return
+    if (
+      next.open === sidebar.open &&
+      next.pinned === sidebar.pinned &&
+      next.compact === sidebar.compact &&
+      next.width === sidebar.width
+    )
+      return
     sidebar = next
     sidebarListeners.forEach((fn) => fn({ ...sidebar }))
   }
@@ -72,9 +86,36 @@ export function installPreviewApi(): boolean {
   // Téléchargements de l'aperçu (ARB-55) : un en cours qui avance seul, un terminé et un interrompu, en mémoire.
   const MO = 1024 * 1024
   let downloads: Telechargement[] = [
-    { id: 3, url: 'https://example.com/archive-100-mo.zip', nom: 'archive-100-mo.zip', chemin: 'C:\\Téléchargements\\archive-100-mo.zip', total: 100 * MO, recu: 12 * MO, etat: 'en-cours', date: Date.now() },
-    { id: 2, url: 'https://example.com/rapport.pdf', nom: 'rapport.pdf', chemin: 'C:\\Téléchargements\\rapport.pdf', total: 2 * MO, recu: 2 * MO, etat: 'termine', date: Date.now() - 60_000 },
-    { id: 1, url: 'https://example.com/video.mp4', nom: 'video.mp4', chemin: 'C:\\Téléchargements\\video.mp4', total: 0, recu: 30 * MO, etat: 'interrompu', date: Date.now() - 120_000 }
+    {
+      id: 3,
+      url: 'https://example.com/archive-100-mo.zip',
+      nom: 'archive-100-mo.zip',
+      chemin: 'C:\\Téléchargements\\archive-100-mo.zip',
+      total: 100 * MO,
+      recu: 12 * MO,
+      etat: 'en-cours',
+      date: Date.now()
+    },
+    {
+      id: 2,
+      url: 'https://example.com/rapport.pdf',
+      nom: 'rapport.pdf',
+      chemin: 'C:\\Téléchargements\\rapport.pdf',
+      total: 2 * MO,
+      recu: 2 * MO,
+      etat: 'termine',
+      date: Date.now() - 60_000
+    },
+    {
+      id: 1,
+      url: 'https://example.com/video.mp4',
+      nom: 'video.mp4',
+      chemin: 'C:\\Téléchargements\\video.mp4',
+      total: 0,
+      recu: 30 * MO,
+      etat: 'interrompu',
+      date: Date.now() - 120_000
+    }
   ]
   const downloadListeners = new Set<(list: Telechargement[]) => void>()
   const setDownload = (id: number, champs: Partial<Telechargement>) => {
@@ -131,7 +172,9 @@ export function installPreviewApi(): boolean {
     favorite: favorites.has(active()?.url ?? ''),
     favorites: [...favorites].slice(0, 8).map((url) => ({ url, title: titleFor(url) })),
     popupsBloquees: 0,
-    folders: folders.filter((dossier) => dossier.espace === activeWorkspaceId).map(({ id, nom, replie }) => ({ id, nom, replie })),
+    folders: folders
+      .filter((dossier) => dossier.espace === activeWorkspaceId)
+      .map(({ id, nom, replie }) => ({ id, nom, replie })),
     // Un onglet actif hors des deux pages met fin à la vue partagée, comme dans le processus principal.
     split: split && dansPartage(split, activeTabId) ? [split.gauche, split.droite] : null
   })
@@ -156,7 +199,16 @@ export function installPreviewApi(): boolean {
   const createTab = (url = 'https://www.google.com') => {
     const id = `tab-${next++}`
     const normalized = normalizeUrl(url)
-    tabs.push({ id, title: titleFor(normalized), url: normalized, isLoading: false, canGoBack: false, canGoForward: false, history: [normalized], index: 0 })
+    tabs.push({
+      id,
+      title: titleFor(normalized),
+      url: normalized,
+      isLoading: false,
+      canGoBack: false,
+      canGoForward: false,
+      history: [normalized],
+      index: 0
+    })
     spaceOf.set(id, activeWorkspaceId)
     activeTabId = id
     sync(tabs[tabs.length - 1])
@@ -213,7 +265,11 @@ export function installPreviewApi(): boolean {
       emit()
     },
     moveWorkspace: async (id, direction) => {
-      const ordre = ordreApresDeplacement(workspaces.map((item) => item.id), id, direction)
+      const ordre = ordreApresDeplacement(
+        workspaces.map((item) => item.id),
+        id,
+        direction
+      )
       workspaces.sort((a, b) => ordre.indexOf(a.id) - ordre.indexOf(b.id))
       emit()
     },
@@ -248,14 +304,22 @@ export function installPreviewApi(): boolean {
       if (!tab) return
       if (action === 'dupliquer') createTab(tab.url)
       else if (action === 'copier-adresse') await navigator.clipboard?.writeText(tab.url).catch(() => {})
-      else if (action === 'epingler') { tab.pinned = !tab.pinned; if (tab.pinned) delete tab.folder; emit() }
-      else if (action === 'vue-partagee') {
+      else if (action === 'epingler') {
+        tab.pinned = !tab.pinned
+        if (tab.pinned) delete tab.folder
+        emit()
+      } else if (action === 'vue-partagee') {
         const suivant = basculerPartage(split, activeTabId, id)
-        if (suivant !== split) { split = suivant; emit() }
-      }
-      else {
+        if (suivant !== split) {
+          split = suivant
+          emit()
+        }
+      } else {
         for (const autre of ongletsAFermer(visible(), id)) {
-          tabs.splice(tabs.findIndex((item) => item.id === autre), 1)
+          tabs.splice(
+            tabs.findIndex((item) => item.id === autre),
+            1
+          )
           spaceOf.delete(autre)
         }
         activeTabId = id
@@ -263,8 +327,16 @@ export function installPreviewApi(): boolean {
       }
     },
     moveTab: async (id, index) => {
-      const ordre = ordreApresDeplacementOnglet(visible().map((tab) => tab.id), id, index)
-      const nouveaux = fusionnerOrdre(tabs.map((tab) => tab.id), visible().map((tab) => tab.id), ordre)
+      const ordre = ordreApresDeplacementOnglet(
+        visible().map((tab) => tab.id),
+        id,
+        index
+      )
+      const nouveaux = fusionnerOrdre(
+        tabs.map((tab) => tab.id),
+        visible().map((tab) => tab.id),
+        ordre
+      )
       tabs.sort((a, b) => nouveaux.indexOf(a.id) - nouveaux.indexOf(b.id))
       emit()
     },
@@ -278,11 +350,17 @@ export function installPreviewApi(): boolean {
       const propre = nomDossierOngletValide(nom)
       const dossier = folders.find((item) => item.id === id && item.espace === activeWorkspaceId)
       if (propre === null) throw new Error('Nom de dossier invalide')
-      if (dossier) { dossier.nom = propre; emit() }
+      if (dossier) {
+        dossier.nom = propre
+        emit()
+      }
     },
     toggleTabFolder: async (id) => {
       const dossier = folders.find((item) => item.id === id && item.espace === activeWorkspaceId)
-      if (dossier) { dossier.replie = !dossier.replie; emit() }
+      if (dossier) {
+        dossier.replie = !dossier.replie
+        emit()
+      }
     },
     deleteTabFolder: async (id) => {
       const index = folders.findIndex((item) => item.id === id && item.espace === activeWorkspaceId)
@@ -295,7 +373,8 @@ export function installPreviewApi(): boolean {
       const tab = tabs.find((item) => item.id === tabId)
       if (!tab) return
       if (dossier === null) delete tab.folder
-      else if (!tab.pinned && folders.some((item) => item.id === dossier && item.espace === spaceOf.get(tabId))) tab.folder = dossier
+      else if (!tab.pinned && folders.some((item) => item.id === dossier && item.espace === spaceOf.get(tabId)))
+        tab.folder = dossier
       else return
       emit()
     },
@@ -314,11 +393,17 @@ export function installPreviewApi(): boolean {
     },
     goBack: async () => {
       const tab = active()
-      if (tab && tab.index > 0) { tab.index--; sync(tab) }
+      if (tab && tab.index > 0) {
+        tab.index--
+        sync(tab)
+      }
     },
     goForward: async () => {
       const tab = active()
-      if (tab && tab.index < tab.history.length - 1) { tab.index++; sync(tab) }
+      if (tab && tab.index < tab.history.length - 1) {
+        tab.index++
+        sync(tab)
+      }
     },
     reload: async () => {
       const tab = active()
@@ -408,9 +493,15 @@ export function installPreviewApi(): boolean {
       downloadListeners.add(callback)
       return () => downloadListeners.delete(callback)
     },
-    pauseDownload: async (id) => { if (downloads.find((item) => item.id === id)?.etat === 'en-cours') setDownload(id, { etat: 'en-pause' }) },
-    resumeDownload: async (id) => { if (downloads.find((item) => item.id === id)?.etat === 'en-pause') setDownload(id, { etat: 'en-cours' }) },
-    cancelDownload: async (id) => { if (estActif(downloads.find((item) => item.id === id)?.etat ?? 'annule')) setDownload(id, { etat: 'annule' }) },
+    pauseDownload: async (id) => {
+      if (downloads.find((item) => item.id === id)?.etat === 'en-cours') setDownload(id, { etat: 'en-pause' })
+    },
+    resumeDownload: async (id) => {
+      if (downloads.find((item) => item.id === id)?.etat === 'en-pause') setDownload(id, { etat: 'en-cours' })
+    },
+    cancelDownload: async (id) => {
+      if (estActif(downloads.find((item) => item.id === id)?.etat ?? 'annule')) setDownload(id, { etat: 'annule' })
+    },
     // Pas d'Explorateur dans l'aperçu (ARB-56).
     openDownload: async () => undefined,
     revealDownload: async () => undefined,
@@ -444,13 +535,19 @@ export function installPreviewApi(): boolean {
       archive = archive.filter((autre) => autre !== element)
       createTab(element.url)
     },
-    setDownloadFolder: async (action) => changerReglages({ ...reglages, dossierTelechargements: action === 'choisir' ? 'C:/Users/Aperçu/Téléchargements' : null }),
+    setDownloadFolder: async (action) =>
+      changerReglages({
+        ...reglages,
+        dossierTelechargements: action === 'choisir' ? 'C:/Users/Aperçu/Téléchargements' : null
+      }),
     onSettings: (callback) => {
       reglagesListeners.add(callback)
       return () => reglagesListeners.delete(callback)
     },
     getSearchEngine: async () => ({ ...moteur }),
-    setSearchEngine: async (choix) => { moteur = choix },
+    setSearchEngine: async (choix) => {
+      moteur = choix
+    },
     getTheme: async () => theme,
     setTheme: async (choice) => {
       theme = choice

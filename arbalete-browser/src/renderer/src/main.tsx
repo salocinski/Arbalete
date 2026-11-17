@@ -12,8 +12,11 @@ document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: ligh
 
 // Thème choisi et enregistré (ARB-59) : lu avant le premier rendu, sinon un thème différent de celui du système
 // s'afficherait un instant. Sans réponse du processus principal, le rendu part avec le thème du système.
-void window.arbalete.getTheme()
-  .then((choix) => { if (choix !== 'system') document.documentElement.dataset.theme = choix })
+void window.arbalete
+  .getTheme()
+  .then((choix) => {
+    if (choix !== 'system') document.documentElement.dataset.theme = choix
+  })
   .catch(() => {})
   .then(() => {
     createRoot(document.getElementById('root')!).render(

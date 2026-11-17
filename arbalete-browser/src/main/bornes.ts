@@ -2,7 +2,11 @@
 // fenêtre. Une valeur aberrante (1e300, NaN) ferait lever setBounds dans un listener sans garde ; null = message ignoré.
 export type Rectangle = { x: number; y: number; width: number; height: number }
 
-export function borner(brut: Partial<Rectangle> | undefined, largeurFenetre: number, hauteurFenetre: number): Rectangle | null {
+export function borner(
+  brut: Partial<Rectangle> | undefined,
+  largeurFenetre: number,
+  hauteurFenetre: number
+): Rectangle | null {
   const { x, y, width, height } = brut ?? {}
   if (![x, y, width, height].every(Number.isFinite)) return null
   const borne = (valeur: number, max: number) => Math.min(Math.max(0, Math.round(valeur)), max)

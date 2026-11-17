@@ -27,8 +27,13 @@ const PUB = 'https://googleads.g.doubleclick.net/pagead/id'
 const serveur = createServer((req, res) => {
   res.setHeader('content-type', 'text/html; charset=utf-8')
   if (req.url.startsWith('/hote')) {
-    const [, partition, tab] = decodeURIComponent(req.url).match(/^\/hote\/([^/]+)\/(\d+)/)
-    res.end(`<!doctype html><title>hote</title><body><browser-action-list partition="${partition}" tab="${tab}"></browser-action-list>`)
+    // Seuls des caractères sûrs entrent dans le HTML : `"` ou `<` ne passent pas (pas d'injection).
+    const m = decodeURIComponent(req.url).match(/^\/hote\/([\w:.-]+)\/(\d+)$/)
+    if (!m) return res.writeHead(400).end()
+    const [, partition, tab] = m.map((v) => v.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`))
+    res.end(
+      `<!doctype html><title>hote</title><body><browser-action-list partition="${partition}" tab="${tab}"></browser-action-list>`
+    )
     return
   }
   res.end(`<!doctype html><title>poc</title><body><h1>Page de test</h1><p>texte</p>
@@ -79,7 +84,12 @@ async function essayer(dossier) {
   extensions.on('browser-action-popup-created', async (popup) => {
     r.popup = { cree: true, charge: false }
     try {
-      await Promise.race([popup.whenReady(), pause(5000).then(() => { throw new Error('délai') })])
+      await Promise.race([
+        popup.whenReady(),
+        pause(5000).then(() => {
+          throw new Error('délai')
+        })
+      ])
       const wc = popup.browserWindow?.webContents
       await pause(2500) // les popups en framework (Bitwarden) se dessinent après `whenReady`
       r.popup = {
@@ -89,7 +99,9 @@ async function essayer(dossier) {
         texte: (await wc?.executeJavaScript('document.body.innerText.length').catch(() => -1)) ?? -1,
         // chrome.tabs depuis la popup : l'onglet de la page de test doit être visible.
         tabsQuery: await wc
-          ?.executeJavaScript(`new Promise((ok) => chrome.tabs.query({}, (t) => ok(JSON.stringify((t ?? []).map((x) => x.url)))))`)
+          ?.executeJavaScript(
+            `new Promise((ok) => chrome.tabs.query({}, (t) => ok(JSON.stringify((t ?? []).map((x) => x.url)))))`
+          )
           .catch((e) => String(e))
       }
     } catch (e) {
@@ -116,17 +128,35 @@ async function essayer(dossier) {
   r.serviceWorkersActifs = Object.keys(ses.serviceWorkers.getAllRunning()).length
 
   // Barre d'actions : fenêtre hôte avec <browser-action-list>, puis clic sur l'action de l'extension.
-  const hote = new BrowserWindow({ width: 600, height: 300, show: false, webPreferences: { session: ses, sandbox: true, preload: PRELOAD_HOTE } })
-  hote.webContents.on('preload-error', (_e, chemin, erreur) => (r.erreurPreloadHote = String(erreur?.stack ?? erreur).slice(0, 400)))
-  await hote.loadURL(`${origine}hote/${encodeURIComponent(partition)}/${page.webContents.id}`).catch((e) => (r.erreurHote = String(e)))
+  const hote = new BrowserWindow({
+    width: 600,
+    height: 300,
+    show: false,
+    webPreferences: { session: ses, sandbox: true, preload: PRELOAD_HOTE }
+  })
+  hote.webContents.on(
+    'preload-error',
+    (_e, chemin, erreur) => (r.erreurPreloadHote = String(erreur?.stack ?? erreur).slice(0, 400))
+  )
+  await hote
+    .loadURL(`${origine}hote/${encodeURIComponent(partition)}/${page.webContents.id}`)
+    .catch((e) => (r.erreurHote = String(e)))
   await pause(2000)
   r.diagHote = await hote.webContents
-    .executeJavaScript(`JSON.stringify({ defini: !!customElements.get('browser-action-list'), shadow: !!document.querySelector('browser-action-list')?.shadowRoot, html: document.body.innerHTML.slice(0, 300), api: typeof window.browserAction })`)
+    .executeJavaScript(
+      `JSON.stringify({ defini: !!customElements.get('browser-action-list'), shadow: !!document.querySelector('browser-action-list')?.shadowRoot, html: document.body.innerHTML.slice(0, 300), api: typeof window.browserAction })`
+    )
     .catch((e) => String(e))
   r.actionsAffichees = await hote.webContents
-    .executeJavaScript(`document.querySelector('browser-action-list')?.shadowRoot?.querySelectorAll('[part=action]').length ?? -1`)
+    .executeJavaScript(
+      `document.querySelector('browser-action-list')?.shadowRoot?.querySelectorAll('[part=action]').length ?? -1`
+    )
     .catch((e) => String(e))
-  await hote.webContents.executeJavaScript(`document.querySelector('browser-action-list')?.shadowRoot?.querySelector('[part=action]')?.click()`).catch(() => {})
+  await hote.webContents
+    .executeJavaScript(
+      `document.querySelector('browser-action-list')?.shadowRoot?.querySelector('[part=action]')?.click()`
+    )
+    .catch(() => {})
   await pause(7000)
 
   // chrome.tabs : une page de la session voit-elle le service worker agir sur les onglets ?
@@ -143,10 +173,15 @@ async function principal() {
   await app.whenReady()
   for (const dossier of readdirSync(EXT)) {
     const limite = pause(90000).then(() => ({ dossier, delaiDepasse: true }))
-    resultats.push(await Promise.race([essayer(dossier).catch((e) => ({ dossier, exception: String(e?.stack ?? e) })), limite]))
+    resultats.push(
+      await Promise.race([essayer(dossier).catch((e) => ({ dossier, exception: String(e?.stack ?? e) })), limite])
+    )
     log(`fini ${dossier}`)
   }
-  writeFileSync(join(RACINE, 'resultats-ece.json'), JSON.stringify({ electron: process.versions.electron, chrome: process.versions.chrome, resultats }, null, 2))
+  writeFileSync(
+    join(RACINE, 'resultats-ece.json'),
+    JSON.stringify({ electron: process.versions.electron, chrome: process.versions.chrome, resultats }, null, 2)
+  )
   serveur.close()
   app.quit()
 }

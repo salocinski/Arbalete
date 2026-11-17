@@ -95,7 +95,9 @@ Toutes les commandes se lancent dans `arbalete-browser/`.
 | `npx install-electron` | Télécharger le binaire Electron : depuis Electron 42, `npm install` ne le fait plus, mais le crochet `postinstall` (`scripts/postinstall.mjs`, ARB-96, sans effet quand `CI` est défini) le lance ; à relancer à la main seulement si ce téléchargement a échoué, ou après une mise à jour d'Electron faite sans `npm install` (réinstallation de `node_modules/electron`). Sans lui, `dev` et `preview` échouent avec « Electron uninstall » et `test:smoke` avec une erreur d'installation d'Electron |
 | `npm run dev` | Lancer l'application Electron en développement |
 | `npm run dev:web` | **Aperçu navigateur** de l'interface sur http://localhost:5180 (API simulée) |
-| `npm run typecheck` | Vérification TypeScript |
+| `npm run typecheck` | Vérification TypeScript (`tsc -b`) des trois cibles de `tsconfig.json` : `tsconfig.node.json` (main, preload, configs : types Node, sans DOM), `tsconfig.web.json` (renderer : DOM, sans types Node) et `tsconfig.test.json` (tests Playwright et `*.test.ts` : Node et DOM) ; `src/shared` est vérifié par les deux premières (ARB-6) |
+| `npm run lint` | Oxlint (`.oxlintrc.json`) : règles TypeScript et React hooks (`rules-of-hooks`, `exhaustive-deps`) ; ESLint n'est pas utilisé, `typescript-eslint` n'accepte pas TypeScript 7 (ARB-7) ; une exception se marque par `// oxlint-disable-next-line <règle> -- <raison>` |
+| `npm run format` / `npm run format:check` | Prettier (`.prettierrc.json`, sans point-virgule, guillemets simples, 120 colonnes) ; CSS, Markdown, YAML et HTML ne sont pas formatés (`.prettierignore`) (ARB-7) |
 | `npm run build` | Build Electron (main, preload, renderer) dans `out/` |
 | `npm run build:web` | Build de l'aperçu navigateur dans `out/web/` |
 | `npm run dist` | Build puis installeur `release/Arbalete-Setup-<version>.exe` (NSIS, par utilisateur, non signé). `release/` est ignoré par Git ; `scripts/dist.mjs` donne à l'application la version du fichier `VERSION` repliée en semver (`src/shared/version.ts`, 0.12.44.22 -> 0.12.44022) et ne publie jamais (`--publish never`) : la Release est publiée par `.github/workflows/release.yml` |
@@ -148,7 +150,7 @@ est donc attendu ; il ne doit jamais apparaître sur l'app construite.
 La barrière locale avant une PR (`/ship` compris) :
 
 ```bash
-cd arbalete-browser && npm run typecheck && npm run test:unit
+cd arbalete-browser && npm run typecheck && npm run lint && npm run format:check && npm run test:unit
 ```
 
 `npm run test:smoke` n'est lancé en local que dans trois cas, la CI (job `smoke`, exigé par `PR-Rule`) le couvrant sinon :
@@ -216,7 +218,7 @@ modifier `DESIGN.md` qu'après validation.
   `package.json` ; les autres dépendances gardent `^`, le `package-lock.json` fige l'installation.
   `@types/node` suit la majeure de Node embarquée par Electron (Node 24 pour Electron 45).
 - CI (`.github/workflows/ci.yml`, ARB-8) : à chaque push sur `main` et chaque PR, sur `windows-latest`, deux jobs.
-  `verifier` (phase 1) : `npm ci`, cache du binaire d'Electron (`actions/cache`, clé `CLE_CACHE_ELECTRON` = `electron-windows-<version>`, vérifiée par `src/ci.test.ts`), `npx install-electron`, `npm run typecheck`, `npm run test:unit` et `npm run build`.
+  `verifier` (phase 1) : `npm ci`, cache du binaire d'Electron (`actions/cache`, clé `CLE_CACHE_ELECTRON` = `electron-windows-<version>`, vérifiée par `src/ci.test.ts`), `npx install-electron`, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run test:unit` et `npm run build`.
   `smoke` (phase 2) : `npm ci`, même cache, `npx install-electron` et `npm run test:smoke`, sans nouvel essai automatique ; en cas
   d'échec, `arbalete-browser/test-results/` est gardé 7 jours dans l'artefact `smoke-test-results` (simple avertissement
   si le dossier est absent ou vide). Droits en lecture seule, actions épinglées par empreinte (Dependabot les met à jour), `continue-on-error` et les nouveaux essais

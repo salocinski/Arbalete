@@ -8,7 +8,8 @@ test('les permissions gérées sont reconnues, les autres refusées', () => {
   deepStrictEqual(permissionsDemandees('fullscreen'), ['plein-ecran'])
   deepStrictEqual(permissionsDemandees('notifications'), ['notifications'])
   deepStrictEqual(permissionsDemandees('geolocation'), ['geolocalisation'])
-  for (const autre of ['clipboard-read', 'hid', 'usb', 'openExternal', 'midiSysex', '']) strictEqual(permissionsDemandees(autre), null, autre)
+  for (const autre of ['clipboard-read', 'hid', 'usb', 'openExternal', 'midiSysex', ''])
+    strictEqual(permissionsDemandees(autre), null, autre)
 })
 
 test('media donne caméra et/ou micro selon les types demandés', () => {
@@ -21,14 +22,29 @@ test('media donne caméra et/ou micro selon les types demandés', () => {
 })
 
 test('le plein écran est accordé d’office, un refus enregistré le bloque', () => {
-  strictEqual(decisionPermissions(['plein-ecran'], () => undefined), 'autoriser')
-  strictEqual(decisionPermissions(['plein-ecran'], () => 'refuser'), 'refuser')
+  strictEqual(
+    decisionPermissions(['plein-ecran'], () => undefined),
+    'autoriser'
+  )
+  strictEqual(
+    decisionPermissions(['plein-ecran'], () => 'refuser'),
+    'refuser'
+  )
 })
 
 test('une permission inconnue du site est demandée, un choix enregistré est suivi', () => {
-  strictEqual(decisionPermissions(['micro'], () => undefined), 'demander')
-  strictEqual(decisionPermissions(['micro'], () => 'autoriser'), 'autoriser')
-  strictEqual(decisionPermissions(['micro'], () => 'refuser'), 'refuser')
+  strictEqual(
+    decisionPermissions(['micro'], () => undefined),
+    'demander'
+  )
+  strictEqual(
+    decisionPermissions(['micro'], () => 'autoriser'),
+    'autoriser'
+  )
+  strictEqual(
+    decisionPermissions(['micro'], () => 'refuser'),
+    'refuser'
+  )
 })
 
 test('caméra et micro : un seul refus bloque, il faut les deux accords pour passer', () => {

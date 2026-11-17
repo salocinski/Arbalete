@@ -7,7 +7,7 @@ export const REPONSES_PERMISSION = ['autoriser', 'refuser'] as const
 export type ReponsePermission = (typeof REPONSES_PERMISSION)[number]
 
 // Invite affichée à l'utilisateur : le site (hôte de la page) et ce qu'il demande.
-export type DemandePermission = { hote: string, permissions: PermissionSite[] }
+export type DemandePermission = { hote: string; permissions: PermissionSite[] }
 
 export const LIBELLES_PERMISSION: Record<PermissionSite, string> = {
   'plein-ecran': 'passer en plein écran',
@@ -25,7 +25,10 @@ export function phraseDemande(permissions: readonly PermissionSite[]): string {
 
 // Permissions d'Electron que la demande recouvre, ou null si elle n'est pas gérée (donc refusée). `media` porte caméra
 // et/ou micro : `mediaTypes` pour une demande, `mediaType` pour une vérification ; sans type précis, les deux.
-export function permissionsDemandees(permission: string, details?: { mediaTypes?: readonly string[], mediaType?: string }): PermissionSite[] | null {
+export function permissionsDemandees(
+  permission: string,
+  details?: { mediaTypes?: readonly string[]; mediaType?: string }
+): PermissionSite[] | null {
   if (permission === 'fullscreen') return ['plein-ecran']
   if (permission === 'notifications') return ['notifications']
   if (permission === 'geolocation') return ['geolocalisation']
@@ -39,8 +42,13 @@ export function permissionsDemandees(permission: string, details?: { mediaTypes?
 
 // Une permission refusée une fois bloque la demande ; toutes accordées, elle passe sans invite ; sinon on demande.
 // Le plein écran, sans choix enregistré, est accordé (le geste de l'utilisateur est exigé par Chromium).
-export function decisionPermissions(permissions: readonly PermissionSite[], lire: (permission: PermissionSite) => ReponsePermission | undefined): ReponsePermission | 'demander' {
-  const choix = permissions.map((permission) => lire(permission) ?? (permission === 'plein-ecran' ? 'autoriser' : undefined))
+export function decisionPermissions(
+  permissions: readonly PermissionSite[],
+  lire: (permission: PermissionSite) => ReponsePermission | undefined
+): ReponsePermission | 'demander' {
+  const choix = permissions.map(
+    (permission) => lire(permission) ?? (permission === 'plein-ecran' ? 'autoriser' : undefined)
+  )
   if (choix.includes('refuser')) return 'refuser'
   return choix.every((c) => c === 'autoriser') ? 'autoriser' : 'demander'
 }

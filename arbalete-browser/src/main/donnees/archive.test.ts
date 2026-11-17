@@ -14,8 +14,18 @@ import { lireSession, sauverSession } from './session.ts'
 test('l’archive rend les plus récents d’abord et un élément ne se rouvre qu’une fois', () => {
   const db = ouvrirBase(':memory:')
   archiver(db, [{ url: 'https://a.test/', titre: 'A', espace: null }], 1000)
-  archiver(db, [{ url: 'https://b.test/', titre: 'B', espace: null }, { url: 'https://c.test/', titre: 'C', espace: null }], 2000)
-  deepStrictEqual(listerArchive(db).map((e) => e.titre), ['C', 'B', 'A'])
+  archiver(
+    db,
+    [
+      { url: 'https://b.test/', titre: 'B', espace: null },
+      { url: 'https://c.test/', titre: 'C', espace: null }
+    ],
+    2000
+  )
+  deepStrictEqual(
+    listerArchive(db).map((e) => e.titre),
+    ['C', 'B', 'A']
+  )
   const b = listerArchive(db)[1]
   deepStrictEqual(retirerDeLArchive(db, b.id), { id: b.id, url: 'https://b.test/', titre: 'B', date: 2000 })
   strictEqual(retirerDeLArchive(db, b.id), undefined)
@@ -24,7 +34,8 @@ test('l’archive rend les plus récents d’abord et un élément ne se rouvre 
 
 test('l’archive oublie les plus anciens au-delà de sa limite', () => {
   const db = ouvrirBase(':memory:')
-  for (let i = 0; i < ARCHIVE_GARDEE_MAX + 5; i++) archiver(db, [{ url: `https://x.test/${i}`, titre: `${i}`, espace: null }], 1000 + i)
+  for (let i = 0; i < ARCHIVE_GARDEE_MAX + 5; i++)
+    archiver(db, [{ url: `https://x.test/${i}`, titre: `${i}`, espace: null }], 1000 + i)
   const liste = listerArchive(db)
   strictEqual(liste.length, ARCHIVE_GARDEE_MAX)
   strictEqual(liste[0].titre, String(ARCHIVE_GARDEE_MAX + 4))
@@ -34,8 +45,21 @@ test('l’archive oublie les plus anciens au-delà de sa limite', () => {
 test('un espace périmé est rangé comme « aucun espace » au lieu de faire échouer l’archivage', () => {
   const db = ouvrirBase(':memory:')
   const idEspace = creerEspace(db, { nom: 'Personnel', couleur: 'personal', icone: '✳' })
-  archiver(db, [{ url: 'https://a.test/', titre: 'A', espace: idEspace }, { url: 'https://b.test/', titre: 'B', espace: 9999 }], 1)
-  deepStrictEqual(db.prepare('SELECT espace FROM archive ORDER BY id').all().map((l) => l.espace), [idEspace, null])
+  archiver(
+    db,
+    [
+      { url: 'https://a.test/', titre: 'A', espace: idEspace },
+      { url: 'https://b.test/', titre: 'B', espace: 9999 }
+    ],
+    1
+  )
+  deepStrictEqual(
+    db
+      .prepare('SELECT espace FROM archive ORDER BY id')
+      .all()
+      .map((l) => l.espace),
+    [idEspace, null]
+  )
 })
 
 test('l’épinglage et le dernier usage reviennent avec la session', () => {

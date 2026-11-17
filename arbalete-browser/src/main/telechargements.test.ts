@@ -1,7 +1,13 @@
 import { strictEqual } from 'node:assert/strict'
 import { test } from 'node:test'
 import { formaterTaille, pourcentage } from '../shared/telechargements.ts'
-import { adresseTelechargement, cheminLibre, extensionExecutable, nomFichierSur, schemaAutorise } from './telechargements.ts'
+import {
+  adresseTelechargement,
+  cheminLibre,
+  extensionExecutable,
+  nomFichierSur,
+  schemaAutorise
+} from './telechargements.ts'
 
 // Tests unitaires des calculs purs des téléchargements (ARB-55).
 
@@ -32,7 +38,10 @@ test('le chemin évite un fichier existant', () => {
   const existe = (chemin: string) => pris.has(chemin.replace(/^.*?([^\\/]+)$/, 'D\\$1'))
   strictEqual(cheminLibre('D', 'b.zip', existe), 'D\\b.zip')
   strictEqual(cheminLibre('D', 'a.zip', existe), 'D\\a (2).zip')
-  strictEqual(cheminLibre('D', 'sans-extension', () => false), 'D\\sans-extension')
+  strictEqual(
+    cheminLibre('D', 'sans-extension', () => false),
+    'D\\sans-extension'
+  )
 })
 
 test('l’adresse gardée n’a ni identifiants ni fragment ; un blob: est tronqué', () => {
@@ -44,7 +53,8 @@ test('l’adresse gardée n’a ni identifiants ni fragment ; un blob: est tronq
 
 test('seuls le web et blob: sont téléchargés', () => {
   for (const url of ['http://a/b', 'HTTPS://a/b', 'blob:https://a/uuid']) strictEqual(schemaAutorise(url), true)
-  for (const url of ['file:///C:/x', 'data:text/plain,a', 'javascript:1', 'ftp://a/b']) strictEqual(schemaAutorise(url), false)
+  for (const url of ['file:///C:/x', 'data:text/plain,a', 'javascript:1', 'ftp://a/b'])
+    strictEqual(schemaAutorise(url), false)
 })
 
 test('le pourcentage est borné, nul de taille inconnue', () => {
@@ -73,15 +83,32 @@ test('un nom coupé ne finit pas sur une espace et « CON .txt » est réservé'
 // Value: protects=la recherche de « nom (n) » est bornée même si tous les noms existent; fails_when=la boucle redevient illimitée (milliers de lectures du disque dans le processus principal); why_new=le test du chemin libre s'arrête à (2); seam=none; no_claim=le temps réel d'existsSync.
 test('la recherche d’un nom libre est bornée', () => {
   let appels = 0
-  const chemin = cheminLibre('D', 'a.zip', () => { appels++; return true })
+  const chemin = cheminLibre('D', 'a.zip', () => {
+    appels++
+    return true
+  })
   strictEqual(appels <= 1002, true)
   strictEqual(/^D\\a \(\d{10,}\)\.zip$/.test(chemin), true)
 })
 
 // protects: refus d'ouverture d'un exécutable selon sa dernière extension ; fails_when: extension retirée, casse non normalisée, double extension mal classée ; why_new: aucun test direct ; seam: none ; no_claim: SmartScreen, contenu réel du fichier
 test('extensionExecutable : se fie à la dernière extension, sans tenir compte de la casse (ARB-56)', () => {
-  for (const nom of ['a.exe', 'A.EXE', 'x.txt.exe', 'a.ps1', 'a.msi', 'a.lnk', 'a.jnlp', 'a.dll', 'a.xlsm', 'a.settingcontent-ms']) strictEqual(extensionExecutable(nom), true, nom)
+  for (const nom of [
+    'a.exe',
+    'A.EXE',
+    'x.txt.exe',
+    'a.ps1',
+    'a.msi',
+    'a.lnk',
+    'a.jnlp',
+    'a.dll',
+    'a.xlsm',
+    'a.settingcontent-ms'
+  ])
+    strictEqual(extensionExecutable(nom), true, nom)
   // Un nom réduit à l'extension (« .bat ») et un chemin complet comptent comme leur extension.
-  for (const nom of ['.bat', '.exe', '.hta', '.lnk', 'D\\Téléchargements\\.bat', 'D\\dossier.pdf\\setup.exe']) strictEqual(extensionExecutable(nom), true, nom)
-  for (const nom of ['a.pdf', 'x.exe.txt', 'sans-extension', 'D\\dossier.exe\\lisez-moi', '']) strictEqual(extensionExecutable(nom), false, nom)
+  for (const nom of ['.bat', '.exe', '.hta', '.lnk', 'D\\Téléchargements\\.bat', 'D\\dossier.pdf\\setup.exe'])
+    strictEqual(extensionExecutable(nom), true, nom)
+  for (const nom of ['a.pdf', 'x.exe.txt', 'sans-extension', 'D\\dossier.exe\\lisez-moi', ''])
+    strictEqual(extensionExecutable(nom), false, nom)
 })

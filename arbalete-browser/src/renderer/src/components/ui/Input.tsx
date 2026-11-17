@@ -17,10 +17,20 @@ export function Input({ ref, leading, trailing, error, className, fieldClassName
     <div className={cx('ui-field-group', className)}>
       <div className={cx('ui-field', error && 'ui-field--error', fieldClassName)}>
         {leading}
-        <input ref={ref} className="ui-input" aria-invalid={error ? true : undefined} aria-describedby={error ? erreurId : undefined} {...reste} />
+        <input
+          ref={ref}
+          className="ui-input"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? erreurId : undefined}
+          {...reste}
+        />
         {trailing}
       </div>
-      {error && <p id={erreurId} className="ui-field-error" role="alert">{error}</p>}
+      {error && (
+        <p id={erreurId} className="ui-field-error" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

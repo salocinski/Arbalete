@@ -38,7 +38,10 @@ test('importer crée les dossiers, ignore les adresses déjà présentes et se r
   db.prepare('INSERT INTO favori (url, titre, date) VALUES (?, ?, ?)').run('https://example.org/', 'Déjà là', 1)
   strictEqual(importerFavoris(db, lireFavorisHtml(EXPORT)), 2)
   const liste = listerFavoris(db)
-  deepStrictEqual(liste.dossiers.map((d) => d.nom), ['Barre de favoris', 'Outils'])
+  deepStrictEqual(
+    liste.dossiers.map((d) => d.nom),
+    ['Barre de favoris', 'Outils']
+  )
   strictEqual(liste.favoris.length, 3)
   strictEqual(liste.favoris.find((f) => f.url === 'https://example.org/')?.titre, 'Déjà là')
   strictEqual(importerFavoris(db, lireFavorisHtml(EXPORT)), 0)
@@ -58,7 +61,10 @@ test('après un sous-dossier, les favoris suivants reviennent au dossier parent 
 
 test('un <DL> sans titre de dossier hérite du dossier nommé le plus proche', () => {
   const html = `<DL><DT><H3>Haut</H3><DL><DL><DT><A HREF="https://x.test/">X</A></DL></DL></DL>`
-  deepStrictEqual(lireFavorisHtml(html).map((f) => f.dossier), ['Haut'])
+  deepStrictEqual(
+    lireFavorisHtml(html).map((f) => f.dossier),
+    ['Haut']
+  )
 })
 
 test('des balises jamais fermées ne rendent pas la lecture quadratique', () => {
@@ -69,7 +75,10 @@ test('des balises jamais fermées ne rendent pas la lecture quadratique', () => 
 
 test('un favori Chrome avec une grosse icône data: (ICON de 10 Ko) est gardé', () => {
   const html = `<DL><DT><A HREF="https://a.test/" ICON="data:image/png;base64,${'A'.repeat(10_000)}">A</A><DT><A HREF="https://b.test/">B</A></DL>`
-  deepStrictEqual(lireFavorisHtml(html).map((f) => f.url), ['https://a.test/', 'https://b.test/'])
+  deepStrictEqual(
+    lireFavorisHtml(html).map((f) => f.url),
+    ['https://a.test/', 'https://b.test/']
+  )
 })
 
 test('des balises ouvertes sans fermeture, en masse, se lisent vite', () => {

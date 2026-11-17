@@ -37,7 +37,9 @@ téléchargement a échoué (hors ligne), lancer `npx install-electron` : sans l
 |---|---|
 | `npm run dev` | Lancer Arbalète (Electron) |
 | `npm run dev:web` | Aperçu de l'interface dans un navigateur, sur http://localhost:5180 |
-| `npm run typecheck` | Vérification TypeScript |
+| `npm run typecheck` | Vérification TypeScript des trois cibles (main et preload, interface, tests) |
+| `npm run lint` | Oxlint : règles TypeScript et React hooks |
+| `npm run format` / `npm run format:check` | Prettier : reformate / vérifie le formatage |
 | `npm run build` | Build de production |
 | `npm run dist` | Installeur Windows `release/Arbalete-Setup-<version>.exe` (NSIS, par utilisateur, non signé) |
 | `npm run test:unit` | Tests unitaires (couche de données, design tokens, polices, composants de base) |

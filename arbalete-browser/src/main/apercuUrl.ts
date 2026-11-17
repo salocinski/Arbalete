@@ -14,6 +14,7 @@ const LARGEUR_MIN = 48
 // Au-delà, l'adresse est coupée par des points de suspension.
 const LONGUEUR_MAX = 2000
 // Caractères de contrôle et marques bidirectionnelles : une adresse ne doit pas pouvoir se faire passer pour une autre.
+// oxlint-disable-next-line no-control-regex -- les caractères de contrôle sont justement ce qu'on retire
 const INTERDITS = /[\u0000-\u001f\u007f-\u009f‎‏‪-‮⁦-⁩]/g
 
 // Couleurs jumelles de --color-surface, --color-text-primary et --color-border de chaque thème (tokens.css), à changer ensemble.
@@ -35,7 +36,12 @@ export function placerApercu(page: Rectangle, texte: string, cote: CoteApercu): 
   const disponible = Math.max(0, page.width - 2 * MARGE)
   const largeur = Math.min(Math.max(LARGEUR_MIN, texte.length * 7 + 26), Math.floor(page.width * 0.6), disponible)
   const x = cote === 'gauche' ? page.x + MARGE : page.x + page.width - MARGE - largeur
-  return { x: Math.round(x), y: Math.round(page.y + page.height - MARGE - HAUTEUR_APERCU), width: Math.round(largeur), height: HAUTEUR_APERCU }
+  return {
+    x: Math.round(x),
+    y: Math.round(page.y + page.height - MARGE - HAUTEUR_APERCU),
+    width: Math.round(largeur),
+    height: HAUTEUR_APERCU
+  }
 }
 
 // Document de la vue : aucun script (la CSP les interdit), le processus principal remplit le texte et le thème.

@@ -6,7 +6,13 @@ export const DELAIS_ARCHIVAGE = [12, 24, 168, 720, 0] as const
 export const DELAI_ARCHIVAGE_DEFAUT = 12
 export const ARCHIVE_GARDEE_MAX = 200
 
-export const LIBELLES_DELAI: Record<number, string> = { 12: '12 heures', 24: '24 heures', 168: '7 jours', 720: '30 jours', 0: 'Jamais' }
+export const LIBELLES_DELAI: Record<number, string> = {
+  12: '12 heures',
+  24: '24 heures',
+  168: '7 jours',
+  720: '30 jours',
+  0: 'Jamais'
+}
 
 export const delaiArchivageValide = (valeur: unknown): valeur is number =>
   typeof valeur === 'number' && (DELAIS_ARCHIVAGE as readonly number[]).includes(valeur)
@@ -25,10 +31,16 @@ export type OngletArchivable = {
 }
 
 // Identifiants des onglets à archiver : ni épinglés, ni affichés, ni sonores, laissés de côté depuis `delaiHeures` ou plus.
-export function ongletsAArchiver(onglets: readonly OngletArchivable[], maintenant: number, delaiHeures: number): string[] {
+export function ongletsAArchiver(
+  onglets: readonly OngletArchivable[],
+  maintenant: number,
+  delaiHeures: number
+): string[] {
   if (!delaiArchivageValide(delaiHeures) || delaiHeures === 0) return []
   const limite = delaiHeures * 3_600_000
-  return onglets.filter((o) => !o.epingle && !o.affiche && !o.sonore && maintenant - o.activite >= limite).map((o) => o.id)
+  return onglets
+    .filter((o) => !o.epingle && !o.affiche && !o.sonore && maintenant - o.activite >= limite)
+    .map((o) => o.id)
 }
 
 // Les épinglés d'abord, chacun des deux groupes gardant son ordre.

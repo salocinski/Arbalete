@@ -11,9 +11,21 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   icon?: ReactNode
 }
 
-export function Button({ variant = 'secondary', size = 'md', icon, className, children, type = 'button', ...reste }: ButtonProps) {
+export function Button({
+  variant = 'secondary',
+  size = 'md',
+  icon,
+  className,
+  children,
+  type = 'button',
+  ...reste
+}: ButtonProps) {
   return (
-    <button type={type} className={cx('ui-button', `ui-button--${variant}`, size === 'sm' && 'ui-button--sm', className)} {...reste}>
+    <button
+      type={type}
+      className={cx('ui-button', `ui-button--${variant}`, size === 'sm' && 'ui-button--sm', className)}
+      {...reste}
+    >
       {icon}
       {children}
     </button>

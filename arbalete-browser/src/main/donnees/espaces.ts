@@ -1,5 +1,12 @@
 import type { DatabaseSync } from 'node:sqlite'
-import { COULEURS_ESPACE, ESPACES_INITIAUX, LONGUEUR_MAX_ICONE_ESPACE, LONGUEUR_MAX_NOM_ESPACE, type CouleurEspace, type Espace } from '../../shared/espaces.ts'
+import {
+  COULEURS_ESPACE,
+  ESPACES_INITIAUX,
+  LONGUEUR_MAX_ICONE_ESPACE,
+  LONGUEUR_MAX_NOM_ESPACE,
+  type CouleurEspace,
+  type Espace
+} from '../../shared/espaces.ts'
 import { ecrirePreference, lirePreference } from './preferences.ts'
 import { enTransaction } from './transaction.ts'
 
@@ -54,9 +61,11 @@ export function ecrireEspaceActif(db: DatabaseSync, id: number): void {
 // Ajoute l'espace en dernière position et renvoie son id.
 export function creerEspace(db: DatabaseSync, champs: ChampsEspace): number {
   const { nom, couleur, icone } = validerEspace(champs)
-  const resultat = db.prepare(
-    'INSERT INTO espace (nom, couleur, icone, position) VALUES (?, ?, ?, (SELECT COALESCE(MAX(position) + 1, 0) FROM espace))'
-  ).run(nom, couleur, icone)
+  const resultat = db
+    .prepare(
+      'INSERT INTO espace (nom, couleur, icone, position) VALUES (?, ?, ?, (SELECT COALESCE(MAX(position) + 1, 0) FROM espace))'
+    )
+    .run(nom, couleur, icone)
   return Number(resultat.lastInsertRowid)
 }
 
@@ -68,7 +77,10 @@ function validerId(id: number): void {
 export function modifierEspace(db: DatabaseSync, id: number, champs: ChampsEspace): boolean {
   validerId(id)
   const { nom, couleur, icone } = validerEspace(champs)
-  return db.prepare('UPDATE espace SET nom = ?, couleur = ?, icone = ? WHERE id = ?').run(nom, couleur, icone, id).changes > 0
+  return (
+    db.prepare('UPDATE espace SET nom = ?, couleur = ?, icone = ? WHERE id = ?').run(nom, couleur, icone, id).changes >
+    0
+  )
 }
 
 // Les onglets de l'espace supprimé restent dans la session, sans espace. Renvoie faux si l'espace n'existe pas.
@@ -81,9 +93,12 @@ export function supprimerEspace(db: DatabaseSync, id: number): boolean {
 export function ordonnerEspaces(db: DatabaseSync, ids: readonly number[]): void {
   ids.forEach(validerId)
   enTransaction(db, () => {
-    const existants = lireEspaces(db).map((espace) => espace.id).sort((a, b) => a - b)
+    const existants = lireEspaces(db)
+      .map((espace) => espace.id)
+      .sort((a, b) => a - b)
     const demandes = [...ids].sort((a, b) => a - b)
-    if (existants.length !== demandes.length || existants.some((id, i) => id !== demandes[i])) throw new Error('Ordre d’espaces invalide')
+    if (existants.length !== demandes.length || existants.some((id, i) => id !== demandes[i]))
+      throw new Error('Ordre d’espaces invalide')
     const maj = db.prepare('UPDATE espace SET position = ? WHERE id = ?')
     ids.forEach((id, position) => maj.run(position, id))
   })

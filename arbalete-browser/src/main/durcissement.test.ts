@@ -14,7 +14,12 @@ test('borner garde un rectangle valide, arrondit et borne les valeurs aberrantes
   deepEqual(borner({ x: -5, y: -1, width: -10, height: 20 }, 900, 600), { x: 0, y: 0, width: 0, height: 20 })
   deepEqual(borner({ x: 8, y: 48, width: 1e300, height: 1e300 }, 900, 600), { x: 8, y: 48, width: 892, height: 552 })
   deepEqual(borner({ x: 1e300, y: 1e300, width: 10, height: 10 }, 900, 600), { x: 900, y: 600, width: 0, height: 0 })
-  for (const brut of [undefined, {}, { x: NaN, y: 0, width: 1, height: 1 }, { x: 0, y: 0, width: Infinity, height: 1 }]) {
+  for (const brut of [
+    undefined,
+    {},
+    { x: NaN, y: 0, width: 1, height: 1 },
+    { x: 0, y: 0, width: Infinity, height: 1 }
+  ]) {
     equal(borner(brut, 900, 600), null)
   }
 })
@@ -39,8 +44,10 @@ test('lireUrlDev ignore la variable hors développement et refuse une adresse ma
 //   why_new=C6 ne couvre qu'un lien about:blank exact et un seul retour; seam=none;
 //   no_claim=ne reproduit pas de boucle réelle (aucune n'a été obtenue) ni le moment où Electron émet les événements.
 test('estAboutBlank reconnaît les variantes et retourPermis plafonne les retours', () => {
-  for (const url of ['about:blank', 'about:blank#x', 'about:blank?x=1', 'ABOUT:BLANK']) equal(estAboutBlank(url), true, url)
-  for (const url of ['about:blanket', 'about:srcdoc', 'https://a.test/about:blank', 'http://127.0.0.1/', '']) equal(estAboutBlank(url), false, url)
+  for (const url of ['about:blank', 'about:blank#x', 'about:blank?x=1', 'ABOUT:BLANK'])
+    equal(estAboutBlank(url), true, url)
+  for (const url of ['about:blanket', 'about:srcdoc', 'https://a.test/about:blank', 'http://127.0.0.1/', ''])
+    equal(estAboutBlank(url), false, url)
   const premier = retourPermis([], 1_000)
   deepEqual(premier, [1_000])
   const second = retourPermis(premier!, 2_000)

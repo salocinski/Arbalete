@@ -1,0 +1,12 @@
+out/
+release/
+resources/
+.poc/
+.gstack/
+test-results/
+node_modules/
+package-lock.json
+*.css
+*.md
+*.yml
+*.html

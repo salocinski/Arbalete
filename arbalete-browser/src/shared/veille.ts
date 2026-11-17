@@ -6,7 +6,13 @@
 export const DELAIS_VEILLE = [15, 30, 60, 240, 0] as const
 export const DELAI_VEILLE_DEFAUT = 30
 
-export const LIBELLES_VEILLE: Record<number, string> = { 15: '15 minutes', 30: '30 minutes', 60: '1 heure', 240: '4 heures', 0: 'Jamais' }
+export const LIBELLES_VEILLE: Record<number, string> = {
+  15: '15 minutes',
+  30: '30 minutes',
+  60: '1 heure',
+  240: '4 heures',
+  0: 'Jamais'
+}
 
 export const delaiVeilleValide = (valeur: unknown): valeur is number =>
   typeof valeur === 'number' && (DELAIS_VEILLE as readonly number[]).includes(valeur)
@@ -24,17 +30,23 @@ export type OngletEndormissable = {
 }
 
 // Identifiants des onglets à endormir : ni affichés, ni sonores, ni déjà en veille, laissés de côté depuis `delaiMinutes` ou plus.
-export function ongletsAEndormir(onglets: readonly OngletEndormissable[], maintenant: number, delaiMinutes: number): string[] {
+export function ongletsAEndormir(
+  onglets: readonly OngletEndormissable[],
+  maintenant: number,
+  delaiMinutes: number
+): string[] {
   if (!delaiVeilleValide(delaiMinutes) || delaiMinutes === 0) return []
   const limite = delaiMinutes * 60_000
-  return onglets.filter((o) => !o.affiche && !o.sonore && !o.enVeille && maintenant - o.activite >= limite).map((o) => o.id)
+  return onglets
+    .filter((o) => !o.affiche && !o.sonore && !o.enVeille && maintenant - o.activite >= limite)
+    .map((o) => o.id)
 }
 
-export type MemoireOnglets = { mo: number, enVeille: number }
+export type MemoireOnglets = { mo: number; enVeille: number }
 
 // Mémoire des processus des onglets, en Mo : un processus partagé par plusieurs onglets n'est compté qu'une fois.
 // `metriques` vient d'`app.getAppMetrics()` (working set en Ko).
-export function memoireDesOnglets(pids: readonly number[], metriques: readonly { pid: number, ko: number }[]): number {
+export function memoireDesOnglets(pids: readonly number[], metriques: readonly { pid: number; ko: number }[]): number {
   const voulus = new Set(pids)
   return Math.round(metriques.filter((m) => voulus.has(m.pid)).reduce((somme, m) => somme + m.ko, 0) / 1024)
 }

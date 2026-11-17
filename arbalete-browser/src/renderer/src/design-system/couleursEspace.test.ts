@@ -17,7 +17,8 @@ function palette(selecteur: string): Map<string, string> {
 }
 
 function luminance(hex: string): number {
-  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+  const [r, g, b] = [1, 3, 5]
+    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
     .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
@@ -26,10 +27,15 @@ const contraste = (a: string, b: string) => {
   return (clair + 0.05) / (sombre + 0.05)
 }
 
-for (const [theme, selecteur] of [['sombre', ":root[data-theme='dark']"], ['clair', ":root[data-theme='light']"]] as const) {
+for (const [theme, selecteur] of [
+  ['sombre', ":root[data-theme='dark']"],
+  ['clair', ":root[data-theme='light']"]
+] as const) {
   const couleurs = palette(selecteur)
   test(`thème ${theme} : une variante par couleur d'espace, pas d'orphelin, 3:1 sur la barre latérale`, () => {
-    const definies = [...couleurs.keys()].filter((nom) => nom.startsWith('--color-workspace-')).map((nom) => nom.slice('--color-workspace-'.length))
+    const definies = [...couleurs.keys()]
+      .filter((nom) => nom.startsWith('--color-workspace-'))
+      .map((nom) => nom.slice('--color-workspace-'.length))
     deepStrictEqual(definies.sort(), [...COULEURS_ESPACE].sort())
     const barre = couleurs.get('--color-sidebar')
     ok(barre, '--color-sidebar manque')

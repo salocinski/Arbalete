@@ -1,6 +1,6 @@
 // Panneau Historique (ARB-52) : regroupement des visites par jour, sans accès à Electron ni à la base.
-export type VisiteHistorique = { url: string, titre: string, date: number }
-export type JourHistorique<T extends VisiteHistorique = VisiteHistorique> = { jour: string, visites: T[] }
+export type VisiteHistorique = { url: string; titre: string; date: number }
+export type JourHistorique<T extends VisiteHistorique = VisiteHistorique> = { jour: string; visites: T[] }
 
 const MS_PAR_JOUR = 86_400_000
 const debutDuJour = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate())
@@ -21,11 +21,15 @@ export function libelleJour(date: number, maintenant = Date.now()): string {
 
 // Effacement des données de navigation (ARB-54) : période (liste fermée, validée par le processus principal) et types.
 export const PERIODES_EFFACEMENT = ['heure', 'jour', 'semaine', 'tout'] as const
-export type PeriodeEffacement = typeof PERIODES_EFFACEMENT[number]
+export type PeriodeEffacement = (typeof PERIODES_EFFACEMENT)[number]
 export const TYPES_EFFACEMENT = ['historique', 'cookies', 'cache'] as const
-export type TypeEffacement = typeof TYPES_EFFACEMENT[number]
+export type TypeEffacement = (typeof TYPES_EFFACEMENT)[number]
 
-const DUREES_MS: Record<Exclude<PeriodeEffacement, 'tout'>, number> = { heure: 3_600_000, jour: MS_PAR_JOUR, semaine: 7 * MS_PAR_JOUR }
+const DUREES_MS: Record<Exclude<PeriodeEffacement, 'tout'>, number> = {
+  heure: 3_600_000,
+  jour: MS_PAR_JOUR,
+  semaine: 7 * MS_PAR_JOUR
+}
 
 // Date (ms) à partir de laquelle effacer : 0 pour « tout ». `maintenant` est injecté pour les tests.
 export function debutEffacement(periode: PeriodeEffacement, maintenant = Date.now()): number {

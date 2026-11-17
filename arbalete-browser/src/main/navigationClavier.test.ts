@@ -1,11 +1,20 @@
 import { strictEqual } from 'node:assert/strict'
 import { test } from 'node:test'
-import { numeroDOnglet, ongletNumero, ongletRelatif, pasDEspace, pasDOnglet, rechargement } from './navigationClavier.ts'
+import {
+  numeroDOnglet,
+  ongletNumero,
+  ongletRelatif,
+  pasDEspace,
+  pasDOnglet,
+  rechargement
+} from './navigationClavier.ts'
 
 // Changement d'onglet au clavier (ARB-19) et rechargement (ARB-21).
 
-const touche = (key: string, plus: Partial<{ code: string, control: boolean, alt: boolean, meta: boolean, shift: boolean }> = {}) =>
-  ({ key, code: key, control: false, alt: false, meta: false, shift: false, ...plus })
+const touche = (
+  key: string,
+  plus: Partial<{ code: string; control: boolean; alt: boolean; meta: boolean; shift: boolean }> = {}
+) => ({ key, code: key, control: false, alt: false, meta: false, shift: false, ...plus })
 const ctrl = (key: string, plus = {}) => touche(key, { control: true, ...plus })
 
 test('Ctrl+Tab et Ctrl+PageDown avancent, Ctrl+Maj+Tab et Ctrl+PageUp reculent', () => {
@@ -15,7 +24,7 @@ test('Ctrl+Tab et Ctrl+PageDown avancent, Ctrl+Maj+Tab et Ctrl+PageUp reculent',
   strictEqual(pasDOnglet(ctrl('PageUp')), -1)
 })
 
-test('sans Ctrl, avec AltGr ou Meta, ou Ctrl+Maj+PageUp (déplacement), ce n\'est pas un changement d\'onglet', () => {
+test("sans Ctrl, avec AltGr ou Meta, ou Ctrl+Maj+PageUp (déplacement), ce n'est pas un changement d'onglet", () => {
   strictEqual(pasDOnglet(touche('Tab')), undefined)
   strictEqual(pasDOnglet(ctrl('Tab', { alt: true })), undefined)
   strictEqual(pasDOnglet(ctrl('Tab', { meta: true })), undefined)
@@ -61,12 +70,12 @@ test('pasDEspace : Ctrl+Alt+flèche seulement, ni Maj ni Alt seul ni Ctrl seul',
   strictEqual(pasDEspace(touche('1', { ...plus, code: 'Digit1' })), undefined)
 })
 
-test('ongletRelatif boucle aussi sur des numéros d\'espace', () => {
+test("ongletRelatif boucle aussi sur des numéros d'espace", () => {
   strictEqual(ongletRelatif([3, 7, 9], 9, 1), 3)
   strictEqual(ongletRelatif([3, 7, 9], 3, -1), 9)
 })
 
-test('ongletRelatif boucle dans l\'ordre affiché et ne fait rien avec un seul onglet', () => {
+test("ongletRelatif boucle dans l'ordre affiché et ne fait rien avec un seul onglet", () => {
   const ids = ['a', 'b', 'c']
   strictEqual(ongletRelatif(ids, 'a', 1), 'b')
   strictEqual(ongletRelatif(ids, 'c', 1), 'a')

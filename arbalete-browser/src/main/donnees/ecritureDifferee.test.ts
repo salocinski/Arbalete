@@ -11,7 +11,12 @@ beforeEach(() => {
 
 function compteur() {
   const appels = { n: 0 }
-  return { appels, ecrire: () => { appels.n++ } }
+  return {
+    appels,
+    ecrire: () => {
+      appels.n++
+    }
+  }
 }
 
 test('des demandes rapprochées ne donnent qu’une écriture, après le délai', () => {

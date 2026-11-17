@@ -7,7 +7,10 @@ import { test } from 'node:test'
 // extension chargée par Arbalète avant l'audit de sécurité ARB-95), son profil est jetable et ses extensions
 // téléchargées ne sont jamais commitées. Lecture du texte, le POC lui-même se lance à la main sous Electron.
 const racine = fileURLToPath(new URL('../..', import.meta.url))
-const pocs = ['arbalete-browser/scripts/poc-extensions.mjs', 'arbalete-browser/scripts/poc-electron-chrome-extensions.mjs'].map((f) => readFileSync(racine + f, 'utf8'))
+const pocs = [
+  'arbalete-browser/scripts/poc-extensions.mjs',
+  'arbalete-browser/scripts/poc-electron-chrome-extensions.mjs'
+].map((f) => readFileSync(racine + f, 'utf8'))
 
 test('chaque POC travaille dans un profil jetable et sans await de plus haut niveau', () => {
   for (const poc of pocs) {

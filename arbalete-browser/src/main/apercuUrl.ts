@@ -14,6 +14,7 @@ const LARGEUR_MIN = 48
 // Au-delà, l'adresse est coupée par des points de suspension.
 const LONGUEUR_MAX = 2000
 // Caractères de contrôle et marques bidirectionnelles : une adresse ne doit pas pouvoir se faire passer pour une autre.
+// oxlint-disable-next-line no-control-regex -- les caractères de contrôle sont justement ce qu'on retire
 const INTERDITS = /[\u0000-\u001f\u007f-\u009f‎‏‪-‮⁦-⁩]/g
 
 // Couleurs jumelles de --color-surface, --color-text-primary et --color-border de chaque thème (tokens.css), à changer ensemble.

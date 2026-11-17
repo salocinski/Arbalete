@@ -7,7 +7,7 @@ import { after, test } from 'node:test'
 import { ouvrirBase } from './base.ts'
 import { LONGUEUR_MAX_TITRE, LONGUEUR_MAX_URL, adresseHistorique, ajouterVisite, effacerHistorique, lirePage, listerHistorique, nommerPage, rechercherPages, LONGUEUR_MOT_MAX, MOTS_MAX } from './historique.ts'
 import { MIGRATIONS, appliquerMigrations, versionDuSchema } from './migrations.ts'
-import { lireSession, sauverSession } from './session.ts'
+import { lireSession } from './session.ts'
 
 // Tests unitaires de l'historique des visites (ARB-51).
 

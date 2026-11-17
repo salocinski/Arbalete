@@ -12,6 +12,7 @@ const ESSAIS_SUFFIXE_MAX = 1000
 // Nom de fichier sûr sous Windows : sans séparateur de chemin, caractère interdit ni caractère de contrôle, sans point ni
 // espace final, ni nom réservé, d'au plus 150 caractères (extension conservée). Le nom vient du serveur, donc de la page.
 export function nomFichierSur(nom: string): string {
+  // oxlint-disable-next-line no-control-regex -- les caractères de contrôle sont justement ce qu'on retire
   let propre = nom.replace(/[\u0000-\u001f<>:"/\\|?*]/g, '_').replace(/[. ]+$/, '').replace(/^\s+/, '')
   if (propre.length > LONGUEUR_MAX_NOM) {
     const extension = extname(propre).slice(0, 20)

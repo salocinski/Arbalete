@@ -23,9 +23,11 @@ export function MainView() {
   const addressRef = useRef<HTMLInputElement>(null)
   const activeTab = state.tabs.find((tab) => tab.id === state.activeTabId)
 
+  const activeUrl = activeTab?.url
+
   useEffect(() => {
-    if (!addressFocused && activeTab) setAddress(activeTab.url)
-  }, [activeTab?.id, activeTab?.url, addressFocused])
+    if (!addressFocused && activeUrl) setAddress(activeUrl)
+  }, [activeTab?.id, activeUrl, addressFocused])
 
   const syncBounds = useCallback(() => {
     const el = contentRef.current

@@ -12,6 +12,7 @@ export interface MiseAJourUpdater {
   autoInstallOnAppQuit: boolean
   allowDowngrade: boolean
   allowPrerelease: boolean
+  // oxlint-disable-next-line typescript/no-explicit-any -- les écouteurs de l'updater reçoivent des arguments de types variés
   on(evenement: string, ecouteur: (...args: any[]) => void): unknown
   checkForUpdates(): Promise<unknown>
   quitAndInstall(silencieux: boolean, relancer: boolean): void

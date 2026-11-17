@@ -29,6 +29,7 @@ export function Modal({ label, className, role = 'dialog', testId, onClose, chil
     return () => {
       document.removeEventListener('keydown', pieger)
       // Différé : sous StrictMode (dev) le cleanup précède une relance de l'effet, le panneau est alors encore monté.
+      // oxlint-disable-next-line react-hooks/exhaustive-deps -- lecture volontaire de la valeur au moment du délai
       setTimeout(() => { if (!panneau.current) avant?.focus?.() })
     }
   }, [avant])

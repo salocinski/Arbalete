@@ -3861,7 +3861,7 @@ test('C90 : page d’accueil, animations et dossier de téléchargement des Para
 
   // Dossier : la fenêtre ne l'atteint pas, la vue de la barre revient au défaut, toute autre action est refusée.
   expect(await ui.evaluate(() => window.arbalete.setDownloadFolder('defaut').then(() => 'ok', () => 'refuse'))).toBe('refuse')
-  expect(await barreUi.evaluate(() => window.arbalete.setDownloadFolder('C:\Windows' as unknown as 'defaut').then(() => 'ok', () => 'refuse'))).toBe('refuse')
+  expect(await barreUi.evaluate(() => window.arbalete.setDownloadFolder('C:\\Windows' as unknown as 'defaut').then(() => 'ok', () => 'refuse'))).toBe('refuse')
   await barreUi.evaluate(() => window.arbalete.setDownloadFolder('defaut'))
   expect((await ui.evaluate(() => window.arbalete.getSettings())).dossierTelechargements).toBeNull()
 

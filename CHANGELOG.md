@@ -2,6 +2,18 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.29] - 2026-11-17
+
+### Ajouté
+- Contrôle du code (ARB-7) : Oxlint (`npm run lint`, règles TypeScript et hooks React) et Prettier (`npm run format`, `npm run format:check`) sont branchés, et la CI les exécute dans le job `verifier`. Oxlint remplace ESLint, car `typescript-eslint` n’accepte pas encore TypeScript 7.
+
+### Modifié
+- Typecheck (ARB-6) : `tsconfig.json` ne fait plus que référencer trois cibles (`tsconfig.node.json` pour le processus principal et le preload, sans DOM ; `tsconfig.web.json` pour l’interface, sans types Node ; `tsconfig.test.json` pour les tests), et `npm run typecheck` lance `tsc -b`. Un `window` utilisé dans le main ou un `fs` dans le renderer ne compile plus.
+- Tout le code est reformaté par Prettier (sans changement de comportement). `src/configuration.test.ts` garde ces réglages en place.
+
+### Limites
+- Deux règles Oxlint de compilateur React (`set-state-in-effect`, `immutability`) sont désactivées : trop bruyantes sur le code existant. ESLint reste inutilisé tant que `typescript-eslint` ne gère pas TypeScript 7.
+
 ## [0.12.44.28] - 2026-11-16
 
 ### Modifié

@@ -82,6 +82,7 @@ arbalete-browser/
   scripts/poc-electron-chrome-extensions.mjs  POC ARB-25, lancé à la main (`npx electron scripts/poc-electron-chrome-extensions.mjs`), hors de l'application : mêmes extensions que ARB-24, avec la bibliothèque `electron-chrome-extensions` installée dans `.poc/lib/` (pas une dépendance d'Arbalète), barre d'actions, popup et `chrome.tabs.query` ; résultat dans `docs/extensions/arb-25-poc-electron-chrome-extensions.md`
   tests/                   tests Playwright (smoke.spec.ts, developpement.spec.ts)
   src/ci.test.ts           garde-fous de la CI (ARB-8) : lecture seule, actions épinglées, étapes attendues de `../.github/workflows/ci.yml`, clé du cache du binaire d'Electron alignée sur la version de `package.json` (aussi dans `release.yml`, ARB-77)
+  src/configuration.test.ts  garde-fous de la configuration des outils (ARB-6, ARB-7, ARB-99) : trois cibles TypeScript séparées, Oxlint et Prettier branchés, lanceur des tests unitaires, `engines.node` de `package.json` (`^20.19.0 || >=22.12.0`, plage de Vite, electron-vite et Oxlint ; simple avertissement npm, ni `engine-strict` ni `.nvmrc`) respecté par la version de Node de `ci.yml`
   src/pocExtensions.test.ts  garde-fous des POC d'extensions (ARB-24, ARB-25) : profil jetable, pas d'`await` de plus haut niveau, `.poc/` ignoré par Git (lecture du texte, le POC reste manuel)
 ```
 

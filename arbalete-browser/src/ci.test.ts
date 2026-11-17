@@ -17,7 +17,10 @@ const ci = readFileSync(racine + '.github/workflows/ci.yml', 'utf8')
 const lignes = ci.split('\n')
 
 test('la CI ne demande que la lecture du dépôt et ne se déclenche pas sur pull_request_target', () => {
-  ok(/^permissions:\s*\r?\n {2}contents: read\s*$/m.test(ci), 'permissions: contents: read attendu au niveau du workflow')
+  ok(
+    /^permissions:\s*\r?\n {2}contents: read\s*$/m.test(ci),
+    'permissions: contents: read attendu au niveau du workflow'
+  )
   ok(!/:\s*write\b/.test(ci), 'aucune permission en écriture')
   ok(!ci.includes('pull_request_target'), 'pull_request_target donnerait des secrets au code d’une PR externe')
 })
@@ -34,10 +37,12 @@ test('la CI tourne sur Windows, sur main et sur les PR, avec typecheck, tests un
   strictEqual((ci.match(/runs-on: windows-latest/g) ?? []).length, 2, 'deux jobs, tous deux sur windows-latest')
   ok(/^ {2}push:\s*\r?\n {4}branches: \[main\]/m.test(ci), 'push sur main')
   ok(/^ {2}pull_request:/m.test(ci), 'pull_request')
-  const commandes = lignes.filter((ligne) => /^\s*(- )?run:\s*\S/.test(ligne)).map((ligne) => ligne.replace(/^\s*(- )?run:\s*/, '').trim())
+  const commandes = lignes
+    .filter((ligne) => /^\s*(- )?run:\s*\S/.test(ligne))
+    .map((ligne) => ligne.replace(/^\s*(- )?run:\s*/, '').trim())
   strictEqual(
     commandes.join(' | '),
-    'npm ci | npx install-electron | npm run typecheck | npm run test:unit | npm run build | ' +
+    'npm ci | npx install-electron | npm run typecheck | npm run lint | npm run format:check | npm run test:unit | npm run build | ' +
       'npm ci | npx install-electron | npm run test:smoke'
   )
 })

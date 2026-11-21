@@ -26,7 +26,10 @@ desktop.ini
 
 # gstack : l'installation est globale (~/.claude/skills/gstack), jamais copiée dans le dépôt
 .claude/skills/gstack/
-.gstack/
+.gstack/*
+# Politiques de /ship lues depuis main (ARB-133) : seules suivies par Git
+!.gstack/pregate.json
+!.gstack/ship-policy.json
 
 # Résultats Playwright (npm run test:smoke)
 test-results/
@@ -37,3 +40,7 @@ playwright-report/
 
 # POC extensions (ARB-24) : archives téléchargées et décompressées, jamais commitées
 .poc/
+
+# Cadre ATLAS — non suivi (générés par ATLAS, ne pas éditer)
+AGENTS.md
+GEMINI.md

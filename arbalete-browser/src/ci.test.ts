@@ -43,7 +43,8 @@ test('la CI tourne sur Windows, sur main et sur les PR, avec typecheck, tests un
   strictEqual(
     commandes.join(' | '),
     'npm ci | npx install-electron | npm run typecheck | npm run lint | npm run format:check | npm run test:unit | npm run build | ' +
-      'npm ci | npx install-electron | npm run test:smoke'
+      "node scripts/ci-tree-json.mjs tree.json 'src/**/*.test.ts' | " +
+      "npm ci | npx install-electron | npm run test:smoke | node scripts/ci-tree-json.mjs tree.json 'tests/**/*.spec.ts'"
   )
 })
 
@@ -108,5 +109,77 @@ test('postinstall avertit sans échouer quand electron est introuvable', () => {
     ok(resultat.stderr.includes('npx install-electron'), 'avertissement attendu')
   } finally {
     rmSync(dossier, { recursive: true, force: true })
+  }
+})
+
+// ARB-133 : tree.json est ce que /ship lit pour reprendre un job de la CI ; sans fichiers ni arbre, la reprise refuse.
+test('ci-tree-json écrit l’arbre testé et les fichiers de test, et refuse hors CI', () => {
+  const dossier = mkdtempSync(join(tmpdir(), 'arbalete-tree-'))
+  try {
+    const script = racine + 'arbalete-browser/scripts/ci-tree-json.mjs'
+    const sortie = join(dossier, 'tree.json')
+    const cwd = racine + 'arbalete-browser'
+    const env = {
+      ...process.env,
+      GITHUB_RUN_ID: '12',
+      GITHUB_RUN_ATTEMPT: '2',
+      GITHUB_EVENT_NAME: 'pull_request',
+      GITHUB_SHA: 'a'.repeat(40),
+      RUNNER_OS: 'Windows'
+    }
+    const ok1 = spawnSync(process.execPath, [script, sortie, 'src/ci.test.ts'], { cwd, env, encoding: 'utf8' })
+    strictEqual(ok1.status, 0, ok1.stderr)
+    const t = JSON.parse(readFileSync(sortie, 'utf8'))
+    strictEqual(t.run_id, 12)
+    strictEqual(t.run_attempt, 2)
+    strictEqual(t.os, 'Windows')
+    strictEqual(t.head_sha, 'a'.repeat(40))
+    ok(/^[0-9a-f]{40}$/.test(t.tree))
+    strictEqual(t.files.join(), 'arbalete-browser/src/ci.test.ts')
+    const vide = spawnSync(process.execPath, [script, sortie, 'src/rien.test.ts'], { cwd, env, encoding: 'utf8' })
+    strictEqual(vide.status, 1)
+    const pr = spawnSync(process.execPath, [script, sortie, 'src/ci.test.ts'], {
+      cwd,
+      env: { ...env, PR_HEAD_SHA: 'b'.repeat(40) },
+      encoding: 'utf8'
+    })
+    strictEqual(pr.status, 0, pr.stderr)
+    const tPr = JSON.parse(readFileSync(sortie, 'utf8'))
+    strictEqual(tPr.head_sha, 'b'.repeat(40), 'head_sha vient de PR_HEAD_SHA')
+    strictEqual(tPr.sha, 'a'.repeat(40), 'sha reste le commit testé')
+    for (const nom of ['GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_EVENT_NAME', 'GITHUB_SHA', 'RUNNER_OS']) {
+      const horsCI: NodeJS.ProcessEnv = { ...env }
+      delete horsCI[nom]
+      strictEqual(spawnSync(process.execPath, [script, sortie, 'src/ci.test.ts'], { cwd, env: horsCI }).status, 2, nom)
+    }
+    strictEqual(spawnSync(process.execPath, [script], { cwd, env }).status, 2, 'usage')
+  } finally {
+    rmSync(dossier, { recursive: true, force: true })
+  }
+})
+
+// ARB-133 : /ship reprend les jobs de la CI par leur nom (.gstack/pregate.json) ; renommer un job sans mettre ce
+// fichier à jour ferait relancer les contrôles en local, sans autre signe.
+test('pregate.json lie les lanes de /ship aux jobs de la CI, à leur artefact et à leurs profils', () => {
+  const pregate = JSON.parse(readFileSync(racine + '.gstack/pregate.json', 'utf8'))
+  type Profil = { workflow: string; jobs: string[]; artifact: string; os: string }
+  const profils = pregate.run_profiles as Record<string, Profil>
+  const sections = ci.split(/\n(?=  [a-z]+:\r?\n {4}name: )/)
+  for (const profil of Object.values(profils)) {
+    strictEqual(profil.workflow, 'ci.yml')
+    strictEqual(profil.os, 'Windows')
+    strictEqual(profil.jobs.length, 1)
+    const section = sections.find((t) => t.includes(`    name: ${profil.jobs[0]}`))
+    ok(section, `job « ${profil.jobs[0]} » absent de ci.yml`)
+    ok(section.includes(`          name: ${profil.artifact}`), `artefact ${profil.artifact} hors de son job`)
+    ok(section.includes('path: arbalete-browser/tree.json'), 'chemin de tree.json')
+    ok(section.includes('PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}'), 'PR_HEAD_SHA câblé')
+  }
+  const lanes = Object.values(pregate.ship_lanes_from) as { profiles: string[]; jobs: string[] }[]
+  strictEqual(lanes.length, Object.keys(profils).length)
+  for (const lane of lanes) {
+    strictEqual(lane.profiles.length, 1)
+    ok(profils[lane.profiles[0]], `profil ${lane.profiles[0]} inconnu`)
+    strictEqual(lane.jobs.join(), profils[lane.profiles[0]].jobs.join())
   }
 })

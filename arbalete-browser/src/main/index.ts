@@ -12,6 +12,7 @@ import {
   nativeTheme,
   type IpcMainEvent,
   type IpcMainInvokeEvent,
+  type Session,
   type WebContents
 } from 'electron'
 import { mkdirSync, statSync, readFileSync } from 'node:fs'
@@ -158,6 +159,7 @@ import {
 import {
   creerEspace,
   ecrireEspaceActif,
+  isolerEspace,
   lireEspaceActif,
   lireEspaces,
   modifierEspace,
@@ -165,7 +167,13 @@ import {
   semerEspaces,
   supprimerEspace
 } from './donnees/espaces.ts'
-import { champsNouvelEspace, ordreApresDeplacement, type CouleurEspace, type Espace } from '../shared/espaces.ts'
+import {
+  champsNouvelEspace,
+  nomPartition,
+  ordreApresDeplacement,
+  type CouleurEspace,
+  type Espace
+} from '../shared/espaces.ts'
 import { creerGestionnaire } from './gestionnaireTelechargements.ts'
 import { ARCHIVE_GARDEE_MAX, delaiArchivageValide, epinglesDabord, ongletsAArchiver } from '../shared/archivage.ts'
 import { delaiVeilleValide, memoireDesOnglets, ongletsAEndormir, type MemoireOnglets } from '../shared/veille.ts'
@@ -1245,7 +1253,7 @@ function ouvertureAutorisee(onglet: string, url: string): boolean {
 // shortcut: si la création échoue après l'autorisation, la place reste prise ; l'utilisateur garde les onglets, relancer règle.
 let popupsOuvertes = 0
 
-function optionsPopup(features: string): Electron.BrowserWindowConstructorOptions {
+function optionsPopup(features: string, sessionDeLaPage: Session): Electron.BrowserWindowConstructorOptions {
   const taille = tailleDePopup(features)
   const b = mainWindow?.getBounds()
   return {
@@ -1270,7 +1278,8 @@ function optionsPopup(features: string): Electron.BrowserWindowConstructorOption
       contextIsolation: true,
       sandbox: true,
       webSecurity: true,
-      session: session.defaultSession
+      // Celle de la page d'origine (ARB-65) : une connexion dans un espace isolé reste dans son espace.
+      session: sessionDeLaPage
     }
   }
 }
@@ -1519,7 +1528,7 @@ function createTab(
   const dossier = dossierAccepte(dossiersOnglets, restaure?.dossier, espaceDeLOnglet, !!restaure?.epingle)
     ? restaure?.dossier
     : undefined
-  const view = nouvelleVue()
+  const view = nouvelleVue(espaceDeLOnglet)
 
   const record: TabRecord = {
     data: {
@@ -1552,14 +1561,94 @@ function createTab(
   return id
 }
 
-function nouvelleVue(): WebContentsView {
+// Refus de permissions, téléchargements et périphériques d'une session (défaut ou partition d'un espace isolé, ARB-65).
+function securiserSession(s: Session) {
+  if (sessionsSecurisees.has(s)) return
+  sessionsSecurisees.add(s)
+  // ARB-15 : plein écran, caméra, micro, notifications et position se décident par site (hôte de la page de l'onglet, pas
+  // celui d'un sous-cadre) ; tout le reste, et toute vue qui n'est pas la page de l'onglet actif, reste refusé.
+  s.setPermissionRequestHandler((contenu, permission, callback, details) => {
+    const permissions = permissionsDemandees(permission, details as { mediaTypes?: string[] })
+    const hote = hoteZoom(contenu.getURL())
+    if (!permissions || !hote) return callback(false)
+    // Seule la page de l'onglet actif décide (ni vue d'interface, ni onglet masqué) ; un sous-cadre d'un autre site
+    // n'hérite jamais du choix de la page, sauf le plein écran (vidéo intégrée), accordé d'office.
+    if (contenu !== activeRecord()?.view.webContents) return callback(false)
+    if (hoteZoom(details.requestingUrl ?? '') !== hote && permissions.some((p) => p !== 'plein-ecran'))
+      return callback(false)
+    const decision = decisionSite(hote, permissions)
+    if (decision !== 'demander') return callback(decision === 'autoriser')
+    // Mêmes hôte et permissions déjà en attente : une seule invite, qui répond aux deux demandes. File plafonnée.
+    const cle = permissions.join()
+    const existante = [invitePermission, ...invitesEnAttente].find(
+      (i) => i && i.hote === hote && i.permissions.join() === cle
+    )
+    if (existante) {
+      const premiere = existante.reponse
+      existante.reponse = (accordee) => {
+        premiere(accordee)
+        callback(accordee)
+      }
+      return
+    }
+    if (invitesEnAttente.length >= 5) return callback(false)
+    invitesEnAttente.push({ hote, permissions, reponse: callback })
+    afficherInvitePermission()
+  })
+  // Le refus vaut aussi pour les vérifications (navigator.permissions, accès sans demande) et les périphériques
+  // (ARB-120) : sans ces gestionnaires, Electron les accorde et les pages se voient tout permis.
+  // Téléchargements (ARB-55) : un échec (dossier illisible…) annule le téléchargement sans faire tomber le processus.
+  s.on('will-download', (_event, item) => {
+    try {
+      telechargements.nouveau(item)
+    } catch (erreur) {
+      console.error('Téléchargement refusé :', erreur)
+      item.cancel()
+    }
+  })
+  // Une vérification (navigator.permissions, Notification.permission) n'invite jamais : elle ne voit que le choix mémorisé.
+  s.setPermissionCheckHandler((contenu, permission, origine, details) => {
+    const permissions = permissionsDemandees(permission, details as { mediaType?: string })
+    const hote = hoteZoom(contenu?.getURL() || origine)
+    // Un sous-cadre d'un autre site ne lit pas le choix de la page.
+    const demandeur = hoteZoom((details as { requestingUrl?: string }).requestingUrl || origine)
+    if (permissions?.some((p) => p !== 'plein-ecran') && demandeur !== hote) return false
+    return !!permissions && !!hote && decisionSite(hote, permissions) === 'autoriser'
+  })
+  s.setDevicePermissionHandler(() => false)
+  s.on('select-hid-device', (event, _details, callback) => {
+    event.preventDefault()
+    callback()
+  })
+  s.on('select-serial-port', (event, _portList, _webContents, callback) => {
+    event.preventDefault()
+    callback('')
+  })
+  s.on('select-usb-device', (event, _details, callback) => {
+    event.preventDefault()
+    callback()
+  })
+}
+
+// Session des pages d'un espace (ARB-65) : la partition de l'espace s'il est isolé, sinon la session commune. Chaque session
+// reçoit les mêmes refus de permissions et la même prise en charge des téléchargements (`securiserSession`), une fois.
+const sessionsSecurisees = new Set<Session>()
+
+function sessionEspace(espace: number | null): Session {
+  const cible = espaces.find((item) => item.id === espace)
+  const s = cible?.isole ? session.fromPartition(nomPartition(cible.id)) : session.defaultSession
+  securiserSession(s)
+  return s
+}
+
+function nouvelleVue(espace: number | null): WebContentsView {
   const view = new WebContentsView({
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
       webSecurity: true,
-      session: session.defaultSession
+      session: sessionEspace(espace)
     }
   })
   view.setBorderRadius(RAYON_PAGE)
@@ -1672,7 +1761,7 @@ function brancherOnglet(id: string, record: TabRecord) {
     // Seul l'onglet actif ouvre une pop-up : un onglet d'arrière-plan n'accapare pas les places d'une vraie connexion.
     if (estPopup(disposition) && id === activeTabId && popupsOuvertes < POPUPS_MAX) {
       popupsOuvertes++
-      return { action: 'allow', overrideBrowserWindowOptions: optionsPopup(features) }
+      return { action: 'allow', overrideBrowserWindowOptions: optionsPopup(features, view.webContents.session) }
     }
     // Ctrl+clic : l'onglet s'ouvre en arrière-plan, l'onglet affiché garde le focus.
     const avant = activeTabId
@@ -1876,8 +1965,20 @@ function archiverAnciens() {
 function endormir(id: string) {
   const record = tabs.get(id)
   if (!record || id === activeTabId || dansPartage(partage, id)) return
+  renouvelerVue(id, record)
+}
+
+// Remplace la vue de l'onglet par une vue neuve, dans l'état d'un onglet restauré : mise en veille, ou changement de session
+// de l'espace (ARB-65). La vue neuve prend la session que l'espace a à cet instant.
+function renouvelerVue(id: string, record: TabRecord) {
+  if (record.view === pleinEcranPage) sortirPleinEcranPage(record.view)
+  try {
+    mainWindow?.contentView.removeChildView(record.view)
+  } catch {
+    // La vue peut déjà être détachée.
+  }
   record.view.webContents.close()
-  record.view = nouvelleVue()
+  record.view = nouvelleVue(record.espace)
   record.chargee = false
   record.popupsBloquees = 0
   record.data = {
@@ -1979,6 +2080,38 @@ function colorerEspace(id: number, couleur: string) {
   broadcastState()
 }
 
+function effacerPartition(id: number) {
+  const s = session.fromPartition(nomPartition(id))
+  void Promise.all([s.clearStorageData(), s.clearCache()]).catch((erreur) =>
+    console.error('Session de l’espace non effacée :', erreur)
+  )
+}
+
+// Session isolée d'un espace (ARB-65). Les onglets de l'espace changent de session : leur page est fermée et rechargée dans
+// la nouvelle (ouvrir l'isolement les déconnecte, le couper les remet dans la session commune et efface la partition : les
+// comptes isolés ne survivent ni à « Effacer les cookies » ni à un id réutilisé). Écrit en base avant de changer l'état.
+// shortcut: la page perd Précédent / Suivant, défilement et formulaires non envoyés (comme la mise en veille, ARB-78) ; une
+// confirmation avant de basculer reste à faire si cela gêne en usage réel.
+function isolerEspaceUtilisateur(id: number, isole: boolean) {
+  const espace = espaces.find((item) => item.id === id)
+  if (!base || !espace || !!espace.isole === isole) return
+  isolerEspace(base, id, isole)
+  espaces = lireEspaces(base)
+  // La vue partagée tient deux pages de l'ancienne session : elle se termine si l'une est de l'espace.
+  if ([partage?.gauche, partage?.droite].some((tabId) => tabId && tabs.get(tabId)?.espace === id)) partage = null
+  for (const [ongletId, onglet] of tabs) {
+    if (onglet.espace !== id) continue
+    try {
+      renouvelerVue(ongletId, onglet)
+    } catch (erreur) {
+      console.error('Onglet non basculé dans la nouvelle session :', erreur)
+    }
+  }
+  if (!isole) effacerPartition(id)
+  setActiveView()
+  broadcastState()
+}
+
 function deplacerEspace(id: number, sens: -1 | 1) {
   if (!base || !espaces.some((item) => item.id === id)) return
   ordonnerEspaces(
@@ -2005,6 +2138,8 @@ function supprimerEspaceUtilisateur(id: number) {
   dossiersOnglets = lireDossiersOnglets(base) // supprimés avec l'espace (ARB-69)
   dernierActif.delete(id)
   for (const [ongletId, onglet] of [...tabs]) if (onglet.espace === id) closeTab(ongletId, false)
+  // Les comptes connectés de l'espace ne survivent pas à sa suppression (l'id pourrait aussi être réutilisé).
+  effacerPartition(id)
   broadcastState()
 }
 
@@ -2085,6 +2220,11 @@ function traiter(canal: string, gestionnaire: (...args: unknown[]) => unknown) {
 
 function exigerTexte(valeur: unknown): string {
   if (typeof valeur !== 'string') throw new Error('Argument IPC invalide : texte attendu')
+  return valeur
+}
+
+function exigerBooleen(valeur: unknown): boolean {
+  if (typeof valeur !== 'boolean') throw new Error('Argument IPC invalide : booléen attendu')
   return valeur
 }
 
@@ -2307,69 +2447,7 @@ app.whenReady().then(() => {
   // Mises à jour (ARB-77) : ne dépendent pas de la base.
   miseAJour.planifier()
 
-  // ARB-15 : plein écran, caméra, micro, notifications et position se décident par site (hôte de la page de l'onglet, pas
-  // celui d'un sous-cadre) ; tout le reste, et toute vue qui n'est pas la page de l'onglet actif, reste refusé.
-  session.defaultSession.setPermissionRequestHandler((contenu, permission, callback, details) => {
-    const permissions = permissionsDemandees(permission, details as { mediaTypes?: string[] })
-    const hote = hoteZoom(contenu.getURL())
-    if (!permissions || !hote) return callback(false)
-    // Seule la page de l'onglet actif décide (ni vue d'interface, ni onglet masqué) ; un sous-cadre d'un autre site
-    // n'hérite jamais du choix de la page, sauf le plein écran (vidéo intégrée), accordé d'office.
-    if (contenu !== activeRecord()?.view.webContents) return callback(false)
-    if (hoteZoom(details.requestingUrl ?? '') !== hote && permissions.some((p) => p !== 'plein-ecran'))
-      return callback(false)
-    const decision = decisionSite(hote, permissions)
-    if (decision !== 'demander') return callback(decision === 'autoriser')
-    // Mêmes hôte et permissions déjà en attente : une seule invite, qui répond aux deux demandes. File plafonnée.
-    const cle = permissions.join()
-    const existante = [invitePermission, ...invitesEnAttente].find(
-      (i) => i && i.hote === hote && i.permissions.join() === cle
-    )
-    if (existante) {
-      const premiere = existante.reponse
-      existante.reponse = (accordee) => {
-        premiere(accordee)
-        callback(accordee)
-      }
-      return
-    }
-    if (invitesEnAttente.length >= 5) return callback(false)
-    invitesEnAttente.push({ hote, permissions, reponse: callback })
-    afficherInvitePermission()
-  })
-  // Le refus vaut aussi pour les vérifications (navigator.permissions, accès sans demande) et les périphériques
-  // (ARB-120) : sans ces gestionnaires, Electron les accorde et les pages se voient tout permis.
-  // Téléchargements (ARB-55) : un échec (dossier illisible…) annule le téléchargement sans faire tomber le processus.
-  session.defaultSession.on('will-download', (_event, item) => {
-    try {
-      telechargements.nouveau(item)
-    } catch (erreur) {
-      console.error('Téléchargement refusé :', erreur)
-      item.cancel()
-    }
-  })
-  // Une vérification (navigator.permissions, Notification.permission) n'invite jamais : elle ne voit que le choix mémorisé.
-  session.defaultSession.setPermissionCheckHandler((contenu, permission, origine, details) => {
-    const permissions = permissionsDemandees(permission, details as { mediaType?: string })
-    const hote = hoteZoom(contenu?.getURL() || origine)
-    // Un sous-cadre d'un autre site ne lit pas le choix de la page.
-    const demandeur = hoteZoom((details as { requestingUrl?: string }).requestingUrl || origine)
-    if (permissions?.some((p) => p !== 'plein-ecran') && demandeur !== hote) return false
-    return !!permissions && !!hote && decisionSite(hote, permissions) === 'autoriser'
-  })
-  session.defaultSession.setDevicePermissionHandler(() => false)
-  session.defaultSession.on('select-hid-device', (event, _details, callback) => {
-    event.preventDefault()
-    callback()
-  })
-  session.defaultSession.on('select-serial-port', (event, _portList, _webContents, callback) => {
-    event.preventDefault()
-    callback('')
-  })
-  session.defaultSession.on('select-usb-device', (event, _details, callback) => {
-    event.preventDefault()
-    callback()
-  })
+  securiserSession(session.defaultSession)
 
   traiter('browser:get-state', () => stateSnapshot())
   traiter('browser:get-system-theme', () => (nativeTheme.shouldUseDarkColors ? 'dark' : 'light'))
@@ -2760,11 +2838,18 @@ app.whenReady().then(() => {
     const choisis = new Set<TypeEffacement>(types)
     if (choisis.has('historique') && base) effacerHistorique(base, debutEffacement(periode as PeriodeEffacement))
     // Chaque type est tenté même si un autre échoue ; l'échec est rendu à l'interface, qui relit la liste.
+    // Toutes les sessions : la commune et la partition de chaque espace isolé (ARB-65).
+    const sessions = [
+      session.defaultSession,
+      ...espaces.filter((e) => e.isole).map((e) => session.fromPartition(nomPartition(e.id)))
+    ]
     const echecs = (
-      await Promise.allSettled([
-        choisis.has('cookies') ? session.defaultSession.clearStorageData({ storages: ['cookies'] }) : undefined,
-        choisis.has('cache') ? session.defaultSession.clearCache() : undefined
-      ])
+      await Promise.allSettled(
+        sessions.flatMap((s) => [
+          choisis.has('cookies') ? s.clearStorageData({ storages: ['cookies'] }) : undefined,
+          choisis.has('cache') ? s.clearCache() : undefined
+        ])
+      )
     ).filter((r) => r.status === 'rejected')
     if (echecs.length) throw new Error('Effacement incomplet : cookies ou cache')
   })
@@ -2785,6 +2870,11 @@ app.whenReady().then(() => {
   traiter('browser:create-workspace', (nom) => creerEspaceUtilisateur(exigerTexte(nom)))
   traiter('browser:rename-workspace', (id, nom) => renommerEspace(exigerEntier(id), exigerTexte(nom)))
   traiter('browser:set-workspace-color', (id, couleur) => colorerEspace(exigerEntier(id), exigerTexte(couleur)))
+  // Vue de la barre seule : change la session (cookies) des pages d'un espace.
+  ipcMain.handle('browser:set-workspace-isolation', (event, id, isole) => {
+    exigerBarre(event)
+    isolerEspaceUtilisateur(exigerEntier(id), exigerBooleen(isole))
+  })
   traiter('browser:move-workspace', (id, sens) => deplacerEspace(exigerEntier(id), exigerSens(sens)))
   traiter('browser:delete-workspace', (id) => supprimerEspaceUtilisateur(exigerEntier(id)))
   traiter('browser:get-downloads', () => telechargements.liste())

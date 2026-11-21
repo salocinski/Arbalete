@@ -87,6 +87,7 @@ const api: BrowserAPI = {
   moveWorkspace: (id, direction) => ipcRenderer.invoke('browser:move-workspace', id, direction),
   deleteWorkspace: (id) => ipcRenderer.invoke('browser:delete-workspace', id),
   setWorkspaceColor: (id, color) => ipcRenderer.invoke('browser:set-workspace-color', id, color),
+  setWorkspaceIsolation: (id, isolated) => ipcRenderer.invoke('browser:set-workspace-isolation', id, isolated),
   getDownloads: () => ipcRenderer.invoke('browser:get-downloads'),
   onDownloads: (callback) => ecouter('browser:downloads', callback),
   pauseDownload: (id) => ipcRenderer.invoke('browser:pause-download', id),

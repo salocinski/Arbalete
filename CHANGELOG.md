@@ -2,6 +2,15 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.32] - 2026-11-17
+
+### Ajouté
+- Session isolée par espace (ARB-65) : l'entrée « Isoler la session de cet espace » du menu d'un espace donne à ses onglets leurs propres cookies et leur propre stockage (partition persistante `persist:espace-<id>`, migration 10). Leurs pages sont rechargées dans la nouvelle session, d'où l'on peut être connecté à deux comptes différents dans deux espaces. « Revenir à la session commune » les remet dans la session commune et efface la partition.
+- Chaque session garde les mêmes refus (permissions, périphériques) et la même gestion des téléchargements ; les pop-ups de connexion gardent la session de leur page ; « Effacer les cookies et le cache » couvre toutes les sessions ; supprimer un espace efface sa partition.
+
+### Limites
+- Deux vrais comptes Google, une pop-up de connexion ouverte pendant la bascule et le redémarrage restent à vérifier à la main. Une bascule perd Précédent / Suivant, le défilement et les formulaires non envoyés. Les autorisations de site (caméra, notifications) restent communes à toutes les sessions.
+
 ## [0.12.44.31] - 2026-11-17
 
 ### Corrigé

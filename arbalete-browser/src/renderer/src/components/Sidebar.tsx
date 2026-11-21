@@ -462,6 +462,11 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
                 setModaleEspace(menuEspace.id)
                 setMenuEspace(null)
               }
+            },
+            {
+              // Session isolée (ARB-65) : cookies séparés, par exemple deux comptes Google dans deux espaces.
+              label: espaceDuMenu.isole ? 'Revenir à la session commune' : 'Isoler la session de cet espace',
+              action: () => void window.arbalete.setWorkspaceIsolation(espaceDuMenu.id, !espaceDuMenu.isole)
             }
           ]}
         />

@@ -31,13 +31,23 @@ export function validerEspace(champs: ChampsEspace): ChampsEspace {
 // Espaces dans leur ordre. Une couleur inconnue (base écrite à la main, couleur retirée dans une version future) est
 // remplacée à la lecture par « personal » : l'interface résout toujours un token existant.
 export function lireEspaces(db: DatabaseSync): Espace[] {
-  const lignes = db.prepare('SELECT id, nom, couleur, icone FROM espace ORDER BY position, id').all() as Espace[]
+  const lignes = db.prepare('SELECT id, nom, couleur, icone, isole FROM espace ORDER BY position, id').all() as (Omit<
+    Espace,
+    'isole'
+  > & { isole: number })[]
   return lignes.map((ligne) => ({
     id: ligne.id,
     nom: ligne.nom,
     couleur: COULEURS_ESPACE.includes(ligne.couleur) ? ligne.couleur : 'personal',
-    icone: ligne.icone
+    icone: ligne.icone,
+    ...(ligne.isole ? { isole: true } : {})
   }))
+}
+
+// Active ou coupe la session isolée de l'espace (ARB-65). Renvoie faux si l'espace n'existe pas.
+export function isolerEspace(db: DatabaseSync, id: number, isole: boolean): boolean {
+  validerId(id)
+  return db.prepare('UPDATE espace SET isole = ? WHERE id = ?').run(isole ? 1 : 0, id).changes > 0
 }
 
 // Crée les espaces d'origine si la table est vide (ARB-61) ; sans effet sinon, y compris si l'utilisateur les a tous supprimés

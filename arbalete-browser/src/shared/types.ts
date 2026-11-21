@@ -221,6 +221,9 @@ export type BrowserAPI = {
   // Couleur d'un espace (ARB-134) : le nom d'une couleur de `COULEURS_ESPACE` ; un nom hors liste est refusé, un espace
   // inconnu est sans effet.
   setWorkspaceColor: (id: number, color: string) => Promise<void>
+  // Session isolée d'un espace (ARB-65) : ses onglets ont leurs propres cookies et stockage (`Espace.isole`). Les onglets de
+  // l'espace rechargent leur page dans la nouvelle session ; un espace inconnu est sans effet, seule la vue de la barre agit.
+  setWorkspaceIsolation: (id: number, isolated: boolean) => Promise<void>
   // Téléchargements (ARB-55) : enregistrés sans invite dans le dossier Téléchargements, du plus récent au plus ancien, et
   // conservés au redémarrage (un téléchargement alors actif devient `interrompu`). Pause, reprise et annulation ne
   // concernent qu'un téléchargement actif ; `removeDownload` retire une ligne terminée de la liste, sans effacer le fichier.

@@ -1622,7 +1622,7 @@ function securiserSession(s: Session) {
     // Un sous-cadre d'un autre site ne lit pas le choix de la page.
     const demandeur = hoteZoom((details as { requestingUrl?: string }).requestingUrl || origine)
     if (permissions?.some((p) => p !== 'plein-ecran') && demandeur !== hote) return false
-    return !!permissions && !!hote && decisionSite(profilDe(contenu), hote, permissions) === 'autoriser'
+    return !!permissions && !!hote && decisionSite(profilDe(contenu, s), hote, permissions) === 'autoriser'
   })
   s.setDevicePermissionHandler(() => false)
   s.on('select-hid-device', (event, _details, callback) => {
@@ -1647,13 +1647,11 @@ function profilDeEspace(espace: number | null): number {
   return espaces.find((item) => item.id === espace)?.profil ?? PROFIL_PRINCIPAL
 }
 
-// Profil de la page d'un onglet (principal pour une pop-up ou une vue qui n'est pas un onglet).
-function profilDe(contenu: Electron.WebContents | null): number {
+// Profil de la page d'un onglet ; sinon (pop-up de connexion, worker : `contenu` nul) celui de la session `s` qui pose la
+// question, principal pour la session par défaut.
+function profilDe(contenu: Electron.WebContents | null, s: Session): number {
   for (const record of tabs.values()) if (record.view.webContents === contenu) return profilDeEspace(record.espace)
-  // Pop-up de connexion : même session que sa page, donc même profil.
-  if (contenu && !contenu.isDestroyed()) {
-    for (const p of profils) if (p.partition && session.fromPartition(p.partition) === contenu.session) return p.id
-  }
+  for (const p of profils) if (p.partition && session.fromPartition(p.partition) === s) return p.id
   return PROFIL_PRINCIPAL
 }
 

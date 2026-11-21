@@ -1,0 +1,106 @@
+{
+  "$schema": "https://github.com/garrytan/gstack/docs/pregate.md#pregate-v1",
+  "runner": "cd arbalete-browser && npm run typecheck && npm run test:smoke # un seul smoke test, lancé en entier : {files}",
+  "dependencies": {
+    "arbalete-browser/electron.vite.config.ts": [
+      "arbalete-browser/tests/smoke.spec.ts"
+    ],
+    "arbalete-browser/package-lock.json": [
+      "arbalete-browser/tests/smoke.spec.ts"
+    ],
+    "arbalete-browser/package.json": [
+      "arbalete-browser/tests/smoke.spec.ts"
+    ],
+    "arbalete-browser/playwright.config.ts": [
+      "arbalete-browser/tests/smoke.spec.ts"
+    ],
+    "arbalete-browser/tsconfig.json": [
+      "arbalete-browser/tests/smoke.spec.ts"
+    ],
+    "arbalete-browser/src/**": [
+      "arbalete-browser/tests/smoke.spec.ts"
+    ],
+    "arbalete-browser/vite-csp.ts": [
+      "arbalete-browser/tests/smoke.spec.ts"
+    ],
+    "arbalete-browser/vite.web.config.ts": [
+      "arbalete-browser/tests/smoke.spec.ts"
+    ],
+    "branding/**": [],
+    "docs/maquettes/**": [],
+    "kanban.html": [],
+    "docs/securite/**": [],
+    "arbalete-browser/tsconfig.*.json": [
+      "arbalete-browser/src/configuration.test.ts"
+    ],
+    "arbalete-browser/.oxlintrc.json": [
+      "arbalete-browser/src/configuration.test.ts"
+    ],
+    "arbalete-browser/scripts/**": [
+      "arbalete-browser/src/configuration.test.ts"
+    ],
+    ".gstack/**": [
+      "arbalete-browser/src/ci.test.ts"
+    ]
+  },
+  "strays": {
+    "allow": [
+      "kanban.html"
+    ]
+  },
+  "allowlist": [
+    {
+      "finding": "env.kv",
+      "paths": [
+        "arbalete-browser/src/renderer/src/components/CommandPalette.tsx",
+        "arbalete-browser/src/renderer/src/components/HistoryPanel.tsx",
+        "arbalete-browser/src/renderer/src/components/SuggestionsOverlay.tsx"
+      ],
+      "reason": "faux positif : identifiants de code reformatés par Prettier, aucun secret"
+    }
+  ],
+  "run_profiles": {
+    "ci/verifier": {
+      "workflow": "ci.yml",
+      "events": [
+        "pull_request",
+        "push"
+      ],
+      "jobs": [
+        "Typecheck, tests unitaires, build"
+      ],
+      "artifact": "tested-tree-verifier",
+      "os": "Windows"
+    },
+    "ci/smoke": {
+      "workflow": "ci.yml",
+      "events": [
+        "pull_request",
+        "push"
+      ],
+      "jobs": [
+        "Smoke test (Electron)"
+      ],
+      "artifact": "tested-tree-smoke",
+      "os": "Windows"
+    }
+  },
+  "ship_lanes_from": {
+    "cd arbalete-browser && npm run typecheck && npm run lint && npm run format:check && npm run test:unit": {
+      "profiles": [
+        "ci/verifier"
+      ],
+      "jobs": [
+        "Typecheck, tests unitaires, build"
+      ]
+    },
+    "cd arbalete-browser && npm run test:smoke": {
+      "profiles": [
+        "ci/smoke"
+      ],
+      "jobs": [
+        "Smoke test (Electron)"
+      ]
+    }
+  }
+}

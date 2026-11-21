@@ -264,6 +264,13 @@ export function installPreviewApi(): boolean {
       space.couleur = color as CouleurEspace
       emit()
     },
+    setWorkspaceIsolation: async (id, isolated) => {
+      const space = workspaces.find((item) => item.id === id)
+      if (!space) return
+      if (isolated) space.isole = true
+      else delete space.isole
+      emit()
+    },
     moveWorkspace: async (id, direction) => {
       const ordre = ordreApresDeplacement(
         workspaces.map((item) => item.id),

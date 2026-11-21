@@ -45,6 +45,13 @@ export type Espace = {
   nom: string
   couleur: CouleurEspace
   icone: string
+  // Session isolée (ARB-65) : présent (vrai) seulement si activée ; les onglets de l'espace ont leur propre partition.
+  isole?: boolean
+}
+
+// Partition Electron de l'espace isolé : persistante, une par id (supprimée avec l'espace).
+export function nomPartition(id: number): string {
+  return `persist:espace-${id}`
 }
 
 // Champs d'un espace créé par l'utilisateur (ARB-62) : seul le nom est saisi, couleur et icône se choisissent à la suite

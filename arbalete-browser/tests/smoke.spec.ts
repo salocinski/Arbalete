@@ -4707,6 +4707,62 @@ test('C99 : l’infobulle refuse une ancre aberrante, se place sous l’ancre da
   }
 })
 
+// C101 (ARB-65) : session isolée par espace.
+//   risque=un espace isolé qui partage encore les cookies de la session commune, un canal ouvert à une autre vue que la barre, un onglet qui ne change pas de session;
+//   why_new=aucun test ne regarde la session d'une page; seam=none; no_claim=ni deux vrais comptes Google, ni la suppression de la partition d'un espace supprimé, ni le redémarrage.
+test('C101 : la session isolée donne à l’espace sa partition, sans les cookies communs, et se coupe', async () => {
+  const espaceId = (await etat()).activeWorkspaceId!
+  const url = `${origine}/page-a.html`
+  const onglet = await ui.evaluate((adresse) => window.arbalete.createTab(adresse), url)
+  await attendreUrlActive(url)
+  // La page de l'onglet actif : commune ou propre à l'espace, et les cookies qu'elle voit.
+  const lecture = () =>
+    app.evaluate(async ({ BrowserWindow, WebContentsView, session }, adresse) => {
+      const page = BrowserWindow.getAllWindows()[0].contentView.children.find(
+        (e) => e instanceof WebContentsView && e.webContents.getURL() === adresse
+      ) as InstanceType<typeof WebContentsView> | undefined
+      if (!page) return null
+      const cookies = await page.webContents.session.cookies.get({ name: 'c101' })
+      return { commune: page.webContents.session === session.defaultSession, cookies: cookies.length }
+    }, url)
+  try {
+    await app.evaluate(
+      ({ session }, adresse) => session.defaultSession.cookies.set({ url: adresse, name: 'c101', value: '1' }),
+      origine
+    )
+    await expect.poll(lecture).toEqual({ commune: true, cookies: 1 })
+    // Seule la vue de la barre change la session ; un argument qui n'est pas un booléen est refusé.
+    await expect(ui.evaluate((id) => window.arbalete.setWorkspaceIsolation(id, true), espaceId)).rejects.toThrow()
+    await expect(
+      barreUi.evaluate((id) => window.arbalete.setWorkspaceIsolation(id, 'oui' as never), espaceId)
+    ).rejects.toThrow()
+    expect((await etat()).workspaces.find((e) => e.id === espaceId)!.isole).toBeUndefined()
+    // Isolé : la page de l'onglet est rechargée dans la partition de l'espace, sans le cookie commun.
+    await barreUi.evaluate((id) => window.arbalete.setWorkspaceIsolation(id, true), espaceId)
+    expect((await etat()).workspaces.find((e) => e.id === espaceId)!.isole).toBe(true)
+    await expect.poll(lecture).toEqual({ commune: false, cookies: 0 })
+    expect((await etat()).activeTabId).toBe(onglet)
+    // La partition garde les refus de la session commune (securiserSession) : géolocalisation refusée sans invite.
+    const permission = await app.evaluate(({ BrowserWindow, WebContentsView }, adresse) => {
+      const page = BrowserWindow.getAllWindows()[0].contentView.children.find(
+        (e) => e instanceof WebContentsView && e.webContents.getURL() === adresse
+      ) as InstanceType<typeof WebContentsView>
+      return page.webContents.executeJavaScript(
+        "navigator.permissions.query({ name: 'geolocation' }).then((r) => r.state)"
+      )
+    }, url)
+    expect(permission).toBe('denied')
+    // Coupé : retour à la session commune, cookie retrouvé.
+    await barreUi.evaluate((id) => window.arbalete.setWorkspaceIsolation(id, false), espaceId)
+    expect((await etat()).workspaces.find((e) => e.id === espaceId)!.isole).toBeUndefined()
+    await expect.poll(lecture).toEqual({ commune: true, cookies: 1 })
+  } finally {
+    await barreUi.evaluate((id) => window.arbalete.setWorkspaceIsolation(id, false), espaceId)
+    await app.evaluate(({ session }, adresse) => session.defaultSession.cookies.remove(adresse, 'c101'), origine)
+    await ui.evaluate((id) => window.arbalete.closeTab(id), onglet)
+  }
+})
+
 // C100 (ARB-72) : vue partagée, deux onglets côte à côte.
 //   risque=le placement des deux pages, l'onglet actif au clic dans l'autre page et la fin de la vue à la fermeture;
 //   why_new=aucun test ne regarde plus d'une vue de page à la fois; seam=none; no_claim=ni glisser-déposer, ni clavier réel, ni rendu.

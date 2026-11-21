@@ -90,7 +90,10 @@ export const MIGRATIONS: readonly string[] = [
     espace INTEGER NOT NULL REFERENCES espace (id) ON DELETE CASCADE,
     replie INTEGER NOT NULL DEFAULT 0 CHECK (replie IN (0, 1))
   );
-  ALTER TABLE onglet ADD COLUMN dossier INTEGER REFERENCES dossier_onglet (id) ON DELETE SET NULL`
+  ALTER TABLE onglet ADD COLUMN dossier INTEGER REFERENCES dossier_onglet (id) ON DELETE SET NULL`,
+  // 10 — Session isolée par espace (ARB-65) : 1 = les onglets de l'espace vivent dans leur propre partition (cookies,
+  // stockage et cache séparés), 0 = la session commune.
+  `ALTER TABLE espace ADD COLUMN isole INTEGER NOT NULL DEFAULT 0 CHECK (isole IN (0, 1))`
 ]
 
 export function versionDuSchema(db: DatabaseSync): number {

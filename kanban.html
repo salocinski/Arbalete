@@ -1218,11 +1218,11 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "epic": "phase-4-productivite",
       "kind": "tache",
       "milestone": "EP-12",
-      "note": "Partition de session par espace (comptes différents par espace).\nCritère : Connecté à 2 comptes Google différents dans 2 espaces",
+      "note": "Partition de session par espace (comptes différents par espace).\nCritère : Connecté à 2 comptes Google différents dans 2 espaces\r\nTerminé (2026-11-17) : le menu d'un espace propose « Isoler la session de cet espace » : ses onglets passent dans une partition persistante (persist:espace-<id>, colonne espace.isole, migration 10), rechargés dans la nouvelle session ; « Revenir à la session commune » les y remet et efface la partition. Mêmes refus de permissions, téléchargements et périphériques sur chaque session ; effacement des cookies et du cache sur toutes ; supprimer un espace efface sa partition. Couvert par C101 et espaces.test.ts ; deux vrais comptes Google, pop-up de connexion d'un espace isolé et redémarrage restent manuels.",
       "num": 65,
       "prio": "P3",
       "size": "M",
-      "status": "todo",
+      "status": "done",
       "title": "Option de session isolée par espace"
     },
     {

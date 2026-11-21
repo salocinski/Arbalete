@@ -6,6 +6,7 @@ import { ouvrirBase } from './base.ts'
 import {
   creerEspace,
   ecrireEspaceActif,
+  isolerEspace,
   lireEspaceActif,
   lireEspaces,
   modifierEspace,
@@ -116,6 +117,36 @@ test('la session garde l’espace de chaque onglet, et supprimer l’espace lib�
   strictEqual(supprimerEspace(db, a), true)
   strictEqual(supprimerEspace(db, a), false)
   deepStrictEqual(lireSession(db), [{ url: 'https://example.com/a', titre: 'A', actif: true }, onglets[1], onglets[2]])
+})
+
+// Value: protects=ARB-65, la session isolée est écrite, relue, laissée en paix par un renommage et ne touche que son espace; fails_when=lireEspaces ignore la colonne isole, modifierEspace la remet à zéro ou isolerEspace vise tous les espaces; why_new=la colonne et la fonction sont nouvelles; seam=none; no_claim=le changement de partition dans index.ts
+test('la session isolée d’un espace s’active, se coupe et survit à un renommage', () => {
+  const db = ouvrirBase(':memory:')
+  const a = creerEspace(db, dev)
+  const b = creerEspace(db, perso)
+  deepStrictEqual(lireEspaces(db), [
+    { id: a, ...dev },
+    { id: b, ...perso }
+  ])
+  strictEqual(isolerEspace(db, a, true), true)
+  deepStrictEqual(lireEspaces(db), [
+    { id: a, ...dev, isole: true },
+    { id: b, ...perso }
+  ])
+  modifierEspace(db, a, { nom: 'Travail', couleur: 'work', icone: '▲' })
+  strictEqual(lireEspaces(db)[0].isole, true)
+  strictEqual(isolerEspace(db, a, false), true)
+  strictEqual(lireEspaces(db)[0].isole, undefined)
+  strictEqual(isolerEspace(db, b + 1, true), false)
+  throws(() => isolerEspace(db, 1.5, true))
+})
+
+test('une base au schéma 9 (avant ARB-65) gagne la colonne isole, espaces non isolés', () => {
+  const ancienne = new DatabaseSync(':memory:')
+  appliquerMigrations(ancienne, MIGRATIONS.slice(0, 9))
+  ancienne.exec("INSERT INTO espace (nom, couleur, icone, position) VALUES ('Perso', 'personal', '✳', 0)")
+  appliquerMigrations(ancienne)
+  deepStrictEqual(lireEspaces(ancienne), [{ id: 1, nom: 'Perso', couleur: 'personal', icone: '✳' }])
 })
 
 test('une base au schéma 4 (avant ARB-60) gagne les espaces sans perdre sa session', () => {

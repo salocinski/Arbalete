@@ -31,7 +31,7 @@ jobs:
       contents: write
       actions: read
     env:
-      CLE_CACHE_ELECTRON: electron-windows-45.2.3
+      CLE_CACHE_ELECTRON: electron-windows-45.3.2
       SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
     steps:
       - name: Vérifier la configuration de signature

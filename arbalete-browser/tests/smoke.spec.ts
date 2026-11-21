@@ -4742,14 +4742,12 @@ test('C101 : la session isolée donne à l’espace sa partition, sans les cooki
     expect((await etat()).workspaces.find((e) => e.id === espaceId)!.isole).toBe(true)
     await expect.poll(lecture).toEqual({ commune: false, cookies: 0 })
     expect((await etat()).activeTabId).toBe(onglet)
-    // La partition garde les refus de la session commune (securiserSession) : géolocalisation refusée sans invite.
+    // La partition garde les refus de la session commune (securiserSession) : une permission hors liste (midi) reste refusée.
     const permission = await app.evaluate(({ BrowserWindow, WebContentsView }, adresse) => {
       const page = BrowserWindow.getAllWindows()[0].contentView.children.find(
         (e) => e instanceof WebContentsView && e.webContents.getURL() === adresse
       ) as InstanceType<typeof WebContentsView>
-      return page.webContents.executeJavaScript(
-        "navigator.permissions.query({ name: 'geolocation' }).then((r) => r.state)"
-      )
+      return page.webContents.executeJavaScript("navigator.permissions.query({ name: 'midi' }).then((r) => r.state)")
     }, url)
     expect(permission).toBe('denied')
     // Coupé : retour à la session commune, cookie retrouvé.

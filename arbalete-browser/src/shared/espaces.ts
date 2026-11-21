@@ -45,19 +45,17 @@ export type Espace = {
   nom: string
   couleur: CouleurEspace
   icone: string
-  // Session isolée (ARB-65) : présent (vrai) seulement si activée ; les onglets de l'espace ont leur propre partition.
-  isole?: boolean
+  // Profil de navigation (ARB-143) : id du profil dont les onglets de l'espace utilisent la session ; 1 = Principal.
+  profil: number
 }
 
-// Partition Electron de l'espace isolé : persistante, une par id (supprimée avec l'espace).
-export function nomPartition(id: number): string {
-  return `persist:espace-${id}`
-}
+// Champs d'un espace avant son rattachement : le profil se choisit à part (`definirProfilEspace`, 1 par défaut).
+export type ChampsEspace = Omit<Espace, 'id' | 'profil'>
 
 // Champs d'un espace créé par l'utilisateur (ARB-62) : seul le nom est saisi, couleur et icône se choisissent à la suite
 // de la liste. Partagé avec l'aperçu navigateur.
 const ICONES_ESPACE = ['◆', '✳', '◈', '●'] as const
-export function champsNouvelEspace(existants: readonly Espace[], nom: string): Omit<Espace, 'id'> {
+export function champsNouvelEspace(existants: readonly Espace[], nom: string): ChampsEspace {
   return {
     nom,
     couleur: COULEURS_ESPACE[existants.length % COULEURS_ESPACE.length],
@@ -77,7 +75,7 @@ export function ordreApresDeplacement(ids: readonly number[], id: number, sens: 
 }
 
 // Espaces créés au premier lancement (ARB-61), quand la table est vide : ceux de la maquette de la barre latérale.
-export const ESPACES_INITIAUX: readonly Omit<Espace, 'id'>[] = [
+export const ESPACES_INITIAUX: readonly ChampsEspace[] = [
   { nom: 'Développement', couleur: 'development', icone: '◆' },
   { nom: 'Personnel', couleur: 'personal', icone: '✳' },
   { nom: 'Recherche', couleur: 'research', icone: '◈' }

@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { ArrowDown, ArrowUp, ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react'
 import { LONGUEUR_MAX_NOM_ESPACE, type Espace } from '../../../shared/espaces'
+import { PROFIL_PRINCIPAL, type Profil } from '../../../shared/profils'
 import { Button } from './ui/Button'
 import { IconButton } from './ui/IconButton'
 import { Input } from './ui/Input'
 
 type WorkspaceSwitcherProps = {
   workspaces: Espace[]
+  // Profils (ARB-143) : le nom de celui de l'espace affiché est montré hors profil principal, pour savoir quelle session est active.
+  profils: Profil[]
   active: number | null
   onWorkspaceChange: (id: number) => void
   menuOpen: boolean
@@ -60,6 +63,7 @@ function ChampNom({
 // gestion des espaces n'y est pas offerte. À reprendre avec la couche d'overlays (EP-06).
 export function WorkspaceSwitcher({
   workspaces,
+  profils,
   active,
   onWorkspaceChange,
   menuOpen,
@@ -97,6 +101,11 @@ export function WorkspaceSwitcher({
       >
         <span className="workspace-dot" style={{ background: couleur(activeWorkspace) }} />
         <span>{activeWorkspace.nom}</span>
+        {activeWorkspace.profil !== PROFIL_PRINCIPAL && (
+          <span className="profiles-count" data-testid="profil-actif">
+            {profils.find((p) => p.id === activeWorkspace.profil)?.nom}
+          </span>
+        )}
         <ChevronDown size={14} className="muted-icon" />
       </button>
       {menuOpen && !compact && (

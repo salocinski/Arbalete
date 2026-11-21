@@ -67,6 +67,14 @@ html.vue-barre .sidebar-zone { right: 0; }
 .overlay-content { position: fixed; }
 .overlay-layer--centre { display: flex; align-items: center; justify-content: center; }
 .overlay-layer--centre .overlay-content { position: static; }
+/* Modale des profils (ARB-143). */
+.profiles-modal { width: 340px; padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+.profiles-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.profiles-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.profiles-row .workspace-choice { justify-content: space-between; }
+.profiles-row [aria-checked='true'] { background: var(--color-surface-hover); font-weight: 600; }
+.profiles-count { color: var(--color-text-secondary); font-size: 11px; }
+.profiles-error { color: var(--color-error); font-size: 12px; }
 /* Modale de la couleur d'un espace (ARB-134). */
 .color-modal { width: 300px; padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
 .engine-list { display: flex; flex-direction: column; gap: var(--space-1); }

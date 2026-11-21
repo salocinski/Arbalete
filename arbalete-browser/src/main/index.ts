@@ -157,9 +157,17 @@ import {
   type DossierOngletEspace
 } from './donnees/dossiersOnglets.ts'
 import {
+  creerProfil,
+  definirProfilEspace,
+  lireProfils,
+  renommerProfil,
+  supprimerProfil,
+  type ProfilStocke
+} from './donnees/profils.ts'
+import { hotePourProfil, PROFIL_PRINCIPAL } from '../shared/profils.ts'
+import {
   creerEspace,
   ecrireEspaceActif,
-  isolerEspace,
   lireEspaceActif,
   lireEspaces,
   modifierEspace,
@@ -167,13 +175,7 @@ import {
   semerEspaces,
   supprimerEspace
 } from './donnees/espaces.ts'
-import {
-  champsNouvelEspace,
-  nomPartition,
-  ordreApresDeplacement,
-  type CouleurEspace,
-  type Espace
-} from '../shared/espaces.ts'
+import { champsNouvelEspace, ordreApresDeplacement, type CouleurEspace, type Espace } from '../shared/espaces.ts'
 import { creerGestionnaire } from './gestionnaireTelechargements.ts'
 import { ARCHIVE_GARDEE_MAX, delaiArchivageValide, epinglesDabord, ongletsAArchiver } from '../shared/archivage.ts'
 import { delaiVeilleValide, memoireDesOnglets, ongletsAEndormir, type MemoireOnglets } from '../shared/veille.ts'
@@ -227,7 +229,7 @@ let menuPage: (MenuPage & { tabId: string; lien: string; image: string; pageX: n
 let palette: EntreePalette[] | null = null
 // Permissions de site (ARB-15) : l'invite affichée dans l'overlay (modale) et celles qui attendent leur tour, une à la fois.
 // La page est tenue en attente par `reponse` (le callback d'Electron) ; fermer l'overlay sans répondre refuse sans mémoriser.
-type InvitePermission = DemandePermission & { reponse: (accordee: boolean) => void }
+type InvitePermission = DemandePermission & { profil: number; reponse: (accordee: boolean) => void }
 let invitePermission: InvitePermission | null = null
 const invitesEnAttente: InvitePermission[] = []
 // Plein écran demandé par la page (ARB-15, requestFullscreen) : sa vue couvre alors toute la fenêtre, passée en plein écran.
@@ -279,6 +281,8 @@ const tabs = new Map<string, TabRecord>()
 // Onglet actif de l'espace affiché (ARB-61) ; celui des autres espaces est gardé dans dernierActif, jusqu'au retour.
 let activeTabId: string | null = null
 let espaces: Espace[] = []
+// Profils de navigation (ARB-143), le principal en premier ; la session d'un espace est celle de son profil.
+let profils: ProfilStocke[] = []
 let espaceActif: number | null = null
 // Dossiers d'onglets de tous les espaces (ARB-69) ; la barre n'en reçoit que ceux de l'espace affiché.
 let dossiersOnglets: DossierOngletEspace[] = []
@@ -368,6 +372,7 @@ function stateSnapshot(): BrowserState {
     tabs: ongletsVisibles().map((id) => ({ ...tabs.get(id)!.data })),
     activeTabId,
     workspaces: espaces,
+    profiles: profils.map(({ id, nom }) => ({ id, nom })),
     activeWorkspaceId: espaceActif,
     favorite: pageActiveEstFavorite(),
     favorites: grilleFavoris(),
@@ -702,7 +707,7 @@ function afficherInvitePermission() {
   // shortcut: une invite dont l'onglet a été fermé ou a navigué reste affichée ; la réponse vaut pour l'hôte indiqué.
   let invite = invitesEnAttente.shift()
   while (invite) {
-    const decision = decisionSite(invite.hote, invite.permissions)
+    const decision = decisionSite(invite.profil, invite.hote, invite.permissions)
     if (decision === 'demander') break
     invite.reponse(decision === 'autoriser')
     invite = invitesEnAttente.shift()
@@ -719,7 +724,8 @@ function repondreInvitePermission(reponse: ReponsePermission) {
   invitePermission = null
   if (base) {
     try {
-      for (const permission of invite.permissions) ecrirePermissionSite(base, invite.hote, permission, reponse)
+      for (const permission of invite.permissions)
+        ecrirePermissionSite(base, hotePourProfil(invite.hote, invite.profil), permission, reponse)
     } catch (erreur) {
       console.error('Permission de site non enregistrée :', erreur)
     }
@@ -731,10 +737,12 @@ function repondreInvitePermission(reponse: ReponsePermission) {
 }
 
 // Choix mémorisé du site pour ces permissions : accordé, refusé ou à demander. Une base indisponible refuse.
-function decisionSite(hote: string, permissions: PermissionSite[]): ReponsePermission | 'demander' {
+function decisionSite(profil: number, hote: string, permissions: PermissionSite[]): ReponsePermission | 'demander' {
   if (!base) return 'refuser'
   try {
-    return decisionPermissions(permissions, (permission) => lirePermissionSite(base!, hote, permission))
+    return decisionPermissions(permissions, (permission) =>
+      lirePermissionSite(base!, hotePourProfil(hote, profil), permission)
+    )
   } catch (erreur) {
     console.error('Permission de site non relue :', erreur)
     return 'refuser'
@@ -1331,11 +1339,11 @@ function avancer() {
   if (wc?.navigationHistory.canGoForward()) wc.navigationHistory.goForward()
 }
 
-function siteAutorisePopups(url: string): boolean {
+function siteAutorisePopups(url: string, profil: number): boolean {
   const hote = hoteZoom(url)
   if (!base || !hote) return false
   try {
-    return popupsAutorises(base, hote)
+    return popupsAutorises(base, hotePourProfil(hote, profil))
   } catch (erreur) {
     console.error('Autorisation des pop-ups illisible, elles restent bloquées :', erreur)
     return false
@@ -1390,20 +1398,20 @@ function zoomerPage(sens: SensZoom) {
   const hote = hoteZoom(contenu.getURL())
   if (!base || !hote) return
   try {
-    ecrireZoomSite(base, hote, facteur)
+    ecrireZoomSite(base, hotePourProfil(hote, profilDeEspace(activeRecord()?.espace ?? null)), facteur)
   } catch (erreur) {
     console.error('Zoom non enregistré :', erreur)
   }
 }
 
 // Zoom mémorisé du site que l'onglet vient d'atteindre, 100 % pour une page sans zoom ou hors web.
-function appliquerZoomSite(contenu: Electron.WebContents, url: string) {
+function appliquerZoomSite(contenu: Electron.WebContents, url: string, profil: number) {
   if (contenu.isDestroyed()) return
   const hote = hoteZoom(url)
   let facteur = 1
   if (base && hote) {
     try {
-      facteur = lireZoomSite(base, hote)
+      facteur = lireZoomSite(base, hotePourProfil(hote, profil))
     } catch (erreur) {
       console.error('Zoom non relu :', erreur)
     }
@@ -1576,12 +1584,13 @@ function securiserSession(s: Session) {
     if (contenu !== activeRecord()?.view.webContents) return callback(false)
     if (hoteZoom(details.requestingUrl ?? '') !== hote && permissions.some((p) => p !== 'plein-ecran'))
       return callback(false)
-    const decision = decisionSite(hote, permissions)
+    const profil = profilDeEspace(activeRecord()?.espace ?? null)
+    const decision = decisionSite(profil, hote, permissions)
     if (decision !== 'demander') return callback(decision === 'autoriser')
     // Mêmes hôte et permissions déjà en attente : une seule invite, qui répond aux deux demandes. File plafonnée.
     const cle = permissions.join()
     const existante = [invitePermission, ...invitesEnAttente].find(
-      (i) => i && i.hote === hote && i.permissions.join() === cle
+      (i) => i && i.profil === profil && i.hote === hote && i.permissions.join() === cle
     )
     if (existante) {
       const premiere = existante.reponse
@@ -1592,7 +1601,7 @@ function securiserSession(s: Session) {
       return
     }
     if (invitesEnAttente.length >= 5) return callback(false)
-    invitesEnAttente.push({ hote, permissions, reponse: callback })
+    invitesEnAttente.push({ hote, permissions, profil, reponse: callback })
     afficherInvitePermission()
   })
   // Le refus vaut aussi pour les vérifications (navigator.permissions, accès sans demande) et les périphériques
@@ -1613,7 +1622,7 @@ function securiserSession(s: Session) {
     // Un sous-cadre d'un autre site ne lit pas le choix de la page.
     const demandeur = hoteZoom((details as { requestingUrl?: string }).requestingUrl || origine)
     if (permissions?.some((p) => p !== 'plein-ecran') && demandeur !== hote) return false
-    return !!permissions && !!hote && decisionSite(hote, permissions) === 'autoriser'
+    return !!permissions && !!hote && decisionSite(profilDe(contenu), hote, permissions) === 'autoriser'
   })
   s.setDevicePermissionHandler(() => false)
   s.on('select-hid-device', (event, _details, callback) => {
@@ -1630,15 +1639,35 @@ function securiserSession(s: Session) {
   })
 }
 
-// Session des pages d'un espace (ARB-65) : la partition de l'espace s'il est isolé, sinon la session commune. Chaque session
+// Session des pages d'un espace (ARB-65, ARB-143) : la session du profil de l'espace. Chaque session
 // reçoit les mêmes refus de permissions et la même prise en charge des téléchargements (`securiserSession`), une fois.
 const sessionsSecurisees = new Set<Session>()
 
-function sessionEspace(espace: number | null): Session {
-  const cible = espaces.find((item) => item.id === espace)
-  const s = cible?.isole ? session.fromPartition(nomPartition(cible.id)) : session.defaultSession
+function profilDeEspace(espace: number | null): number {
+  return espaces.find((item) => item.id === espace)?.profil ?? PROFIL_PRINCIPAL
+}
+
+// Profil de la page d'un onglet (principal pour une pop-up ou une vue qui n'est pas un onglet).
+function profilDe(contenu: Electron.WebContents | null): number {
+  for (const record of tabs.values()) if (record.view.webContents === contenu) return profilDeEspace(record.espace)
+  // Pop-up de connexion : même session que sa page, donc même profil.
+  if (contenu && !contenu.isDestroyed()) {
+    for (const p of profils) if (p.partition && session.fromPartition(p.partition) === contenu.session) return p.id
+  }
+  return PROFIL_PRINCIPAL
+}
+
+// Session d'un profil (ARB-143) : sa partition persistante, ou la session par défaut pour le profil principal et pour un
+// profil inconnu (jamais une session vide qui perdrait les comptes).
+function sessionProfil(profil: number): Session {
+  const partition = profils.find((p) => p.id === profil)?.partition
+  const s = partition ? session.fromPartition(partition) : session.defaultSession
   securiserSession(s)
   return s
+}
+
+function sessionEspace(espace: number | null): Session {
+  return sessionProfil(profilDeEspace(espace))
 }
 
 function nouvelleVue(espace: number | null): WebContentsView {
@@ -1668,7 +1697,7 @@ function brancherOnglet(id: string, record: TabRecord) {
   })
   view.webContents.on('did-navigate', (_event, url) => {
     noterVisite(record, url)
-    appliquerZoomSite(view.webContents, url)
+    appliquerZoomSite(view.webContents, url, profilDeEspace(record.espace))
     updateTabFromView(id)
   })
   view.webContents.on('did-navigate-in-page', (_event, url, cadrePrincipal) => {
@@ -1752,7 +1781,10 @@ function brancherOnglet(id: string, record: TabRecord) {
     if (record.espace !== espaceActif) return { action: 'deny' }
     // ARB-108 : sans geste récent de l'utilisateur, la page n'ouvre rien (refus tracé en console).
     // Un site que l'utilisateur a autorisé (avis de pop-up bloquée) ouvre sans geste.
-    if (!gesteRecent(dernierGeste, performance.now()) && !siteAutorisePopups(view.webContents.getURL())) {
+    if (
+      !gesteRecent(dernierGeste, performance.now()) &&
+      !siteAutorisePopups(view.webContents.getURL(), profilDeEspace(record.espace))
+    ) {
       console.warn(`Ouverture bloquée (aucun geste de l'utilisateur) : ${url}`)
       signalerPopupBloquee(id)
       return { action: 'deny' }
@@ -2080,22 +2112,52 @@ function colorerEspace(id: number, couleur: string) {
   broadcastState()
 }
 
-function effacerPartition(id: number) {
-  const s = session.fromPartition(nomPartition(id))
-  void Promise.all([s.clearStorageData(), s.clearCache()]).catch((erreur) =>
-    console.error('Session de l’espace non effacée :', erreur)
-  )
+// Efface cookies, cache et stockage d'une session de profil (ARB-143), sans toucher aux autres profils.
+async function effacerSessionProfil(id: number) {
+  // Un id inconnu ne doit jamais retomber sur la session par défaut (ce serait effacer le profil principal).
+  if (!profils.some((p) => p.id === id)) throw new Error('Profil inconnu')
+  const s = sessionProfil(id)
+  // Attendu : l'erreur remonte à la modale plutôt que de laisser croire que les cookies sont effacés.
+  await Promise.all([s.clearStorageData(), s.clearCache()])
 }
 
-// Session isolée d'un espace (ARB-65). Les onglets de l'espace changent de session : leur page est fermée et rechargée dans
-// la nouvelle (ouvrir l'isolement les déconnecte, le couper les remet dans la session commune et efface la partition : les
-// comptes isolés ne survivent ni à « Effacer les cookies » ni à un id réutilisé). Écrit en base avant de changer l'état.
+// Profils (ARB-143, décision 0007). Écrits en base avant de changer l'état (une erreur remonte à l'appelant).
+function creerProfilUtilisateur(nom: string): number {
+  if (!base) throw new Error('Base indisponible')
+  const id = creerProfil(base, nom)
+  profils = lireProfils(base)
+  broadcastState()
+  return id
+}
+
+function renommerProfilUtilisateur(id: number, nom: string) {
+  if (!base) throw new Error('Base indisponible')
+  if (renommerProfil(base, id, nom)) profils = lireProfils(base)
+  broadcastState()
+}
+
+// Refusée tant que le profil a des espaces (`supprimerProfil`) ; ses comptes connectés sont effacés avec lui.
+function supprimerProfilUtilisateur(id: number) {
+  if (!base) throw new Error('Base indisponible')
+  const session = sessionProfil(id)
+  const supprime = supprimerProfil(base, id)
+  profils = lireProfils(base)
+  if (supprime?.partition) {
+    void Promise.all([session.clearStorageData(), session.clearCache()]).catch((erreur) =>
+      console.error('Session du profil supprimé non effacée :', erreur)
+    )
+  }
+  broadcastState()
+}
+
+// Change le profil d'un espace (ARB-65 pour le principe, ARB-143). Les onglets de l'espace changent de session : leur page est
+// fermée et rechargée dans la nouvelle (changer de profil déconnecte les comptes de l'ancien). Écrit en base avant l'état.
 // shortcut: la page perd Précédent / Suivant, défilement et formulaires non envoyés (comme la mise en veille, ARB-78) ; une
 // confirmation avant de basculer reste à faire si cela gêne en usage réel.
-function isolerEspaceUtilisateur(id: number, isole: boolean) {
+function profilerEspaceUtilisateur(id: number, profil: number) {
   const espace = espaces.find((item) => item.id === id)
-  if (!base || !espace || !!espace.isole === isole) return
-  isolerEspace(base, id, isole)
+  if (!base || !espace || espace.profil === profil) return
+  if (!definirProfilEspace(base, id, profil)) return
   espaces = lireEspaces(base)
   // La vue partagée tient deux pages de l'ancienne session : elle se termine si l'une est de l'espace.
   if ([partage?.gauche, partage?.droite].some((tabId) => tabId && tabs.get(tabId)?.espace === id)) partage = null
@@ -2107,7 +2169,6 @@ function isolerEspaceUtilisateur(id: number, isole: boolean) {
       console.error('Onglet non basculé dans la nouvelle session :', erreur)
     }
   }
-  if (!isole) effacerPartition(id)
   setActiveView()
   broadcastState()
 }
@@ -2138,8 +2199,7 @@ function supprimerEspaceUtilisateur(id: number) {
   dossiersOnglets = lireDossiersOnglets(base) // supprimés avec l'espace (ARB-69)
   dernierActif.delete(id)
   for (const [ongletId, onglet] of [...tabs]) if (onglet.espace === id) closeTab(ongletId, false)
-  // Les comptes connectés de l'espace ne survivent pas à sa suppression (l'id pourrait aussi être réutilisé).
-  effacerPartition(id)
+  // Les comptes connectés restent au profil de l'espace (ARB-143) : seul « Effacer les données du profil » les retire.
   broadcastState()
 }
 
@@ -2220,11 +2280,6 @@ function traiter(canal: string, gestionnaire: (...args: unknown[]) => unknown) {
 
 function exigerTexte(valeur: unknown): string {
   if (typeof valeur !== 'string') throw new Error('Argument IPC invalide : texte attendu')
-  return valeur
-}
-
-function exigerBooleen(valeur: unknown): boolean {
-  if (typeof valeur !== 'boolean') throw new Error('Argument IPC invalide : booléen attendu')
   return valeur
 }
 
@@ -2418,6 +2473,7 @@ app.whenReady().then(() => {
     }
     // Espaces (ARB-61) : créés au premier lancement, espace affiché relu avant la restauration de la session.
     try {
+      profils = lireProfils(base)
       semerEspaces(base)
       espaces = lireEspaces(base)
       espaceActif = lireEspaceActif(base, espaces)
@@ -2838,11 +2894,8 @@ app.whenReady().then(() => {
     const choisis = new Set<TypeEffacement>(types)
     if (choisis.has('historique') && base) effacerHistorique(base, debutEffacement(periode as PeriodeEffacement))
     // Chaque type est tenté même si un autre échoue ; l'échec est rendu à l'interface, qui relit la liste.
-    // Toutes les sessions : la commune et la partition de chaque espace isolé (ARB-65).
-    const sessions = [
-      session.defaultSession,
-      ...espaces.filter((e) => e.isole).map((e) => session.fromPartition(nomPartition(e.id)))
-    ]
+    // Toutes les sessions : celle de chaque profil (ARB-143), la session par défaut si la base est indisponible.
+    const sessions = profils.length > 0 ? profils.map((p) => sessionProfil(p.id)) : [session.defaultSession]
     const echecs = (
       await Promise.allSettled(
         sessions.flatMap((s) => [
@@ -2870,10 +2923,26 @@ app.whenReady().then(() => {
   traiter('browser:create-workspace', (nom) => creerEspaceUtilisateur(exigerTexte(nom)))
   traiter('browser:rename-workspace', (id, nom) => renommerEspace(exigerEntier(id), exigerTexte(nom)))
   traiter('browser:set-workspace-color', (id, couleur) => colorerEspace(exigerEntier(id), exigerTexte(couleur)))
-  // Vue de la barre seule : change la session (cookies) des pages d'un espace.
-  ipcMain.handle('browser:set-workspace-isolation', (event, id, isole) => {
+  // Profils (ARB-143), vue de la barre seule : changer le profil d'un espace change la session (cookies) de ses pages.
+  ipcMain.handle('browser:set-workspace-profile', (event, id, profil) => {
     exigerBarre(event)
-    isolerEspaceUtilisateur(exigerEntier(id), exigerBooleen(isole))
+    profilerEspaceUtilisateur(exigerEntier(id), exigerEntier(profil))
+  })
+  ipcMain.handle('browser:create-profile', (event, nom) => {
+    exigerBarre(event)
+    return creerProfilUtilisateur(exigerTexte(nom))
+  })
+  ipcMain.handle('browser:rename-profile', (event, id, nom) => {
+    exigerBarre(event)
+    renommerProfilUtilisateur(exigerEntier(id), exigerTexte(nom))
+  })
+  ipcMain.handle('browser:delete-profile', (event, id) => {
+    exigerBarre(event)
+    supprimerProfilUtilisateur(exigerEntier(id))
+  })
+  ipcMain.handle('browser:clear-profile-data', async (event, id) => {
+    exigerBarre(event)
+    await effacerSessionProfil(exigerEntier(id))
   })
   traiter('browser:move-workspace', (id, sens) => deplacerEspace(exigerEntier(id), exigerSens(sens)))
   traiter('browser:delete-workspace', (id) => supprimerEspaceUtilisateur(exigerEntier(id)))
@@ -2915,7 +2984,7 @@ app.whenReady().then(() => {
     const record = activeRecord()
     const hote = record ? hoteZoom(record.view.webContents.getURL()) : undefined
     if (!base || !record || !hote) return
-    autoriserPopups(base, hote)
+    autoriserPopups(base, hotePourProfil(hote, profilDeEspace(record.espace)))
     record.popupsBloquees = 0
     retirerAvis()
     broadcastState()

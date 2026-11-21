@@ -12,7 +12,7 @@ import {
 // Tests unitaires des fonctions pures de gestion des espaces (ARB-62).
 
 const espaces = (n: number): Espace[] =>
-  Array.from({ length: n }, (_, i) => ({ id: i + 1, nom: `E${i}`, couleur: 'personal', icone: '◆' }))
+  Array.from({ length: n }, (_, i) => ({ id: i + 1, nom: `E${i}`, couleur: 'personal', icone: '◆', profil: 1 }))
 
 test('un nouvel espace prend la couleur et l’icône suivantes de la liste, en boucle', () => {
   const trois = champsNouvelEspace(espaces(ESPACES_INITIAUX.length), 'Travail')

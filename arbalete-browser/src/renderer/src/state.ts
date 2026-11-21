@@ -17,6 +17,7 @@ const starterState: BrowserState = {
   tabs: [],
   activeTabId: null,
   workspaces: [],
+  profiles: [],
   activeWorkspaceId: null,
   favorite: false,
   favorites: [],

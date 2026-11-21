@@ -1,4 +1,5 @@
 import type { Espace } from './espaces'
+import type { Profil } from './profils'
 import type { ActionDossier, Reglages } from './reglages'
 import type { ChoixMoteur } from './moteurs'
 import type { Telechargement } from './telechargements'
@@ -35,6 +36,9 @@ export type BrowserState = {
   activeTabId: string | null
   // Espaces de travail dans leur ordre et id de l'actif (ARB-61) ; vides et null si la base est indisponible.
   workspaces: Espace[]
+  // Profils de navigation (ARB-143), le principal en premier : `Espace.profil` en désigne un ; le profil actif est celui de
+  // l'espace affiché. Vide si la base est indisponible.
+  profiles: Profil[]
   activeWorkspaceId: number | null
   // La page de l'onglet actif est un favori (ARB-47) : faux pour une page hors du web (adresse non enregistrable).
   favorite: boolean
@@ -221,9 +225,16 @@ export type BrowserAPI = {
   // Couleur d'un espace (ARB-134) : le nom d'une couleur de `COULEURS_ESPACE` ; un nom hors liste est refusé, un espace
   // inconnu est sans effet.
   setWorkspaceColor: (id: number, color: string) => Promise<void>
-  // Session isolée d'un espace (ARB-65) : ses onglets ont leurs propres cookies et stockage (`Espace.isole`). Les onglets de
-  // l'espace rechargent leur page dans la nouvelle session ; un espace inconnu est sans effet, seule la vue de la barre agit.
-  setWorkspaceIsolation: (id: number, isolated: boolean) => Promise<void>
+  // Profils (ARB-143, décision 0007), seule la vue de la barre agit. Un profil a sa propre session (cookies, cache, stockage,
+  // permissions et zoom par site) ; changer le profil d'un espace recharge ses onglets dans la nouvelle session, un espace ou
+  // un profil inconnu est sans effet. `createProfile` renvoie l'id ; un nom vide ou de plus de 40 caractères est refusé,
+  // `deleteProfile` refuse le profil principal et un profil qui a encore des espaces, et efface ses données.
+  setWorkspaceProfile: (id: number, profileId: number) => Promise<void>
+  createProfile: (name: string) => Promise<number>
+  renameProfile: (id: number, name: string) => Promise<void>
+  deleteProfile: (id: number) => Promise<void>
+  // Efface cookies, cache et stockage du profil seulement (les autres profils gardent leurs comptes).
+  clearProfileData: (id: number) => Promise<void>
   // Téléchargements (ARB-55) : enregistrés sans invite dans le dossier Téléchargements, du plus récent au plus ancien, et
   // conservés au redémarrage (un téléchargement alors actif devient `interrompu`). Pause, reprise et annulation ne
   // concernent qu'un téléchargement actif ; `removeDownload` retire une ligne terminée de la liste, sans effacer le fichier.

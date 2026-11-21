@@ -3,10 +3,10 @@ import { DatabaseSync } from 'node:sqlite'
 import { test } from 'node:test'
 import { COULEURS_ESPACE, LONGUEUR_MAX_ICONE_ESPACE, LONGUEUR_MAX_NOM_ESPACE } from '../../shared/espaces.ts'
 import { ouvrirBase } from './base.ts'
+import { lireProfils } from './profils.ts'
 import {
   creerEspace,
   ecrireEspaceActif,
-  isolerEspace,
   lireEspaceActif,
   lireEspaces,
   modifierEspace,
@@ -28,8 +28,8 @@ test('les espaces se créent à la suite et se relisent dans leur ordre', () => 
   const a = creerEspace(db, dev)
   const b = creerEspace(db, perso)
   deepStrictEqual(lireEspaces(db), [
-    { id: a, ...dev },
-    { id: b, ...perso }
+    { id: a, ...dev, profil: 1 },
+    { id: b, ...perso, profil: 1 }
   ])
 })
 
@@ -37,7 +37,7 @@ test('modifier change nom, couleur et icône, et ignore un id inconnu', () => {
   const db = ouvrirBase(':memory:')
   const id = creerEspace(db, dev)
   strictEqual(modifierEspace(db, id, { nom: ' Travail ', couleur: 'work', icone: '▲' }), true)
-  deepStrictEqual(lireEspaces(db), [{ id, nom: 'Travail', couleur: 'work', icone: '▲' }])
+  deepStrictEqual(lireEspaces(db), [{ id, nom: 'Travail', couleur: 'work', icone: '▲', profil: 1 }])
   strictEqual(modifierEspace(db, id + 1, perso), false)
 })
 
@@ -58,7 +58,7 @@ test('modifier refuse des champs invalides et laisse l’espace intact', () => {
   throws(() => modifierEspace(db, id, { ...dev, nom: '' }))
   throws(() => modifierEspace(db, id, { ...dev, couleur: '#ff0000' as never }))
   throws(() => modifierEspace(db, id, { ...dev, icone: 'x'.repeat(LONGUEUR_MAX_ICONE_ESPACE + 1) }))
-  deepStrictEqual(lireEspaces(db), [{ id, ...dev }])
+  deepStrictEqual(lireEspaces(db), [{ id, ...dev, profil: 1 }])
 })
 
 // Value: protects=un espace supprimé entre-temps ne fait pas perdre toute la session; fails_when=l'insertion reprend l'id tel quel (violation de clé étrangère, session non écrite); why_new=seul le SET NULL à la suppression est testé; seam=none; no_claim=la gestion de l'erreur par l'appelant
@@ -82,7 +82,7 @@ test('un identifiant non entier est refusé', () => {
   throws(() => modifierEspace(db, 1.5, dev))
   throws(() => supprimerEspace(db, Number.NaN))
   throws(() => ordonnerEspaces(db, [id, '2' as never]))
-  deepStrictEqual(lireEspaces(db), [{ id, ...dev }])
+  deepStrictEqual(lireEspaces(db), [{ id, ...dev, profil: 1 }])
 })
 
 test('ordonner réécrit l’ordre et refuse une liste qui n’est pas exactement les espaces', () => {
@@ -119,34 +119,31 @@ test('la session garde l’espace de chaque onglet, et supprimer l’espace lib�
   deepStrictEqual(lireSession(db), [{ url: 'https://example.com/a', titre: 'A', actif: true }, onglets[1], onglets[2]])
 })
 
-// Value: protects=ARB-65, la session isolée est écrite, relue, laissée en paix par un renommage et ne touche que son espace; fails_when=lireEspaces ignore la colonne isole, modifierEspace la remet à zéro ou isolerEspace vise tous les espaces; why_new=la colonne et la fonction sont nouvelles; seam=none; no_claim=le changement de partition dans index.ts
-test('la session isolée d’un espace s’active, se coupe et survit à un renommage', () => {
+test('un espace sans profil écrit se lit rattaché au profil principal', () => {
   const db = ouvrirBase(':memory:')
   const a = creerEspace(db, dev)
-  const b = creerEspace(db, perso)
-  deepStrictEqual(lireEspaces(db), [
-    { id: a, ...dev },
-    { id: b, ...perso }
-  ])
-  strictEqual(isolerEspace(db, a, true), true)
-  deepStrictEqual(lireEspaces(db), [
-    { id: a, ...dev, isole: true },
-    { id: b, ...perso }
-  ])
-  modifierEspace(db, a, { nom: 'Travail', couleur: 'work', icone: '▲' })
-  strictEqual(lireEspaces(db)[0].isole, true)
-  strictEqual(isolerEspace(db, a, false), true)
-  strictEqual(lireEspaces(db)[0].isole, undefined)
-  strictEqual(isolerEspace(db, b + 1, true), false)
-  throws(() => isolerEspace(db, 1.5, true))
+  deepStrictEqual(lireEspaces(db), [{ id: a, ...dev, profil: 1 }])
+  db.exec('UPDATE espace SET profil = NULL')
+  strictEqual(lireEspaces(db)[0].profil, 1)
 })
 
-test('une base au schéma 9 (avant ARB-65) gagne la colonne isole, espaces non isolés', () => {
+test('une base au schéma 10 : un espace isolé (ARB-65) devient un profil qui garde sa partition, les autres vont au principal', () => {
   const ancienne = new DatabaseSync(':memory:')
-  appliquerMigrations(ancienne, MIGRATIONS.slice(0, 9))
-  ancienne.exec("INSERT INTO espace (nom, couleur, icone, position) VALUES ('Perso', 'personal', '✳', 0)")
+  appliquerMigrations(ancienne, MIGRATIONS.slice(0, 10))
+  ancienne.exec(`INSERT INTO espace (nom, couleur, icone, position, isole) VALUES
+    ('Perso', 'personal', '✳', 0, 0), ('Banque', 'work', '◆', 1, 1)`)
   appliquerMigrations(ancienne)
-  deepStrictEqual(lireEspaces(ancienne), [{ id: 1, nom: 'Perso', couleur: 'personal', icone: '✳' }])
+  deepStrictEqual(lireProfils(ancienne), [
+    { id: 1, nom: 'Principal', partition: null },
+    { id: 2, nom: 'Banque', partition: 'persist:espace-2' }
+  ])
+  deepStrictEqual(
+    lireEspaces(ancienne).map((e) => [e.id, e.profil]),
+    [
+      [1, 1],
+      [2, 2]
+    ]
+  )
 })
 
 test('une base au schéma 4 (avant ARB-60) gagne les espaces sans perdre sa session', () => {

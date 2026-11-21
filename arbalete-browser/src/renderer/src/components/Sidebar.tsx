@@ -23,6 +23,7 @@ import type { BrowserState, SidebarState } from '../../../shared/types'
 import { LIBELLES_MENU_PAGE } from '../../../shared/menuPage'
 import { useDownloads, useOverlay, usePageMenu } from '../state'
 import { ColorModal } from './ColorModal'
+import { ProfilesModal } from './ProfilesModal'
 import { DownloadsOverlay } from './DownloadsOverlay'
 import { FavoritesPanel } from './FavoritesPanel'
 import { HistoryPanel } from './HistoryPanel'
@@ -92,7 +93,9 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
   // Menu d'un espace puis modale de sa couleur (ARB-134) : même couche d'overlays, la modale remplace le menu sans la fermer.
   const [menuEspace, setMenuEspace] = useState<{ id: number; x: number; y: number } | null>(null)
   const [modaleEspace, setModaleEspace] = useState<number | null>(null)
-  const espaceDuMenu = state.workspaces.find((e) => e.id === (menuEspace?.id ?? modaleEspace))
+  // Espace dont la modale des profils est ouverte (ARB-143).
+  const [modaleProfil, setModaleProfil] = useState<number | null>(null)
+  const espaceDuMenu = state.workspaces.find((e) => e.id === (menuEspace?.id ?? modaleEspace ?? modaleProfil))
   const compacte = barreCompacte(sidebar)
   const espaceActif = state.workspaces.find((e) => e.id === state.activeWorkspaceId)
 
@@ -101,6 +104,7 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
       setMenuOnglet(null)
       setMenuEspace(null)
       setModaleEspace(null)
+      setModaleProfil(null)
       setPanneauTelechargements(null)
       setPanneauHistorique(false)
       setPanneauFavoris(false)
@@ -110,8 +114,9 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
 
   // L'espace a été supprimé pendant que son menu ou sa modale était ouvert : ils n'ont plus d'objet.
   useEffect(() => {
-    if ((menuEspace || modaleEspace !== null) && !espaceDuMenu) void window.arbalete.setOverlay(false)
-  }, [menuEspace, modaleEspace, espaceDuMenu])
+    if ((menuEspace || modaleEspace !== null || modaleProfil !== null) && !espaceDuMenu)
+      void window.arbalete.setOverlay(false)
+  }, [menuEspace, modaleEspace, modaleProfil, espaceDuMenu])
 
   // L'onglet a été fermé autrement (Ctrl+W, une page) : son menu n'a plus d'objet.
   useEffect(() => {
@@ -279,6 +284,7 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
 
           <WorkspaceSwitcher
             workspaces={state.workspaces}
+            profils={state.profiles}
             active={state.activeWorkspaceId}
             onWorkspaceChange={(id) => void window.arbalete.setWorkspace(id)}
             menuOpen={showWorkspaceMenu}
@@ -464,9 +470,13 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
               }
             },
             {
-              // Session isolée (ARB-65) : cookies séparés, par exemple deux comptes Google dans deux espaces.
-              label: espaceDuMenu.isole ? 'Revenir à la session commune' : 'Isoler la session de cet espace',
-              action: () => void window.arbalete.setWorkspaceIsolation(espaceDuMenu.id, !espaceDuMenu.isole)
+              // Profil (ARB-143) : cookies séparés, par exemple deux comptes Google dans deux espaces de profils différents.
+              label: `Profil : ${state.profiles.find((p) => p.id === espaceDuMenu.profil)?.nom ?? 'Principal'}…`,
+              remplace: true,
+              action: () => {
+                setModaleProfil(menuEspace.id)
+                setMenuEspace(null)
+              }
             }
           ]}
         />
@@ -483,6 +493,14 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
       {overlay && panneauHistorique && <HistoryPanel onClose={fermerOverlay} />}
       {overlay && panneauArchive && <ArchivePanel onClose={fermerOverlay} />}
       {overlay && panneauParametres && <SettingsModal sidebar={sidebar} onClose={fermerOverlay} />}
+      {overlay && modaleProfil !== null && espaceDuMenu && (
+        <ProfilesModal
+          espace={espaceDuMenu}
+          profils={state.profiles}
+          espaces={state.workspaces}
+          onClose={fermerOverlay}
+        />
+      )}
       {overlay && modaleEspace !== null && espaceDuMenu && (
         <ColorModal
           espace={espaceDuMenu}

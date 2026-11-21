@@ -315,7 +315,7 @@ sans fond fortement contrasté (ARB-124) : surface discrète et barre Amber. Le 
 par une icône, l'erreur par une icône et la couleur Error, le chargement par un indicateur tournant sur le favicon.
 
 **Espaces** : chacun est un contexte indépendant avec nom, couleur, onglets, favoris, préférences éventuelles
-et session persistante. Changer d'espace préserve les états de navigation.
+et session persistante (celle du profil de navigation auquel l'espace est rattaché). Changer d'espace préserve les états de navigation.
 
 ## Elevation & Depth
 

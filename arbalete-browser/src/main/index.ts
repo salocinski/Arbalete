@@ -2135,17 +2135,14 @@ function renommerProfilUtilisateur(id: number, nom: string) {
 }
 
 // Refusée tant que le profil a des espaces (`supprimerProfil`) ; ses comptes connectés sont effacés avec lui.
-function supprimerProfilUtilisateur(id: number) {
+async function supprimerProfilUtilisateur(id: number) {
   if (!base) throw new Error('Base indisponible')
   const session = sessionProfil(id)
   const supprime = supprimerProfil(base, id)
   profils = lireProfils(base)
-  if (supprime?.partition) {
-    void Promise.all([session.clearStorageData(), session.clearCache()]).catch((erreur) =>
-      console.error('Session du profil supprimé non effacée :', erreur)
-    )
-  }
   broadcastState()
+  // Attendu : une partition non effacée ne se nettoierait plus jamais (l'id n'est pas réutilisé), l'erreur remonte à la modale.
+  if (supprime?.partition) await Promise.all([session.clearStorageData(), session.clearCache()])
 }
 
 // Change le profil d'un espace (ARB-65 pour le principe, ARB-143). Les onglets de l'espace changent de session : leur page est
@@ -2934,9 +2931,9 @@ app.whenReady().then(() => {
     exigerBarre(event)
     renommerProfilUtilisateur(exigerEntier(id), exigerTexte(nom))
   })
-  ipcMain.handle('browser:delete-profile', (event, id) => {
+  ipcMain.handle('browser:delete-profile', async (event, id) => {
     exigerBarre(event)
-    supprimerProfilUtilisateur(exigerEntier(id))
+    await supprimerProfilUtilisateur(exigerEntier(id))
   })
   ipcMain.handle('browser:clear-profile-data', async (event, id) => {
     exigerBarre(event)

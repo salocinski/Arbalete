@@ -12,7 +12,7 @@ Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MIN
 - Les espaces à session isolée d'ARB-65 deviennent des profils (migration 11) et gardent leurs cookies ; « Isoler la session de cet espace » est remplacé par « Profil… ». « Effacer les cookies et le cache » parcourt tous les profils.
 
 ### Limites
-- Deux vrais comptes Google, le rechargement des onglets masqués et le redémarrage restent à vérifier à la main. Changer le profil d'un espace recharge ses onglets (Précédent / Suivant, défilement, formulaires non envoyés perdus). Un profil supprimé garde ses réglages par site orphelins en base (sans effet : son numéro n'est jamais réutilisé).
+- Deux vrais comptes Google, le rechargement des onglets masqués et le redémarrage restent à vérifier à la main. Changer le profil d'un espace recharge ses onglets (Précédent / Suivant, défilement, formulaires non envoyés perdus). Un profil supprimé garde ses réglages par site orphelins en base (sans effet : son numéro n'est jamais réutilisé). L'export / import de données (ARB-79) ne porte pas les profils : une restauration remet tous les espaces dans « Principal ». Les réglages par site d'un espace isolé d'ARB-65 repartent de zéro à la migration.
 
 ## [0.12.44.32] - 2026-11-17
 

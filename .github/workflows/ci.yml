@@ -28,7 +28,7 @@ jobs:
     # Binaire d'Electron téléchargé une fois par version (cache) : un 502 de GitHub ne casse plus un job qui a déjà le zip.
     # La clé porte la version d'Electron de package.json (src/ci.test.ts la compare) : à changer avec elle.
     env:
-      CLE_CACHE_ELECTRON: electron-windows-45.2.3
+      CLE_CACHE_ELECTRON: electron-windows-45.3.2
     steps:
       # Actions épinglées par empreinte de commit (version en commentaire) ; Dependabot les met à jour.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -66,7 +66,7 @@ jobs:
     # Binaire d'Electron téléchargé une fois par version (cache) : un 502 de GitHub ne casse plus un job qui a déjà le zip.
     # La clé porte la version d'Electron de package.json (src/ci.test.ts la compare) : à changer avec elle.
     env:
-      CLE_CACHE_ELECTRON: electron-windows-45.2.3
+      CLE_CACHE_ELECTRON: electron-windows-45.3.2
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

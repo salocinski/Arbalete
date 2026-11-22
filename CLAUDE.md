@@ -228,6 +228,7 @@ modifier `DESIGN.md` qu'après validation.
   Phase 3 : le badge CI du `README.md` suit `main`, et le ruleset GitHub `PR-Rule` (réglage du dépôt, hors Git) exige les deux
   contrôles « Typecheck, tests unitaires, build » et « Smoke test (Electron) » avant fusion. Renommer un job du workflow
   oblige à mettre à jour ce ruleset, sinon plus aucune PR ne fusionne.
+- Reprise de la CI par `/ship` (ARB-133) : `.gstack/pregate.json` (lu depuis `main`, donc effectif seulement après la fusion de la PR qui l'ajoute) associe aux deux lanes de `/ship`, dont la commande doit rester **exacte** (`cd arbalete-browser && npm run typecheck && npm run lint && npm run format:check && npm run test:unit` et `cd arbalete-browser && npm run test:smoke`), les jobs « Typecheck, tests unitaires, build » et « Smoke test (Electron) » ; chaque job écrit `tree.json` (`scripts/ci-tree-json.mjs`) et le publie (artefacts `tested-tree-verifier` et `tested-tree-smoke`). Renommer un job ou changer une de ces commandes casse la reprise (et le ruleset `PR-Rule`) ; `.gstack/ship-policy.json` fixe la version minimale de gstack. Preuve avant PR : `gstack-ci-carry find --base main --policy-from head --simulate --command '<commande>' --allow-repo-commands`.
 - PR Dependabot : la CI couvre typecheck, tests unitaires, build et smoke ; fusionner une PR dont les deux jobs sont verts.
 
 ## Cycle de travail avec gstack

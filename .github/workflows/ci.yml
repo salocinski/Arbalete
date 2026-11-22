@@ -55,6 +55,16 @@ jobs:
       - run: npm run format:check
       - run: npm run test:unit
       - run: npm run build
+      # ARB-133 : enregistrement de l’arbre testé, lu par /ship (.gstack/pregate.json) pour reprendre ce job au lieu de
+      # relancer ses contrôles. Le nom du job est lié à ce fichier, comme au ruleset PR-Rule.
+      - run: node scripts/ci-tree-json.mjs tree.json 'src/**/*.test.ts'
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tested-tree-verifier
+          path: arbalete-browser/tree.json
+          retention-days: 7
 
   # Phase 2 : le smoke test lance Arbalète pour de bon (fenêtres Electron pilotées par Playwright) sur la session
   # graphique du poste Windows. Un job à part : ses échecs ne masquent pas ceux du typecheck et des tests unitaires.
@@ -87,6 +97,16 @@ jobs:
           electron_config_cache: ${{ runner.temp }}\electron-cache
       # test:smoke compile puis lance Playwright ; l'app des tests démarre sur une page locale, sans réseau.
       - run: npm run test:smoke
+      # ARB-133 : enregistrement de l’arbre testé, lu par /ship (.gstack/pregate.json) pour reprendre ce job au lieu de
+      # relancer ses contrôles. Le nom du job est lié à ce fichier, comme au ruleset PR-Rule.
+      - run: node scripts/ci-tree-json.mjs tree.json 'tests/**/*.spec.ts'
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tested-tree-smoke
+          path: arbalete-browser/tree.json
+          retention-days: 7
       # Contexte d'erreur des tests (test-results/), gardé 7 jours, seulement quand le smoke échoue ; un dossier vide
       # laisse un avertissement plutôt que de passer sous silence.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

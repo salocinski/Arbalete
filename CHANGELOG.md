@@ -14,6 +14,14 @@ Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MIN
 ### Limites
 - Deux vrais comptes Google, le rechargement des onglets masqués et le redémarrage restent à vérifier à la main. Changer le profil d'un espace recharge ses onglets (Précédent / Suivant, défilement, formulaires non envoyés perdus). Un profil supprimé garde ses réglages par site orphelins en base (sans effet : son numéro n'est jamais réutilisé). L'export / import de données (ARB-79) ne porte pas les profils : une restauration remet tous les espaces dans « Principal ». Les réglages par site d'un espace isolé d'ARB-65 repartent de zéro à la migration.
 
+## [0.12.44.33] - 2026-11-21
+
+### Ajouté
+- Une livraison n'a plus à refaire des contrôles que la CI a déjà passés (ARB-133) : chaque job de la CI publie en artefact l'arbre testé (`tree.json`, écrit par `scripts/ci-tree-json.mjs`), et `.gstack/pregate.json` associe les deux contrôles locaux de `/ship` aux jobs « Typecheck, tests unitaires, build » et « Smoke test (Electron) ». `.gstack/ship-policy.json` fixe la version minimale de gstack.
+
+### Limites
+- Sans effet sur l'application. La reprise ne joue qu'une fois ces fichiers fusionnés dans `main` (gstack les lit depuis `main`), et seulement tant que l'artefact existe (7 jours). Renommer un job de la CI ou changer une commande de contrôle la casse, comme le ruleset `PR-Rule` : `src/ci.test.ts` garde le lien.
+
 ## [0.12.44.32] - 2026-11-17
 
 ### Ajouté

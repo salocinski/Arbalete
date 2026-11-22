@@ -1123,6 +1123,8 @@ test('C7 : notifications et géolocalisation demandent, Refuser est mémorisé, 
   await barreUi.evaluate(() => window.arbalete.setOverlay(false))
   await expect.poll(overlay).toBe(false)
   expect(await resultatDansOngletActif<string>('window.__geo')).toBe('refusée')
+  // ARB-145 : un refus (mémorisé ou non) n'est jamais signalé comme usage.
+  expect((await etat()).permissionsUtilisees).toEqual([])
   // Non mémorisé : la page peut redemander.
   await resultatDansOngletActif('navigator.geolocation.getCurrentPosition(() => {}, () => {}, { timeout: 1000 }); 0')
   await expect(invite).toContainText('connaître votre position')
@@ -4222,6 +4224,10 @@ test('C83 : Autoriser est mémorisé pour le site et relu par les vérifications
     .toBe('granted')
   // ARB-145 : la page qui vient d'obtenir la position est signalée (icône d'usage), jusqu'à sa prochaine navigation.
   await expect.poll(async () => (await etat()).permissionsUtilisees).toContain('geolocalisation')
+  // Remise à zéro à la navigation vers une autre page.
+  await saisirAdresse(`${origine}/page-a.html`)
+  await attendreUrlActive(`${origine}/page-a.html`)
+  await expect.poll(async () => (await etat()).permissionsUtilisees).toEqual([])
 })
 
 // Value: protects=le plein écran demandé par la page (YouTube) est accordé sans invite : la fenêtre passe en plein écran, la vue
@@ -4243,6 +4249,8 @@ test('C84 : requestFullscreen met la page et la fenêtre en plein écran, la sor
 
   await resultatDansOngletActif('document.documentElement.requestFullscreen().then(() => 0)')
   await expect.poll(async () => (await mesure()).pleinEcran).toBe(true)
+  // ARB-145 : le plein écran, accordé d'office, n'entre pas dans l'indication d'usage.
+  expect((await etat()).permissionsUtilisees).toEqual([])
   await expect
     .poll(async () => {
       const m = await mesure()
@@ -4868,6 +4876,10 @@ test('C102 : le panneau règle et efface les permissions des sites, la fenêtre 
     await expect(
       barreUi.evaluate(([x, y, z]) => window.arbalete.setSitePermission(x, y as 'camera', z as 'autoriser'), [h, p, c])
     ).rejects.toThrow()
+  for (const atypique of ['[::1]', 'Localhost:8080', '127.0.0.1']) {
+    await barreUi.evaluate((h) => window.arbalete.setSitePermission(h, 'micro', 'refuser'), atypique)
+    await barreUi.evaluate((h) => window.arbalete.resetSitePermissions(h), atypique)
+  }
   await barreUi.evaluate((h) => window.arbalete.setSitePermission(h, 'camera', 'autoriser'), hote)
   await barreUi.evaluate((h) => window.arbalete.setSitePermission(h, 'presse-papiers', 'refuser'), hote)
   await barreUi.evaluate((h) => window.arbalete.setSitePermission(h, 'micro', 'refuser'), autre)

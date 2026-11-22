@@ -72,3 +72,18 @@ test('le presse-papiers se lit sur demande, la liste de choix est fermée (ARB-1
   strictEqual(choixSiteValide('plus-tard'), false)
   strictEqual(permissionSiteValide('hid'), false)
 })
+
+test('presse-papiers : demandé sans choix, suivi une fois accordé ou refusé', () => {
+  strictEqual(
+    decisionPermissions(['presse-papiers'], () => undefined),
+    'demander'
+  )
+  strictEqual(
+    decisionPermissions(['presse-papiers'], () => 'autoriser'),
+    'autoriser'
+  )
+  strictEqual(
+    decisionPermissions(['presse-papiers'], () => 'refuser'),
+    'refuser'
+  )
+})

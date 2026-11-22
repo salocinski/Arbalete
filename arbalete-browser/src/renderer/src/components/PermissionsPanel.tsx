@@ -77,7 +77,7 @@ function LignePermission({
       <select value={choix} onChange={(event) => onChange(event.target.value as ChoixSite)}>
         {CHOIX_SITE.map((valeur) => (
           <option key={valeur} value={valeur}>
-            {LIBELLES[valeur]}
+            {valeur === 'demander' && permission === 'plein-ecran' ? 'Par défaut (autorisé)' : LIBELLES[valeur]}
           </option>
         ))}
       </select>

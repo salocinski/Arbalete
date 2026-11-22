@@ -542,8 +542,11 @@ export function installPreviewApi(): boolean {
       return () => ecouteursPermissions.delete(callback)
     },
     openSitePermissions: async () => {
+      if (overlay) return
       panneauPermissions = true
       ecouteursPermissions.forEach((callback) => callback(true))
+      overlay = true
+      overlayListeners.forEach((fn) => fn(overlay))
     },
     listSitePermissions: async () => sitesPermissions.map((site) => ({ hote: site.hote, choix: { ...site.choix } })),
     setSitePermission: async (hote, permission, choix) => {

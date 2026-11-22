@@ -489,7 +489,7 @@ test('l’archive importée n’efface jamais l’archive existante (place resta
     JSON.stringify({
       format: 'arbalete-donnees',
       version: VERSION_EXPORT,
-      archive: [1, 2, 3].map((i) => ({ url: `https://fichier.test/${i}`, titre: 'F', date: 9000 + i }))
+      archive: ['a', 'b', 'c'].map((i, n) => ({ url: `https://fichier.test/${i}`, titre: 'F', date: 9000 + n }))
     })
   )
   strictEqual(importerExport(cible, donnees).archive, 1)

@@ -4,19 +4,22 @@ import { enTransaction } from './transaction.ts'
 
 // Archive des onglets (ARB-64) : les plus récents d'abord, ARCHIVE_GARDEE_MAX au plus (les plus anciens sont oubliés).
 // shortcut: la limite est fixe, sans écran pour vider l'archive ni la retrouver au-delà ; à régler si l'usage la déborde.
-export type AArchiver = { url: string; titre: string; espace: number | null }
+export type AArchiver = { url: string; titre: string; espace: number | null; date?: number }
 
 // Range ces onglets d'un bloc : un échec n'en laisse aucun à moitié écrit, et l'appelant ne ferme alors rien.
 export function archiver(db: DatabaseSync, onglets: readonly AArchiver[], maintenant = Date.now()): void {
+  enTransaction(db, () => ajouterArchive(db, onglets, maintenant))
+}
+
+// Même chose dans la transaction de l'appelant (import de sauvegarde, ARB-146) ; `date` propre à l'élément si elle est donnée.
+export function ajouterArchive(db: DatabaseSync, onglets: readonly AArchiver[], maintenant = Date.now()): void {
   const inserer = db.prepare(
     'INSERT INTO archive (url, titre, espace, date) VALUES (?, ?, (SELECT id FROM espace WHERE id = ?), ?)'
   )
-  enTransaction(db, () => {
-    for (const { url, titre, espace } of onglets) inserer.run(url, titre, espace, maintenant)
-    db.prepare('DELETE FROM archive WHERE id NOT IN (SELECT id FROM archive ORDER BY date DESC, id DESC LIMIT ?)').run(
-      ARCHIVE_GARDEE_MAX
-    )
-  })
+  for (const { url, titre, espace, date } of onglets) inserer.run(url, titre, espace, date ?? maintenant)
+  db.prepare('DELETE FROM archive WHERE id NOT IN (SELECT id FROM archive ORDER BY date DESC, id DESC LIMIT ?)').run(
+    ARCHIVE_GARDEE_MAX
+  )
 }
 
 export function listerArchive(db: DatabaseSync): ElementArchive[] {

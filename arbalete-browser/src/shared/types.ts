@@ -67,13 +67,35 @@ export type SidebarAction = 'open' | 'hide' | 'toggle-pin' | 'toggle-compact'
 
 export type ThemeChoice = 'system' | 'dark' | 'light'
 
-// Ce qu'un import de données (ARB-79) a ajouté : favoris, pages d'historique (nouvelles ou complétées), espaces ; `reglages`
-// vrai si le fichier en portait.
+// Ce qu'un import de données (ARB-79, ARB-146) a ajouté : favoris, pages d'historique (nouvelles ou complétées), espaces,
+// profils, permissions de site, éléments d'archive (archive et onglets ouverts du fichier) ; `reglages` vrai si le fichier
+// en portait. `conflits` : permissions déjà réglées autrement, gardées telles quelles.
 export interface BilanImport {
   favoris: number
   pages: number
   espaces: number
+  profils: number
+  permissions: number
+  archive: number
+  conflits: number
   reglages: boolean
+}
+
+// Aperçu d'un fichier de sauvegarde avant restauration (ARB-146) : ce que l'import ajouterait (`ajouts`, calculé par un essai
+// annulé), si le fichier est une sauvegarde complète et à quelle date il a été fait (0 si inconnue).
+export interface ApercuImport {
+  ajouts: BilanImport
+  complet: boolean
+  exporteLe: number
+}
+
+// Ce qu'un export a écrit (ARB-79, ARB-146) ; les champs de la sauvegarde complète valent 0 pour un export simple.
+export interface BilanExport {
+  favoris: number
+  pages: number
+  profils: number
+  permissions: number
+  archive: number
 }
 
 // Réponse à l'invite de restauration qui suit un arrêt forcé (ARB-46).
@@ -218,11 +240,15 @@ export type BrowserAPI = {
   checkForUpdates: () => Promise<void>
   installUpdate: () => Promise<void>
   onUpdateState: (callback: (state: EtatMiseAJour) => void) => () => void
-  // Sauvegarde des données (ARB-79) : `exportData` écrit favoris, historique, espaces et réglages dans un fichier JSON choisi
-  // dans une boîte système (nombre de favoris et de pages écrits, null si annulé) ; `importData` ajoute à la base ce qu'un tel
-  // fichier contient, sans rien supprimer (null si annulé). Vue de la barre seule.
-  exportData: () => Promise<{ favoris: number; pages: number } | null>
-  importData: () => Promise<BilanImport | null>
+  // Sauvegarde des données (ARB-79, ARB-146) : `exportData(complet)` écrit favoris, historique, espaces et réglages dans un
+  // fichier JSON choisi dans une boîte système, avec en plus profils, permissions de site, archive et onglets ouverts si
+  // `complet` (null si annulé). Un import se fait en deux temps : `previewImport` choisit le fichier, le valide et rend ce
+  // qu'il ajouterait sans rien écrire (null si annulé) ; `confirmImport` ajoute alors à la base ce fichier, sans rien
+  // supprimer (sauf les réglages du fichier qui remplacent les actuels) ; `cancelImport` l'abandonne. Vue de la barre seule.
+  exportData: (complet: boolean) => Promise<BilanExport | null>
+  previewImport: () => Promise<ApercuImport | null>
+  confirmImport: () => Promise<BilanImport>
+  cancelImport: () => Promise<void>
   // Passe à cet espace (ARB-61) : ses onglets remplacent ceux affichés, son dernier onglet actif reprend la page ; un espace
   // sans onglet en ouvre un. Sans effet si l'espace est inconnu ou déjà actif.
   setWorkspace: (id: number) => Promise<void>

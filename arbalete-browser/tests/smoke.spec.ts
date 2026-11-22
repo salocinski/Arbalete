@@ -4901,3 +4901,15 @@ test('C102 : le panneau règle et efface les permissions des sites, la fenêtre 
   await barreUi.evaluate(() => window.arbalete.setOverlay(false))
   await expect.poll(() => barreUi.evaluate(() => window.arbalete.getPermissionsPanel())).toBe(false)
 })
+
+test('C103 : la sauvegarde complète et l’import en deux temps ne se pilotent que depuis la vue de la barre', async () => {
+  // Les boîtes de fichier système restent manuelles : on vérifie le refus de la fenêtre et la validation des arguments.
+  await expect(ui.evaluate(() => window.arbalete.exportData(true))).rejects.toThrow()
+  await expect(ui.evaluate(() => window.arbalete.previewImport())).rejects.toThrow()
+  await expect(ui.evaluate(() => window.arbalete.confirmImport())).rejects.toThrow()
+  await expect(ui.evaluate(() => window.arbalete.cancelImport())).rejects.toThrow()
+  await expect(barreUi.evaluate(() => window.arbalete.exportData('oui' as unknown as boolean))).rejects.toThrow()
+  // Sans aperçu préalable, rien à confirmer : aucun chemin ni donnée ne vient de l'interface.
+  await expect(barreUi.evaluate(() => window.arbalete.confirmImport())).rejects.toThrow()
+  await barreUi.evaluate(() => window.arbalete.cancelImport())
+})

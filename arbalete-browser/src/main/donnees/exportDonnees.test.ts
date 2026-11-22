@@ -8,6 +8,10 @@ import { creerEspace, lireEspaces } from './espaces.ts'
 import { basculerFavori, creerDossier, deplacerFavori, listerFavoris } from './favoris.ts'
 import { ajouterVisite, listerHistorique, lirePage } from './historique.ts'
 import { ecrireExport, construireExport, importerExport, lireExport, VERSION_EXPORT } from './exportDonnees.ts'
+import { archiver, listerArchive } from './archive.ts'
+import { definirProfilEspace, creerProfil, lireProfils } from './profils.ts'
+import { essaiEnTransaction } from './transaction.ts'
+import { definirPermissionSite, lirePermissionSite } from './permissionsSites.ts'
 import { ecrireReglages, ecrireMoteur, ecrireTheme, lireMoteur, lireReglages, lireTheme } from './preferences.ts'
 
 // Tests unitaires de l'export et de l'import des données (ARB-79).
@@ -51,7 +55,16 @@ test('export puis import dans une base vide : tout revient, sauf le dossier de t
   const fichier = JSON.stringify(construireExport(source, 42))
   const cible = ouvrirBase(':memory:')
   const bilan = importerExport(cible, lireExport(fichier))
-  deepStrictEqual(bilan, { favoris: 2, pages: 2, espaces: 1, reglages: true })
+  deepStrictEqual(bilan, {
+    favoris: 2,
+    pages: 2,
+    espaces: 1,
+    profils: 0,
+    permissions: 0,
+    archive: 0,
+    conflits: 0,
+    reglages: true
+  })
   const liste = listerFavoris(cible)
   deepStrictEqual(
     liste.dossiers.map((d) => d.nom),
@@ -91,7 +104,16 @@ test('rejouer un import ne change rien', () => {
   const cible = ouvrirBase(':memory:')
   importerExport(cible, donnees)
   const avant = JSON.stringify(construireExport(cible, 0))
-  deepStrictEqual(importerExport(cible, donnees), { favoris: 0, pages: 0, espaces: 0, reglages: true })
+  deepStrictEqual(importerExport(cible, donnees), {
+    favoris: 0,
+    pages: 0,
+    espaces: 0,
+    profils: 0,
+    permissions: 0,
+    archive: 0,
+    conflits: 0,
+    reglages: true
+  })
   strictEqual(JSON.stringify(construireExport(cible, 0)), avant)
 })
 
@@ -125,8 +147,8 @@ test('un espace du même nom n’est pas recréé', () => {
 test('un fichier étranger, illisible ou plus récent est refusé', () => {
   throws(() => lireExport('pas du json'), /illisible/)
   throws(() => lireExport('[]'), /pas un export/)
-  throws(() => lireExport(JSON.stringify({ format: 'autre', version: 1 })), /pas un export/)
-  throws(() => lireExport(JSON.stringify({ format: 'arbalete-donnees', version: VERSION_EXPORT + 1 })), /plus récente/)
+  throws(() => lireExport(JSON.stringify({ format: 'autre', version: 1 })), /pas un export/) // pregate-literal: VERSION_EXPORT=1 format étranger refusé avant la version
+  throws(() => lireExport(JSON.stringify({ format: 'arbalete-donnees', version: VERSION_EXPORT + 1 })), /plus récente/) // pregate-literal: VERSION_EXPORT=1 le « + 1 » est la version suivante
   throws(() => lireExport(JSON.stringify({ format: 'arbalete-donnees', version: 'x' })), /Version/)
 })
 
@@ -150,7 +172,7 @@ test('les entrées invalides sont ignorées, pas le reste', () => {
   const donnees = lireExport(
     JSON.stringify({
       format: 'arbalete-donnees',
-      version: 1,
+      version: 1, // pregate-literal: VERSION_EXPORT=1 fichier de version 1, toujours lisible
       exporteLe: 'hier',
       favoris: {
         dossiers: ['', 12, 'Ok'],
@@ -202,7 +224,7 @@ test('un BOM est toléré et une date future est ignorée', () => {
     '﻿' +
       JSON.stringify({
         format: 'arbalete-donnees',
-        version: 1,
+        version: 1, // pregate-literal: VERSION_EXPORT=1 fichier de version 1, toujours lisible
         historique: [{ url: 'https://example.com/', dates: [futur, 3000] }]
       })
   )
@@ -215,7 +237,13 @@ test('une visite à date future en base n’empêche pas l’export', () => {
   ajouterVisite(db, 'https://futur.fr/', 'F', Date.now() + 30 * 86_400_000)
   const dossier = mkdtempSync(join(tmpdir(), 'arbalete-export-'))
   try {
-    deepStrictEqual(ecrireExport(join(dossier, 'x.json'), construireExport(db)), { favoris: 0, pages: 1 })
+    deepStrictEqual(ecrireExport(join(dossier, 'x.json'), construireExport(db)), {
+      favoris: 0,
+      pages: 1,
+      profils: 0,
+      permissions: 0,
+      archive: 0
+    })
   } finally {
     rmSync(dossier, { recursive: true, force: true })
   }
@@ -224,8 +252,17 @@ test('une visite à date future en base n’empêche pas l’export', () => {
 test('un import sans réglages ne touche pas aux réglages', () => {
   const cible = ouvrirBase(':memory:')
   ecrireTheme(cible, 'light')
-  const donnees = lireExport(JSON.stringify({ format: 'arbalete-donnees', version: 1 }))
-  deepStrictEqual(importerExport(cible, donnees), { favoris: 0, pages: 0, espaces: 0, reglages: false })
+  const donnees = lireExport(JSON.stringify({ format: 'arbalete-donnees', version: 1 })) // pregate-literal: VERSION_EXPORT=1 fichier de version 1, toujours lisible
+  deepStrictEqual(importerExport(cible, donnees), {
+    favoris: 0,
+    pages: 0,
+    espaces: 0,
+    profils: 0,
+    permissions: 0,
+    archive: 0,
+    conflits: 0,
+    reglages: false
+  })
   strictEqual(lireTheme(cible), 'light')
 })
 
@@ -245,7 +282,7 @@ test('l’export est écrit sans fichier provisoire et un échec laisse l’anci
   try {
     const chemin = join(dossier, 'sauvegarde.json')
     const donnees = construireExport(remplir())
-    deepStrictEqual(ecrireExport(chemin, donnees), { favoris: 2, pages: 2 })
+    deepStrictEqual(ecrireExport(chemin, donnees), { favoris: 2, pages: 2, profils: 0, permissions: 0, archive: 0 })
     deepStrictEqual(readdirSync(dossier), ['sauvegarde.json'])
     strictEqual(lireExport(readFileSync(chemin, 'utf8')).favoris.favoris.length, 2)
 
@@ -265,4 +302,197 @@ test('l’export est écrit sans fichier provisoire et un échec laisse l’anci
   } finally {
     rmSync(dossier, { recursive: true, force: true })
   }
+})
+
+// Sauvegarde complète (ARB-146).
+function remplirComplet() {
+  const db = remplir()
+  const pro = creerProfil(db, 'Pro')
+  const espace = lireEspaces(db).find((e) => e.nom === 'Perso')!.id
+  definirProfilEspace(db, espace, pro)
+  definirPermissionSite(db, 'exemple.fr', 'micro', 'refuser')
+  definirPermissionSite(db, 'exemple.fr', 'camera', 'autoriser') // une autorisation ne s'importe jamais
+  definirPermissionSite(db, `${pro}@exemple.fr`, 'camera', 'refuser')
+  archiver(db, [{ url: 'https://example.com/vieux', titre: 'Vieux', espace: null }], 3000)
+  db.prepare('INSERT INTO onglet (position, url, titre, actif, espace) VALUES (0, ?, ?, 1, ?)').run(
+    'https://example.com/ouvert',
+    'Ouvert',
+    espace
+  )
+  return { db, pro }
+}
+
+test('un export simple ne porte ni profils, ni permissions, ni archive', () => {
+  const { db } = remplirComplet()
+  const simple = construireExport(db, 42)
+  strictEqual(simple.profils, undefined)
+  strictEqual(simple.permissions, undefined)
+  strictEqual(simple.archive, undefined)
+  strictEqual(simple.onglets, undefined)
+  strictEqual(simple.espaces[0].profil, undefined)
+})
+
+test('sauvegarde complète : profils, permissions, archive et onglets reviennent dans une base vide', () => {
+  const { db } = remplirComplet()
+  const fichier = JSON.stringify(construireExport(db, 4242, true))
+  const cible = ouvrirBase(':memory:')
+  const bilan = importerExport(cible, lireExport(fichier))
+  deepStrictEqual(bilan, {
+    favoris: 2,
+    pages: 2,
+    espaces: 1,
+    profils: 1,
+    permissions: 2,
+    archive: 2,
+    conflits: 0,
+    reglages: true
+  })
+  const pro = lireProfils(cible).find((p) => p.nom === 'Pro')!
+  strictEqual(lireEspaces(cible).find((e) => e.nom === 'Perso')!.profil, pro.id)
+  strictEqual(lirePermissionSite(cible, 'exemple.fr', 'micro'), 'refuser')
+  strictEqual(lirePermissionSite(cible, 'exemple.fr', 'camera'), undefined)
+  strictEqual(lirePermissionSite(cible, `${pro.id}@exemple.fr`, 'camera'), 'refuser')
+  deepStrictEqual(
+    listerArchive(cible)
+      .map((a) => a.url)
+      .sort(),
+    ['https://example.com/ouvert', 'https://example.com/vieux']
+  )
+})
+
+test('restauration : rejouer ne change rien, une permission déjà réglée est gardée et comptée', () => {
+  const { db } = remplirComplet()
+  const donnees = lireExport(JSON.stringify(construireExport(db, 4242, true)))
+  const cible = ouvrirBase(':memory:')
+  definirPermissionSite(cible, 'exemple.fr', 'micro', 'autoriser')
+  const premier = importerExport(cible, donnees)
+  strictEqual(premier.conflits, 1)
+  strictEqual(premier.permissions, 1)
+  strictEqual(lirePermissionSite(cible, 'exemple.fr', 'micro'), 'autoriser')
+  const second = importerExport(cible, donnees)
+  deepStrictEqual(second, {
+    favoris: 0,
+    pages: 0,
+    espaces: 0,
+    profils: 0,
+    permissions: 0,
+    archive: 0,
+    conflits: 1,
+    reglages: true
+  })
+  strictEqual(listerArchive(cible).length, 2)
+  strictEqual(lireProfils(cible).length, 2)
+})
+
+test('l’essai annule tout : même bilan que la restauration, base inchangée', () => {
+  const { db } = remplirComplet()
+  const donnees = lireExport(JSON.stringify(construireExport(db, 4242, true)))
+  const cible = ouvrirBase(':memory:')
+  const essai = importerExport(cible, donnees, true)
+  strictEqual(lireProfils(cible).length, 1)
+  strictEqual(listerArchive(cible).length, 0)
+  strictEqual(listerFavoris(cible).favoris.length, 0)
+  strictEqual(cible.isTransaction, false)
+  deepStrictEqual(importerExport(cible, donnees), essai)
+})
+
+test('un fichier de version 1 reste lisible, les sections complètes invalides sont ignorées', () => {
+  const v1 = lireExport(JSON.stringify({ format: 'arbalete-donnees', version: 1, favoris: {}, historique: [] })) // pregate-literal: VERSION_EXPORT=1 fichier de version 1, toujours lisible
+  strictEqual(v1.profils, undefined)
+  const lu = lireExport(
+    JSON.stringify({
+      format: 'arbalete-donnees',
+      version: VERSION_EXPORT,
+      profils: ['Pro', 'Pro', '', 7, 'x'.repeat(41)],
+      permissions: [
+        { profil: null, hote: 'ok.fr', permission: 'micro', choix: 'autoriser' },
+        { profil: null, hote: 'Majuscule.fr', permission: 'micro', choix: 'autoriser' },
+        { profil: null, hote: 'ok.fr', permission: 'hid', choix: 'autoriser' },
+        { profil: null, hote: 'ok.fr', permission: 'micro', choix: 'demander' },
+        { profil: '', hote: 'ok.fr', permission: 'micro', choix: 'refuser' },
+        'x'
+      ],
+      archive: [
+        { url: 'https://a.fr/', titre: 'A', date: 5 },
+        { url: 'javascript:alert(1)', titre: 'J', date: 5 },
+        { url: 'https://b.fr/', titre: 'B', date: 'hier' }
+      ],
+      onglets: [{ url: 'https://a.fr/', titre: 'A', espace: 'Perso' }, { url: 'data:text/html,x' }, 3]
+    })
+  )
+  deepStrictEqual(lu.profils, ['Pro'])
+  strictEqual(lu.permissions!.length, 1)
+  strictEqual(lu.archive!.length, 1)
+  deepStrictEqual(lu.onglets, [{ url: 'https://a.fr/', titre: 'A', espace: 'Perso' }])
+})
+
+test('une permission d’un profil absent du fichier est ignorée', () => {
+  const cible = ouvrirBase(':memory:')
+  const donnees = lireExport(
+    JSON.stringify({
+      format: 'arbalete-donnees',
+      version: VERSION_EXPORT,
+      permissions: [{ profil: 'Inconnu', hote: 'ok.fr', permission: 'micro', choix: 'autoriser' }]
+    })
+  )
+  strictEqual(importerExport(cible, donnees).permissions, 0)
+})
+
+// Value: protects=l'essai d'import annule aussi quand il échoue, et les onglets ouverts gardent leur espace et la date de l'export; fails_when=le ROLLBACK de essaiEnTransaction saute sur erreur, ou l'espace/la date de l'archive sont perdus; why_new=les tests existants ne couvrent que enTransaction et les urls de l'archive; seam=none; no_claim=boîtes de fichier et IPC (manuels)
+test('un essai qui échoue annule et propage l’erreur', () => {
+  const db = ouvrirBase(':memory:')
+  throws(
+    () =>
+      essaiEnTransaction(db, () => {
+        db.prepare('INSERT INTO dossier_favori (nom) VALUES (?)').run('X')
+        throw new Error('boum')
+      }),
+    /boum/
+  )
+  strictEqual(db.isTransaction, false)
+  strictEqual(db.prepare('SELECT COUNT(*) AS n FROM dossier_favori').get()!.n, 0)
+})
+
+test('un onglet ouvert du fichier est archivé avec son espace et la date de l’export', () => {
+  const { db } = remplirComplet()
+  const cible = ouvrirBase(':memory:')
+  importerExport(cible, lireExport(JSON.stringify(construireExport(db, 4242, true))))
+  const ligne = cible.prepare('SELECT date, espace FROM archive WHERE url = ?').get('https://example.com/ouvert')!
+  strictEqual(Number(ligne.date), 4242)
+  strictEqual(Number(ligne.espace), lireEspaces(cible).find((e) => e.nom === 'Perso')!.id)
+})
+
+test('ecrireExport d’une sauvegarde complète rend les comptes relus', () => {
+  const { db } = remplirComplet()
+  const dossier = mkdtempSync(join(tmpdir(), 'arbalete-sauv-'))
+  try {
+    deepStrictEqual(ecrireExport(join(dossier, 's.json'), construireExport(db, 4242, true)), {
+      favoris: 2,
+      pages: 2,
+      profils: 1,
+      permissions: 3,
+      archive: 2
+    })
+  } finally {
+    rmSync(dossier, { recursive: true, force: true })
+  }
+})
+
+test('l’archive importée n’efface jamais l’archive existante (place restante seulement)', () => {
+  const cible = ouvrirBase(':memory:')
+  archiver(
+    cible,
+    Array.from({ length: 199 }, (_, i) => ({ url: `https://local.test/${i}`, titre: 'L', espace: null })),
+    1000
+  )
+  const donnees = lireExport(
+    JSON.stringify({
+      format: 'arbalete-donnees',
+      version: VERSION_EXPORT,
+      archive: [1, 2, 3].map((i) => ({ url: `https://fichier.test/${i}`, titre: 'F', date: 9000 + i }))
+    })
+  )
+  strictEqual(importerExport(cible, donnees).archive, 1)
+  strictEqual(listerArchive(cible).length, 200)
+  strictEqual(listerArchive(cible).filter((a) => a.url.startsWith('https://local.test/')).length, 199)
 })

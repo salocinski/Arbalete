@@ -8,6 +8,7 @@ import {
   type CouleurEspace,
   type Espace
 } from '../../shared/espaces'
+import { PROFIL_PRINCIPAL, nomProfilValide, type Profil } from '../../shared/profils'
 import { MOTEUR_DEFAUT, modeleDe, urlRecherche, type ChoixMoteur } from '../../shared/moteurs'
 import { REGLAGES_DEFAUT, accueilValide, type Reglages } from '../../shared/reglages'
 import { delaiArchivageValide, type ElementArchive } from '../../shared/archivage'
@@ -142,7 +143,14 @@ export function installPreviewApi(): boolean {
 
   // Espaces de l'aperçu (ARB-61) : les trois d'origine, en mémoire ; chaque onglet appartient à l'un d'eux et chaque espace
   // garde son onglet actif.
-  const workspaces: Espace[] = ESPACES_INITIAUX.map((champs, index) => ({ id: index + 1, ...champs }))
+  const workspaces: Espace[] = ESPACES_INITIAUX.map((champs, index) => ({
+    id: index + 1,
+    profil: PROFIL_PRINCIPAL,
+    ...champs
+  }))
+  // Profils de l'aperçu (ARB-143) : en mémoire, le principal d'abord.
+  const profiles: Profil[] = [{ id: PROFIL_PRINCIPAL, nom: 'Principal' }]
+  let nextProfileId = 2
   let nextWorkspaceId = workspaces.length + 1
   let activeWorkspaceId = workspaces[0].id
   const lastActive = new Map<number, string>()
@@ -168,6 +176,7 @@ export function installPreviewApi(): boolean {
     tabs: visible().map(({ history: _h, index: _i, ...tab }) => ({ ...tab })),
     activeTabId,
     workspaces: [...workspaces],
+    profiles: [...profiles],
     activeWorkspaceId,
     favorite: favorites.has(active()?.url ?? ''),
     favorites: [...favorites].slice(0, 8).map((url) => ({ url, title: titleFor(url) })),
@@ -245,7 +254,7 @@ export function installPreviewApi(): boolean {
     createWorkspace: async (name) => {
       const nom = name.trim()
       if (!nom || nom.length > LONGUEUR_MAX_NOM_ESPACE) throw new Error('Nom d’espace invalide')
-      const space = { id: nextWorkspaceId++, ...champsNouvelEspace(workspaces, nom) }
+      const space = { id: nextWorkspaceId++, profil: PROFIL_PRINCIPAL, ...champsNouvelEspace(workspaces, nom) }
       workspaces.push(space)
       await api.setWorkspace(space.id)
     },
@@ -264,13 +273,35 @@ export function installPreviewApi(): boolean {
       space.couleur = color as CouleurEspace
       emit()
     },
-    setWorkspaceIsolation: async (id, isolated) => {
+    setWorkspaceProfile: async (id, profileId) => {
       const space = workspaces.find((item) => item.id === id)
-      if (!space) return
-      if (isolated) space.isole = true
-      else delete space.isole
+      if (!space || !profiles.some((p) => p.id === profileId)) return
+      space.profil = profileId
       emit()
     },
+    createProfile: async (name) => {
+      const nom = nomProfilValide(name)
+      if (!nom) throw new Error('Nom de profil invalide')
+      const id = nextProfileId++
+      profiles.push({ id, nom })
+      emit()
+      return id
+    },
+    renameProfile: async (id, name) => {
+      const nom = nomProfilValide(name)
+      if (!nom) throw new Error('Nom de profil invalide')
+      const profil = profiles.find((p) => p.id === id)
+      if (profil) profil.nom = nom
+      emit()
+    },
+    deleteProfile: async (id) => {
+      if (id === PROFIL_PRINCIPAL) throw new Error('Le profil principal ne se supprime pas')
+      if (workspaces.some((w) => w.profil === id)) throw new Error('Ce profil a encore des espaces')
+      const index = profiles.findIndex((p) => p.id === id)
+      if (index >= 0) profiles.splice(index, 1)
+      emit()
+    },
+    clearProfileData: async () => {},
     moveWorkspace: async (id, direction) => {
       const ordre = ordreApresDeplacement(
         workspaces.map((item) => item.id),

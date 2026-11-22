@@ -93,7 +93,23 @@ export const MIGRATIONS: readonly string[] = [
   ALTER TABLE onglet ADD COLUMN dossier INTEGER REFERENCES dossier_onglet (id) ON DELETE SET NULL`,
   // 10 — Session isolée par espace (ARB-65) : 1 = les onglets de l'espace vivent dans leur propre partition (cookies,
   // stockage et cache séparés), 0 = la session commune.
-  `ALTER TABLE espace ADD COLUMN isole INTEGER NOT NULL DEFAULT 0 CHECK (isole IN (0, 1))`
+  `ALTER TABLE espace ADD COLUMN isole INTEGER NOT NULL DEFAULT 0 CHECK (isole IN (0, 1))`,
+  // 11 — Profils (ARB-143, décision 0007) : contexte de navigation nommé ; `partition` NULL = session par défaut d'Electron
+  // (profil 1, « Principal »), sinon nom de partition persistante. Un espace isolé (ARB-65) devient un profil qui garde sa
+  // partition `persist:espace-<id>` (cookies conservés) ; les autres espaces vont au profil 1. `espace.isole` reste en base,
+  // inutilisée. La colonne `espace.profil` est nullable (SQLite refuse NOT NULL REFERENCES à l'ajout), NULL = profil 1.
+  `CREATE TABLE profil (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom TEXT NOT NULL,
+    partition TEXT,
+    position INTEGER NOT NULL
+  );
+  INSERT INTO profil (id, nom, partition, position) VALUES (1, 'Principal', NULL, 0);
+  ALTER TABLE espace ADD COLUMN profil INTEGER REFERENCES profil (id);
+  INSERT INTO profil (nom, partition, position)
+    SELECT nom, 'persist:espace-' || id, 0 FROM espace WHERE isole = 1 ORDER BY position, id;
+  UPDATE profil SET position = id;
+  UPDATE espace SET profil = COALESCE((SELECT p.id FROM profil p WHERE p.partition = 'persist:espace-' || espace.id), 1)`
 ]
 
 export function versionDuSchema(db: DatabaseSync): number {

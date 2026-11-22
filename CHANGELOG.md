@@ -2,6 +2,18 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.34] - 2026-11-21
+
+### Ajouté
+- Profils de navigation (ARB-143) : l'entrée « Profil… » du menu d'un espace ouvre une modale où l'on crée, renomme, supprime et efface des profils, puis où l'on rattache l'espace à l'un d'eux. Un profil a ses propres cookies, cache, stockage, permissions de site, zoom et pop-ups autorisées : deux comptes d'un même site cohabitent dans deux espaces. Une pastille dans le sélecteur signale un profil autre que « Principal ».
+- Le profil « Principal » garde la session et les réglages d'avant ; historique, favoris, archive, téléchargements et réglages restent communs (décision 0007).
+
+### Modifié
+- Les espaces à session isolée d'ARB-65 deviennent des profils (migration 11) et gardent leurs cookies ; « Isoler la session de cet espace » est remplacé par « Profil… ». « Effacer les cookies et le cache » parcourt tous les profils.
+
+### Limites
+- Deux vrais comptes Google, le rechargement des onglets masqués et le redémarrage restent à vérifier à la main. Changer le profil d'un espace recharge ses onglets (Précédent / Suivant, défilement, formulaires non envoyés perdus). Un profil supprimé garde ses réglages par site orphelins en base (sans effet : son numéro n'est jamais réutilisé). L'export / import de données (ARB-79) ne porte pas les profils : une restauration remet tous les espaces dans « Principal ». Les réglages par site d'un espace isolé d'ARB-65 repartent de zéro à la migration.
+
 ## [0.12.44.33] - 2026-11-21
 
 ### Ajouté

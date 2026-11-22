@@ -4,17 +4,17 @@ import {
   ESPACES_INITIAUX,
   LONGUEUR_MAX_ICONE_ESPACE,
   LONGUEUR_MAX_NOM_ESPACE,
+  type ChampsEspace,
   type CouleurEspace,
   type Espace
 } from '../../shared/espaces.ts'
+import { PROFIL_PRINCIPAL } from '../../shared/profils.ts'
 import { ecrirePreference, lirePreference } from './preferences.ts'
 import { enTransaction } from './transaction.ts'
 
 // Espaces (ARB-60, EP-12) : dépôt sur la table `espace`. Les onglets d'un espace sont ceux de la session portant son id
 // (session.ts). Le processus principal sème les espaces d'origine au démarrage (ARB-61, `semerEspaces`) ; création,
 // renommage, ordre et suppression par l'utilisateur passent par ses canaux IPC (ARB-62, index.ts).
-
-export type ChampsEspace = Omit<Espace, 'id'>
 
 // Valide les champs reçus (frontière de confiance : l'IPC leur enverra des données du renderer) ; renvoie les champs
 // nettoyés (nom et icône sans espaces de bord) ou lève une erreur.
@@ -31,23 +31,19 @@ export function validerEspace(champs: ChampsEspace): ChampsEspace {
 // Espaces dans leur ordre. Une couleur inconnue (base écrite à la main, couleur retirée dans une version future) est
 // remplacée à la lecture par « personal » : l'interface résout toujours un token existant.
 export function lireEspaces(db: DatabaseSync): Espace[] {
-  const lignes = db.prepare('SELECT id, nom, couleur, icone, isole FROM espace ORDER BY position, id').all() as (Omit<
-    Espace,
-    'isole'
-  > & { isole: number })[]
+  // Profil NULL (espace créé sans rattachement) ou inexistant : le profil principal (ARB-143).
+  const lignes = db
+    .prepare(
+      'SELECT e.id, e.nom, e.couleur, e.icone, COALESCE(p.id, ?) AS profil FROM espace e LEFT JOIN profil p ON p.id = e.profil ORDER BY e.position, e.id'
+    )
+    .all(PROFIL_PRINCIPAL) as Espace[]
   return lignes.map((ligne) => ({
     id: ligne.id,
     nom: ligne.nom,
     couleur: COULEURS_ESPACE.includes(ligne.couleur) ? ligne.couleur : 'personal',
     icone: ligne.icone,
-    ...(ligne.isole ? { isole: true } : {})
+    profil: ligne.profil
   }))
-}
-
-// Active ou coupe la session isolée de l'espace (ARB-65). Renvoie faux si l'espace n'existe pas.
-export function isolerEspace(db: DatabaseSync, id: number, isole: boolean): boolean {
-  validerId(id)
-  return db.prepare('UPDATE espace SET isole = ? WHERE id = ?').run(isole ? 1 : 0, id).changes > 0
 }
 
 // Crée les espaces d'origine si la table est vide (ARB-61) ; sans effet sinon, y compris si l'utilisateur les a tous supprimés

@@ -4707,15 +4707,15 @@ test('C99 : l’infobulle refuse une ancre aberrante, se place sous l’ancre da
   }
 })
 
-// C101 (ARB-65) : session isolée par espace.
-//   risque=un espace isolé qui partage encore les cookies de la session commune, un canal ouvert à une autre vue que la barre, un onglet qui ne change pas de session;
-//   why_new=aucun test ne regarde la session d'une page; seam=none; no_claim=ni deux vrais comptes Google, ni la suppression de la partition d'un espace supprimé, ni le redémarrage.
-test('C101 : la session isolée donne à l’espace sa partition, sans les cookies communs, et se coupe', async () => {
+// C101 (ARB-65, ARB-143) : session par profil.
+//   risque=un profil qui partage encore les cookies de la session commune, un canal ouvert à une autre vue que la barre, un onglet qui ne change pas de session, un effacement qui touche un autre profil;
+//   why_new=aucun test ne regarde la session d'une page; seam=none; no_claim=ni deux vrais comptes Google, ni le redémarrage.
+test('C101 : un profil donne à l’espace sa partition, sans les cookies du principal, et s’efface seul', async () => {
   const espaceId = (await etat()).activeWorkspaceId!
   const url = `${origine}/page-a.html`
   const onglet = await ui.evaluate((adresse) => window.arbalete.createTab(adresse), url)
   await attendreUrlActive(url)
-  // La page de l'onglet actif : commune ou propre à l'espace, et les cookies qu'elle voit.
+  // La page de l'onglet actif : session par défaut ou non, et les cookies qu'elle voit.
   const lecture = () =>
     app.evaluate(async ({ BrowserWindow, WebContentsView, session }, adresse) => {
       const page = BrowserWindow.getAllWindows()[0].contentView.children.find(
@@ -4725,21 +4725,30 @@ test('C101 : la session isolée donne à l’espace sa partition, sans les cooki
       const cookies = await page.webContents.session.cookies.get({ name: 'c101' })
       return { commune: page.webContents.session === session.defaultSession, cookies: cookies.length }
     }, url)
+  const cookiesPrincipal = () =>
+    app.evaluate(
+      ({ session }, adresse) => session.defaultSession.cookies.get({ url: adresse }).then((c) => c.length),
+      origine
+    )
+  let profil: number | null = null
   try {
     await app.evaluate(
       ({ session }, adresse) => session.defaultSession.cookies.set({ url: adresse, name: 'c101', value: '1' }),
       origine
     )
     await expect.poll(lecture).toEqual({ commune: true, cookies: 1 })
-    // Seule la vue de la barre change la session ; un argument qui n'est pas un booléen est refusé.
-    await expect(ui.evaluate((id) => window.arbalete.setWorkspaceIsolation(id, true), espaceId)).rejects.toThrow()
+    // Seule la vue de la barre agit ; un nom invalide est refusé.
+    await expect(ui.evaluate(() => window.arbalete.createProfile('Autre'))).rejects.toThrow()
+    await expect(barreUi.evaluate(() => window.arbalete.createProfile('   '))).rejects.toThrow()
+    const cree = await barreUi.evaluate(() => window.arbalete.createProfile('Autre'))
+    profil = cree
+    expect((await etat()).profiles.map((p) => p.nom)).toEqual(['Principal', 'Autre'])
     await expect(
-      barreUi.evaluate((id) => window.arbalete.setWorkspaceIsolation(id, 'oui' as never), espaceId)
+      ui.evaluate((a) => window.arbalete.setWorkspaceProfile(a[0], a[1]), [espaceId, cree])
     ).rejects.toThrow()
-    expect((await etat()).workspaces.find((e) => e.id === espaceId)!.isole).toBeUndefined()
-    // Isolé : la page de l'onglet est rechargée dans la partition de l'espace, sans le cookie commun.
-    await barreUi.evaluate((id) => window.arbalete.setWorkspaceIsolation(id, true), espaceId)
-    expect((await etat()).workspaces.find((e) => e.id === espaceId)!.isole).toBe(true)
+    // Le profil : la page est rechargée dans sa partition, sans le cookie du principal.
+    await barreUi.evaluate((a) => window.arbalete.setWorkspaceProfile(a[0], a[1]), [espaceId, cree])
+    expect((await etat()).workspaces.find((e) => e.id === espaceId)!.profil).toBe(cree)
     await expect.poll(lecture).toEqual({ commune: false, cookies: 0 })
     expect((await etat()).activeTabId).toBe(onglet)
     // La partition garde les refus de la session commune (securiserSession) : une permission hors liste (midi) reste refusée.
@@ -4750,12 +4759,24 @@ test('C101 : la session isolée donne à l’espace sa partition, sans les cooki
       return page.webContents.executeJavaScript("navigator.permissions.query({ name: 'midi' }).then((r) => r.state)")
     }, url)
     expect(permission).toBe('denied')
-    // Coupé : retour à la session commune, cookie retrouvé.
-    await barreUi.evaluate((id) => window.arbalete.setWorkspaceIsolation(id, false), espaceId)
-    expect((await etat()).workspaces.find((e) => e.id === espaceId)!.isole).toBeUndefined()
+    // Un profil qui a des espaces ne se supprime pas ; le principal non plus.
+    await expect(barreUi.evaluate((p) => window.arbalete.deleteProfile(p), cree)).rejects.toThrow()
+    await expect(barreUi.evaluate(() => window.arbalete.deleteProfile(1))).rejects.toThrow()
+    // Un profil inconnu est refusé et ne retombe pas sur la session du principal.
+    await expect(barreUi.evaluate(() => window.arbalete.clearProfileData(9999))).rejects.toThrow()
+    expect(await cookiesPrincipal()).toBe(1)
+    // Effacer le profil créé laisse les cookies du principal.
+    await barreUi.evaluate((p) => window.arbalete.clearProfileData(p), cree)
+    expect(await cookiesPrincipal()).toBe(1)
+    // Retour au principal : cookie retrouvé, puis le profil, devenu vide d'espaces, se supprime.
+    await barreUi.evaluate((a) => window.arbalete.setWorkspaceProfile(a[0], a[1]), [espaceId, 1])
     await expect.poll(lecture).toEqual({ commune: true, cookies: 1 })
+    await barreUi.evaluate((p) => window.arbalete.deleteProfile(p), cree)
+    profil = null
+    expect((await etat()).profiles.map((p) => p.nom)).toEqual(['Principal'])
   } finally {
-    await barreUi.evaluate((id) => window.arbalete.setWorkspaceIsolation(id, false), espaceId)
+    await barreUi.evaluate((a) => window.arbalete.setWorkspaceProfile(a[0], a[1]), [espaceId, 1])
+    if (profil !== null) await barreUi.evaluate((p) => window.arbalete.deleteProfile(p), profil).catch(() => {})
     await app.evaluate(({ session }, adresse) => session.defaultSession.cookies.remove(adresse, 'c101'), origine)
     await ui.evaluate((id) => window.arbalete.closeTab(id), onglet)
   }

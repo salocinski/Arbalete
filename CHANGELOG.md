@@ -2,6 +2,16 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.35] - 2026-11-22
+
+### Ajouté
+- Panneau des permissions des sites (ARB-145) : le bouton « Permissions » de la barre latérale liste les sites qui ont un choix mémorisé (pour le profil de l'espace affiché) ; chaque permission (plein écran, caméra, micro, notifications, position, presse-papiers) se règle sur Demander, Autoriser ou Bloquer, et « Réinitialiser » efface tous les choix d'un site. Le plein écran, accordé d'office sans choix, s'affiche « Par défaut (autorisé) ».
+- Presse-papiers : la lecture du presse-papiers par une page demande maintenant l'autorisation (invite mémorisable) ; l'écriture reste refusée.
+- Indication d'usage : une icône à droite de la barre d'adresse signale les permissions accordées à la page de l'onglet actif depuis son chargement et ouvre le panneau.
+
+### Limites
+- L'icône d'usage signifie « accordée », pas « flux en cours » : retirer une permission dans le panneau ne coupe pas un flux déjà ouvert (Electron n'offre pas de révocation) et l'icône reste jusqu'à la navigation. Le panneau ne liste que les sites ayant un choix mémorisé, pas tous les sites visités. Revue externe (Codex) non lancée ; deux notes non bloquantes de la revue (usage noté sur l'onglet actif si la réponse arrive après un changement d'onglet, panneau non rafraîchi si l'espace change pendant qu'il est ouvert) restent ouvertes.
+
 ## [0.12.44.34] - 2026-11-21
 
 ### Ajouté

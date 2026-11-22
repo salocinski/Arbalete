@@ -4876,7 +4876,7 @@ test('C102 : le panneau règle et efface les permissions des sites, la fenêtre 
     await expect(
       barreUi.evaluate(([x, y, z]) => window.arbalete.setSitePermission(x, y as 'camera', z as 'autoriser'), [h, p, c])
     ).rejects.toThrow()
-  for (const atypique of ['[::1]', 'Localhost:8080', '127.0.0.1']) {
+  for (const atypique of ['[::1]', 'Localhost:8080', '127.0.0.1', 'evil_x.c102.test']) {
     await barreUi.evaluate((h) => window.arbalete.setSitePermission(h, 'micro', 'refuser'), atypique)
     await barreUi.evaluate((h) => window.arbalete.resetSitePermissions(h), atypique)
   }

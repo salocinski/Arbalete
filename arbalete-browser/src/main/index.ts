@@ -776,8 +776,9 @@ function ouvrirPanneauPermissions() {
 // Hôte reçu de l'interface pour un réglage de site : un nom d'hôte, sans préfixe de profil (`@`), espace ni barre.
 function exigerHoteSite(valeur: unknown): string {
   const hote = exigerTexte(valeur)
-  if (!/^[a-z0-9.[\]:-]{1,253}$/i.test(hote)) throw new Error('Argument IPC invalide : hôte inconnu')
-  return hote
+  // `_` est admis (Chromium l'accepte dans un hôte) ; la clé est en minuscules, comme celle de `hoteZoom`.
+  if (!/^[a-z0-9._[\]:-]{1,253}$/i.test(hote)) throw new Error('Argument IPC invalide : hôte inconnu')
+  return hote.toLowerCase()
 }
 
 // Choix mémorisé du site pour ces permissions : accordé, refusé ou à demander. Une base indisponible refuse.

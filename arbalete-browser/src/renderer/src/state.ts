@@ -22,6 +22,7 @@ const starterState: BrowserState = {
   favorite: false,
   favorites: [],
   popupsBloquees: 0,
+  permissionsUtilisees: [],
   folders: [],
   split: null
 }
@@ -143,6 +144,19 @@ export function usePalette(): EntreePalette[] | null {
     return window.arbalete.onPalette(setLignes)
   }, [])
   return lignes
+}
+
+// Panneau des permissions par site (ARB-145) : ouvert tant que le processus principal le tient dans la couche d'overlays.
+export function usePermissionsPanel(): boolean {
+  const [ouvert, setOuvert] = useState(false)
+  useEffect(() => {
+    void window.arbalete
+      .getPermissionsPanel()
+      .then(setOuvert)
+      .catch(() => {})
+    return window.arbalete.onPermissionsPanel(setOuvert)
+  }, [])
+  return ouvert
 }
 
 // Invite de permission d'un site (ARB-15) : null tant qu'aucun site n'en demande.

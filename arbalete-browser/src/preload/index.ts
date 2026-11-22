@@ -60,6 +60,13 @@ const api: BrowserAPI = {
   onFindResult: (callback) => ecouter('browser:find-result', callback),
   onFindFocus: (callback) => ecouter('browser:find-focus', callback),
   showBlockedPopups: () => ipcRenderer.invoke('browser:popup-show'),
+  getPermissionsPanel: () => ipcRenderer.invoke('browser:get-permissions-panel'),
+  onPermissionsPanel: (callback) => ecouter('browser:permissions-panel', callback),
+  openSitePermissions: () => ipcRenderer.invoke('browser:open-site-permissions'),
+  listSitePermissions: () => ipcRenderer.invoke('browser:list-site-permissions'),
+  setSitePermission: (hote, permission, choix) =>
+    ipcRenderer.invoke('browser:set-site-permission', hote, permission, choix),
+  resetSitePermissions: (hote) => ipcRenderer.invoke('browser:reset-site-permissions', hote),
   allowPopups: () => ipcRenderer.invoke('browser:popup-allow'),
   closePopupNotice: () => ipcRenderer.invoke('browser:popup-close'),
   showTooltip: (text, anchor) => ipcRenderer.invoke('browser:show-tooltip', text, anchor),

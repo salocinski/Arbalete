@@ -1,5 +1,6 @@
 import { useRef, type KeyboardEvent, type RefObject } from 'react'
-import { AppWindow, ShieldCheck, Star } from 'lucide-react'
+import { AppWindow, ShieldCheck, SlidersHorizontal, Star } from 'lucide-react'
+import { NOMS_PERMISSION, type PermissionSite } from '../../../shared/permissions'
 import { useSuggestions } from '../state'
 import { IconButton } from './ui/IconButton'
 import { Input } from './ui/Input'
@@ -15,6 +16,7 @@ type AddressBarProps = {
   favoritable: boolean
   // Pop-ups bloquées sur la page (ARB-108) : l'icône, à droite de l'étoile, n'existe que s'il y en a.
   popupsBloquees: number
+  permissionsUtilisees: PermissionSite[]
 }
 
 // Champ contrôlé par MainView : Ctrl+L y place le focus et la page d'accueil partage sa saisie.
@@ -28,7 +30,8 @@ export function AddressBar({
   onSubmit,
   favorite,
   favoritable,
-  popupsBloquees
+  popupsBloquees,
+  permissionsUtilisees
 }: AddressBarProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const suggestions = useSuggestions()
@@ -92,6 +95,16 @@ export function AddressBar({
             >
               <Star size={14} fill={favorite ? 'currentColor' : 'none'} />
             </IconButton>
+            {permissionsUtilisees.length > 0 && (
+              <IconButton
+                size="sm"
+                title={`Cette page utilise : ${permissionsUtilisees.map((p) => NOMS_PERMISSION[p]).join(', ')}`}
+                data-testid="permissions-used"
+                onClick={() => void window.arbalete.openSitePermissions()}
+              >
+                <SlidersHorizontal size={14} />
+              </IconButton>
+            )}
             {popupsBloquees > 0 && (
               <IconButton
                 size="sm"

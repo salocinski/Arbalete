@@ -1,6 +1,13 @@
 // Permissions de site (ARB-15) : le plein écran est accordé d'office, caméra, micro, notifications et position se
 // demandent une fois par site puis le choix est mémorisé. Tout le reste (HID, USB, presse-papiers…) reste refusé.
-export const PERMISSIONS_SITE = ['plein-ecran', 'camera', 'micro', 'notifications', 'geolocalisation'] as const
+export const PERMISSIONS_SITE = [
+  'plein-ecran',
+  'camera',
+  'micro',
+  'notifications',
+  'geolocalisation',
+  'presse-papiers'
+] as const
 export type PermissionSite = (typeof PERMISSIONS_SITE)[number]
 
 export const REPONSES_PERMISSION = ['autoriser', 'refuser'] as const
@@ -14,7 +21,37 @@ export const LIBELLES_PERMISSION: Record<PermissionSite, string> = {
   camera: 'utiliser votre caméra',
   micro: 'utiliser votre micro',
   notifications: 'vous envoyer des notifications',
-  geolocalisation: 'connaître votre position'
+  geolocalisation: 'connaître votre position',
+  'presse-papiers': 'lire votre presse-papiers'
+}
+
+// Nom court des permissions, pour le panneau de gestion par site (ARB-145).
+export const NOMS_PERMISSION: Record<PermissionSite, string> = {
+  'plein-ecran': 'Plein écran',
+  camera: 'Caméra',
+  micro: 'Micro',
+  notifications: 'Notifications',
+  geolocalisation: 'Position',
+  'presse-papiers': 'Presse-papiers'
+}
+
+// Choix affiché pour une permission d'un site : `demander` = aucun choix mémorisé (le site redemandera ; le plein écran,
+// lui, reste accordé d'office).
+export const CHOIX_SITE = ['autoriser', 'refuser', 'demander'] as const
+export type ChoixSite = (typeof CHOIX_SITE)[number]
+
+export function choixSiteValide(valeur: unknown): valeur is ChoixSite {
+  return CHOIX_SITE.some((choix) => choix === valeur)
+}
+
+export function permissionSiteValide(valeur: unknown): valeur is PermissionSite {
+  return PERMISSIONS_SITE.some((permission) => permission === valeur)
+}
+
+// Un site du panneau : son hôte et les choix mémorisés (absent = `demander`).
+export type SitePermissions = {
+  hote: string
+  choix: Partial<Record<PermissionSite, ReponsePermission>>
 }
 
 // Phrase de l'invite : « utiliser votre caméra et utiliser votre micro » devient « utiliser votre caméra et votre micro »
@@ -32,6 +69,7 @@ export function permissionsDemandees(
   if (permission === 'fullscreen') return ['plein-ecran']
   if (permission === 'notifications') return ['notifications']
   if (permission === 'geolocation') return ['geolocalisation']
+  if (permission === 'clipboard-read') return ['presse-papiers']
   if (permission !== 'media') return null
   const types = details?.mediaTypes ?? (details?.mediaType ? [details.mediaType] : [])
   const resultat: PermissionSite[] = []

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import {
   Archive,
+  SlidersHorizontal,
   ChevronDown,
   Clock3,
   Download,
@@ -21,13 +22,14 @@ import {
 } from '../../../shared/barre'
 import type { BrowserState, SidebarState } from '../../../shared/types'
 import { LIBELLES_MENU_PAGE } from '../../../shared/menuPage'
-import { useDownloads, useOverlay, usePageMenu } from '../state'
+import { useDownloads, useOverlay, usePageMenu, usePermissionsPanel } from '../state'
 import { ColorModal } from './ColorModal'
 import { ProfilesModal } from './ProfilesModal'
 import { DownloadsOverlay } from './DownloadsOverlay'
 import { FavoritesPanel } from './FavoritesPanel'
 import { HistoryPanel } from './HistoryPanel'
 import { ArchivePanel } from './ArchivePanel'
+import { PermissionsPanel } from './PermissionsPanel'
 import { MenuOverlay } from './Overlay'
 import { PinButton } from './PinButton'
 import { SettingsModal } from './SettingsModal'
@@ -88,6 +90,7 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
   // Menu d'un onglet (ARB-39) : demandé ici, affiché une fois que le processus principal a agrandi la vue, sinon il
   // serait coupé au bord de la barre le temps d'une image. Il disparaît avec l'overlay, quelle qu'en soit la cause.
   const overlay = useOverlay()
+  const panneauPermissions = usePermissionsPanel()
   const [menuOnglet, setMenuOnglet] = useState<{ tabId: string; x: number; y: number } | null>(null)
   const ongletDuMenu = menuOnglet && state.tabs.find((tab) => tab.id === menuOnglet.tabId)
   // Menu d'un espace puis modale de sa couleur (ARB-134) : même couche d'overlays, la modale remplace le menu sans la fermer.
@@ -328,6 +331,14 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
               <Archive size={16} />
               <span>Archive</span>
             </button>
+            <button
+              className="nav-item"
+              title="Permissions des sites"
+              onClick={() => void window.arbalete.openSitePermissions()}
+            >
+              <SlidersHorizontal size={16} />
+              <span>Permissions</span>
+            </button>
           </nav>
 
           {state.tabs.some((tab) => tab.pinned) && (
@@ -492,6 +503,7 @@ export function Sidebar({ state, sidebar }: { state: BrowserState; sidebar: Side
       {overlay && panneauFavoris && <FavoritesPanel onClose={fermerOverlay} />}
       {overlay && panneauHistorique && <HistoryPanel onClose={fermerOverlay} />}
       {overlay && panneauArchive && <ArchivePanel onClose={fermerOverlay} />}
+      {overlay && panneauPermissions && <PermissionsPanel onClose={fermerOverlay} />}
       {overlay && panneauParametres && <SettingsModal sidebar={sidebar} onClose={fermerOverlay} />}
       {overlay && modaleProfil !== null && espaceDuMenu && (
         <ProfilesModal

@@ -57,10 +57,18 @@ import { AVIS_DUREE_MS, estGeste, estPopup, gesteRecent, placerAvisPopup, POPUPS
 import { autoriserPopups, popupsAutorises } from './donnees/popupsSites.ts'
 import { palierZoom, sensDuZoom, type SensZoom } from './zoom.ts'
 import { ecrireZoomSite, hoteZoom, lireZoomSite } from './donnees/zoomSites.ts'
-import { ecrirePermissionSite, lirePermissionSite } from './donnees/permissionsSites.ts'
+import {
+  definirPermissionSite,
+  ecrirePermissionSite,
+  lirePermissionSite,
+  listerPermissionsSites,
+  reinitialiserSite
+} from './donnees/permissionsSites.ts'
 import {
   REPONSES_PERMISSION,
+  choixSiteValide,
   decisionPermissions,
+  permissionSiteValide,
   permissionsDemandees,
   type DemandePermission,
   type PermissionSite,
@@ -198,6 +206,9 @@ type TabRecord = {
   espace: number | null
   // Pop-ups refusées faute de geste de l'utilisateur sur la page affichée (ARB-108), remises à zéro à la navigation.
   popupsBloquees: number
+  // Permissions accordées à la page affichée depuis son chargement (ARB-145), remises à zéro à la navigation vers un autre
+  // document : caméra, micro, position, notifications, presse-papiers (le plein écran n'y entre pas).
+  permissionsUtilisees: Set<PermissionSite>
   // Dernier usage, en millisecondes depuis 1970 (ARB-64) : l'archivage compte le délai à partir de là.
   activite: number
 }
@@ -377,6 +388,7 @@ function stateSnapshot(): BrowserState {
     favorite: pageActiveEstFavorite(),
     favorites: grilleFavoris(),
     popupsBloquees: activeRecord()?.popupsBloquees ?? 0,
+    permissionsUtilisees: [...(activeRecord()?.permissionsUtilisees ?? [])],
     folders: dossiersOnglets
       .filter((dossier) => dossier.espace === espaceActif)
       .map(({ id, nom, replie }) => ({ id, nom, replie })),
@@ -666,6 +678,8 @@ function fermerOverlay() {
   const duChamp = suggestions !== null
   const duMenu = menuPage !== null
   const dePalette = palette !== null
+  const dePermissions = panneauPermissions
+  panneauPermissions = false
   suggestions = null
   menuPage = null
   palette = null
@@ -681,6 +695,7 @@ function fermerOverlay() {
   queueMicrotask(afficherInvitePermission)
   envoyerAuxInterfaces('browser:suggestions', null)
   if (duMenu) envoyerAuxInterfaces('browser:page-menu', null)
+  if (dePermissions) envoyerAuxInterfaces('browser:permissions-panel', false)
   if (dePalette) {
     envoyerAuxInterfaces('browser:palette', null)
     // Le champ de la palette avait le clavier : il revient à la page, barre épinglée comprise.
@@ -734,6 +749,36 @@ function repondreInvitePermission(reponse: ReponsePermission) {
   invite.reponse(reponse === 'autoriser')
   fermerOverlay()
   if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused()) activeRecord()?.view.webContents.focus()
+}
+
+// Indication d'usage (ARB-145) : le plein écran n'est pas signalé ; le reste l'est dès que la page l'a obtenu.
+// shortcut: « accordée » ne veut pas dire « en cours d'usage » (Electron n'expose pas l'état de la caméra ou du micro) ; lire
+// l'état réel des flux quand Chromium le permettra.
+function noterUsage(record: TabRecord, permissions: readonly PermissionSite[]) {
+  const avant = record.permissionsUtilisees.size
+  for (const permission of permissions) if (permission !== 'plein-ecran') record.permissionsUtilisees.add(permission)
+  if (record.permissionsUtilisees.size !== avant) broadcastState()
+}
+
+// Panneau des permissions par site (ARB-145) : modale de la couche d'overlays, ouverte par le bouton « Permissions » de la
+// barre latérale ou par l'icône d'usage de la barre d'adresse. Un overlay déjà ouvert n'est pas remplacé.
+let panneauPermissions = false
+
+function ouvrirPanneauPermissions() {
+  if (overlayOuvert || !barreView) return
+  ouvrirOverlay()
+  if (!overlayOuvert) return
+  panneauPermissions = true
+  barreView.webContents.focus()
+  envoyerAuxInterfaces('browser:permissions-panel', true)
+}
+
+// Hôte reçu de l'interface pour un réglage de site : un nom d'hôte, sans préfixe de profil (`@`), espace ni barre.
+function exigerHoteSite(valeur: unknown): string {
+  const hote = exigerTexte(valeur)
+  // `_` est admis (Chromium l'accepte dans un hôte) ; la clé est en minuscules, comme celle de `hoteZoom`.
+  if (!/^[a-z0-9._[\]:-]{1,253}$/i.test(hote)) throw new Error('Argument IPC invalide : hôte inconnu')
+  return hote.toLowerCase()
 }
 
 // Choix mémorisé du site pour ces permissions : accordé, refusé ou à demander. Une base indisponible refuse.
@@ -1555,6 +1600,7 @@ function createTab(
     adresseVisitee: restaure ? adresseHistorique(normalizeUrl(initialUrl)) : null,
     espace: espaceDeLOnglet,
     popupsBloquees: 0,
+    permissionsUtilisees: new Set(),
     activite: restaure?.activite ?? Date.now()
   }
   tabs.set(id, record)
@@ -1586,7 +1632,13 @@ function securiserSession(s: Session) {
       return callback(false)
     const profil = profilDeEspace(activeRecord()?.espace ?? null)
     const decision = decisionSite(profil, hote, permissions)
-    if (decision !== 'demander') return callback(decision === 'autoriser')
+    // Une permission accordée est notée sur l'onglet (indication d'usage, ARB-145) avant de répondre à la page.
+    const record = activeRecord()
+    const repondre = (accordee: boolean) => {
+      if (accordee && record) noterUsage(record, permissions)
+      callback(accordee)
+    }
+    if (decision !== 'demander') return repondre(decision === 'autoriser')
     // Mêmes hôte et permissions déjà en attente : une seule invite, qui répond aux deux demandes. File plafonnée.
     const cle = permissions.join()
     const existante = [invitePermission, ...invitesEnAttente].find(
@@ -1596,12 +1648,12 @@ function securiserSession(s: Session) {
       const premiere = existante.reponse
       existante.reponse = (accordee) => {
         premiere(accordee)
-        callback(accordee)
+        repondre(accordee)
       }
       return
     }
     if (invitesEnAttente.length >= 5) return callback(false)
-    invitesEnAttente.push({ hote, permissions, profil, reponse: callback })
+    invitesEnAttente.push({ hote, permissions, profil, reponse: repondre })
     afficherInvitePermission()
   })
   // Le refus vaut aussi pour les vérifications (navigator.permissions, accès sans demande) et les périphériques
@@ -1734,8 +1786,9 @@ function brancherOnglet(id: string, record: TabRecord) {
     if (!details.isMainFrame || details.isSameDocument) return
     blancDePage = !!details.initiator && estAboutBlank(details.url)
     // Une autre page : les pop-ups bloquées sur la précédente ne la concernent plus (ARB-108).
-    if (record.popupsBloquees) {
+    if (record.popupsBloquees || record.permissionsUtilisees.size) {
       record.popupsBloquees = 0
+      record.permissionsUtilisees.clear()
       if (id === activeTabId) retirerAvis()
       broadcastState()
     }
@@ -2011,6 +2064,7 @@ function renouvelerVue(id: string, record: TabRecord) {
   record.view = nouvelleVue(record.espace)
   record.chargee = false
   record.popupsBloquees = 0
+  record.permissionsUtilisees.clear()
   record.data = {
     ...record.data,
     isLoading: false,
@@ -2683,6 +2737,33 @@ app.whenReady().then(() => {
     retirerInfobulle()
   })
   traiter('browser:get-palette', () => palette)
+  // Panneau des permissions par site (ARB-145) : l'ouverture vient de la fenêtre (icône d'usage) ou de la barre ; la liste et
+  // les réglages, de la barre seule, pour le profil de l'espace affiché.
+  traiter('browser:get-permissions-panel', () => panneauPermissions)
+  traiter('browser:open-site-permissions', () => ouvrirPanneauPermissions())
+  ipcMain.handle('browser:list-site-permissions', (event) => {
+    exigerBarre(event)
+    try {
+      return base ? listerPermissionsSites(base, profilDeEspace(espaceActif)) : []
+    } catch (erreur) {
+      console.error('Permissions de site non lues :', erreur)
+      return []
+    }
+  })
+  ipcMain.handle('browser:set-site-permission', (event, hote, permission, choix) => {
+    exigerBarre(event)
+    const cle = hotePourProfil(exigerHoteSite(hote), profilDeEspace(espaceActif))
+    if (!permissionSiteValide(permission)) throw new Error('Argument IPC invalide : permission inconnue')
+    if (!choixSiteValide(choix)) throw new Error('Argument IPC invalide : choix inconnu')
+    if (!base) throw new Error('Base indisponible')
+    definirPermissionSite(base, cle, permission, choix)
+  })
+  ipcMain.handle('browser:reset-site-permissions', (event, hote) => {
+    exigerBarre(event)
+    const cle = hotePourProfil(exigerHoteSite(hote), profilDeEspace(espaceActif))
+    if (!base) throw new Error('Base indisponible')
+    reinitialiserSite(base, cle)
+  })
   ipcMain.handle('browser:open-palette', (event) => {
     exigerBarre(event)
     ouvrirPalette()

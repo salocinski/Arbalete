@@ -1123,6 +1123,8 @@ test('C7 : notifications et géolocalisation demandent, Refuser est mémorisé, 
   await barreUi.evaluate(() => window.arbalete.setOverlay(false))
   await expect.poll(overlay).toBe(false)
   expect(await resultatDansOngletActif<string>('window.__geo')).toBe('refusée')
+  // ARB-145 : un refus (mémorisé ou non) n'est jamais signalé comme usage.
+  expect((await etat()).permissionsUtilisees).toEqual([])
   // Non mémorisé : la page peut redemander.
   await resultatDansOngletActif('navigator.geolocation.getCurrentPosition(() => {}, () => {}, { timeout: 1000 }); 0')
   await expect(invite).toContainText('connaître votre position')
@@ -4220,6 +4222,12 @@ test('C83 : Autoriser est mémorisé pour le site et relu par les vérifications
       resultatDansOngletActif<string>("navigator.permissions.query({ name: 'geolocation' }).then((s) => s.state)")
     )
     .toBe('granted')
+  // ARB-145 : la page qui vient d'obtenir la position est signalée (icône d'usage), jusqu'à sa prochaine navigation.
+  await expect.poll(async () => (await etat()).permissionsUtilisees).toContain('geolocalisation')
+  // Remise à zéro à la navigation vers une autre page.
+  await saisirAdresse(`${origine}/page-a.html`)
+  await attendreUrlActive(`${origine}/page-a.html`)
+  await expect.poll(async () => (await etat()).permissionsUtilisees).toEqual([])
 })
 
 // Value: protects=le plein écran demandé par la page (YouTube) est accordé sans invite : la fenêtre passe en plein écran, la vue
@@ -4241,6 +4249,8 @@ test('C84 : requestFullscreen met la page et la fenêtre en plein écran, la sor
 
   await resultatDansOngletActif('document.documentElement.requestFullscreen().then(() => 0)')
   await expect.poll(async () => (await mesure()).pleinEcran).toBe(true)
+  // ARB-145 : le plein écran, accordé d'office, n'entre pas dans l'indication d'usage.
+  expect((await etat()).permissionsUtilisees).toEqual([])
   await expect
     .poll(async () => {
       const m = await mesure()
@@ -4844,4 +4854,50 @@ test('C100 : la vue partagée met deux onglets côte à côte, un clic active l�
   } finally {
     await ui.evaluate((id) => window.arbalete.tabAction(id, 'vue-partagee'), premier).catch(() => {})
   }
+})
+
+// Value: protects=le panneau des permissions par site (ARB-145) : la vue de la barre liste, règle (Demander efface le choix) et
+//   réinitialise les sites du profil de l'espace affiché, la fenêtre ne le peut pas, un hôte, une permission ou un choix hors
+//   liste sont refusés, et le panneau s'ouvre dans la couche d'overlays; fails_when=la fenêtre règle une permission, un choix
+//   aberrant est écrit, Demander laisse un choix en base, Réinitialiser efface aussi un autre site; why_new=C7 et C83 ne couvrent
+//   que la décision; seam=none; no_claim=le rendu du panneau (aperçu web) et l'icône d'usage réelle d'une caméra (manuels).
+test('C102 : le panneau règle et efface les permissions des sites, la fenêtre n’y touche pas', async () => {
+  const hote = 'permissions-c102.test'
+  const autre = 'autre-c102.test'
+  const sites = () => barreUi.evaluate(() => window.arbalete.listSitePermissions())
+  await expect(ui.evaluate(() => window.arbalete.listSitePermissions())).rejects.toThrow()
+  await expect(ui.evaluate((h) => window.arbalete.setSitePermission(h, 'camera', 'autoriser'), hote)).rejects.toThrow()
+  for (const [h, p, c] of [
+    ['hôte invalide', 'camera', 'autoriser'],
+    ['2@' + hote, 'camera', 'autoriser'],
+    [hote, 'hid', 'autoriser'],
+    [hote, 'camera', 'peut-etre']
+  ])
+    await expect(
+      barreUi.evaluate(([x, y, z]) => window.arbalete.setSitePermission(x, y as 'camera', z as 'autoriser'), [h, p, c])
+    ).rejects.toThrow()
+  for (const atypique of ['[::1]', 'Localhost:8080', '127.0.0.1', 'evil_x.c102.test']) {
+    await barreUi.evaluate((h) => window.arbalete.setSitePermission(h, 'micro', 'refuser'), atypique)
+    await barreUi.evaluate((h) => window.arbalete.resetSitePermissions(h), atypique)
+  }
+  await barreUi.evaluate((h) => window.arbalete.setSitePermission(h, 'camera', 'autoriser'), hote)
+  await barreUi.evaluate((h) => window.arbalete.setSitePermission(h, 'presse-papiers', 'refuser'), hote)
+  await barreUi.evaluate((h) => window.arbalete.setSitePermission(h, 'micro', 'refuser'), autre)
+  expect((await sites()).find((s) => s.hote === hote)?.choix).toEqual({
+    camera: 'autoriser',
+    'presse-papiers': 'refuser'
+  })
+  await barreUi.evaluate((h) => window.arbalete.setSitePermission(h, 'camera', 'demander'), hote)
+  expect((await sites()).find((s) => s.hote === hote)?.choix).toEqual({ 'presse-papiers': 'refuser' })
+  await barreUi.evaluate((h) => window.arbalete.resetSitePermissions(h), hote)
+  expect((await sites()).some((s) => s.hote === hote)).toBe(false)
+  expect((await sites()).find((s) => s.hote === autre)?.choix).toEqual({ micro: 'refuser' })
+  await barreUi.evaluate((h) => window.arbalete.resetSitePermissions(h), autre)
+
+  // Ouverture : demandée par la fenêtre, tenue par le processus principal, fermée avec l'overlay.
+  await ui.evaluate(() => window.arbalete.openSitePermissions())
+  await expect.poll(() => barreUi.evaluate(() => window.arbalete.getPermissionsPanel())).toBe(true)
+  await expect(barreUi.getByTestId('permissions-panel')).toBeVisible()
+  await barreUi.evaluate(() => window.arbalete.setOverlay(false))
+  await expect.poll(() => barreUi.evaluate(() => window.arbalete.getPermissionsPanel())).toBe(false)
 })

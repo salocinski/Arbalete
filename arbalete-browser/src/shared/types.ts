@@ -9,7 +9,7 @@ import type { EntreePalette } from './palette'
 import type { ListeFavoris } from './favoris'
 import type { EtatMiseAJour } from './miseAJour'
 import type { DossierOnglet } from './dossiersOnglets'
-import type { DemandePermission, ReponsePermission } from './permissions'
+import type { ChoixSite, DemandePermission, PermissionSite, ReponsePermission, SitePermissions } from './permissions'
 import type { ElementArchive } from './archivage'
 import type { MemoireOnglets } from './veille'
 import type { PeriodeEffacement, TypeEffacement, VisiteHistorique } from './historique'
@@ -46,6 +46,8 @@ export type BrowserState = {
   favorites: { url: string; title: string }[]
   // Pop-ups bloquées sur la page de l'onglet actif, sans geste de l'utilisateur (ARB-108) ; 0 : rien à signaler.
   popupsBloquees: number
+  // Permissions accordées à la page de l'onglet actif depuis son chargement (ARB-145) : l'icône d'usage de la barre d'adresse.
+  permissionsUtilisees: PermissionSite[]
   // Dossiers d'onglets de l'espace affiché (ARB-69), dans l'ordre de création.
   folders: DossierOnglet[]
   // Vue partagée (ARB-72) : ids des deux onglets côte à côte (gauche, droite) dans l'espace affiché, sinon null.
@@ -173,6 +175,15 @@ export type BrowserAPI = {
   // Pop-ups bloquées (ARB-108) : l'icône de la barre d'adresse rouvre l'avis (`showBlockedPopups`) ; la vue de l'avis
   // seule autorise les pop-ups du site de l'onglet actif (`allowPopups`) ou le ferme (`closePopupNotice`).
   showBlockedPopups: () => Promise<void>
+  // Panneau des permissions par site (ARB-145) : `openSitePermissions` l'ouvre dans la couche d'overlays (bouton de la barre
+  // latérale, icône d'usage de la barre d'adresse) ; la vue de la barre seule liste les sites du profil de l'espace affiché,
+  // règle un choix (`demander` l'efface) ou réinitialise un site.
+  getPermissionsPanel: () => Promise<boolean>
+  onPermissionsPanel: (callback: (ouvert: boolean) => void) => () => void
+  openSitePermissions: () => Promise<void>
+  listSitePermissions: () => Promise<SitePermissions[]>
+  setSitePermission: (hote: string, permission: PermissionSite, choix: ChoixSite) => Promise<void>
+  resetSitePermissions: (hote: string) => Promise<void>
   allowPopups: () => Promise<void>
   closePopupNotice: () => Promise<void>
   // Infobulle (ARB-126) : la fenêtre et la vue de la barre la montrent sous un élément (rectangle dans leur propre vue), le texte

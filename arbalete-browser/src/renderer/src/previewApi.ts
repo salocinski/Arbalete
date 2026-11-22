@@ -15,6 +15,7 @@ import { delaiArchivageValide, type ElementArchive } from '../../shared/archivag
 import { delaiVeilleValide } from '../../shared/veille'
 import { basculerPartage, dansPartage, type Partage } from '../../shared/vuePartagee'
 import { estActif, type Telechargement } from '../../shared/telechargements'
+import type { SitePermissions } from '../../shared/permissions'
 import type { BrowserAPI, BrowserState, BrowserTab, SidebarState, ThemeChoice } from '../../shared/types'
 
 /**
@@ -160,6 +161,13 @@ export function installPreviewApi(): boolean {
     const ici = tabs.filter((tab) => spaceOf.get(tab.id) === activeWorkspaceId)
     return [...ici.filter((tab) => tab.pinned), ...ici.filter((tab) => !tab.pinned)]
   }
+  // Permissions de l'aperçu (ARB-145) : deux sites d'exemple.
+  let panneauPermissions = false
+  const ecouteursPermissions = new Set<(ouvert: boolean) => void>()
+  let sitesPermissions: SitePermissions[] = [
+    { hote: 'meet.example.com', choix: { camera: 'autoriser', micro: 'autoriser' } },
+    { hote: 'news.example.org', choix: { notifications: 'refuser', geolocalisation: 'refuser' } }
+  ]
   // Archive de l'aperçu (ARB-64) : deux éléments d'exemple, sans archivage automatique (pas de minuterie d'onglets).
   let archive: ElementArchive[] = [
     { id: 1, url: 'https://example.com/', titre: 'Exemple', date: Date.now() - 3_600_000 },
@@ -181,6 +189,7 @@ export function installPreviewApi(): boolean {
     favorite: favorites.has(active()?.url ?? ''),
     favorites: [...favorites].slice(0, 8).map((url) => ({ url, title: titleFor(url) })),
     popupsBloquees: 0,
+    permissionsUtilisees: ['camera', 'micro'],
     folders: folders
       .filter((dossier) => dossier.espace === activeWorkspaceId)
       .map(({ id, nom, replie }) => ({ id, nom, replie })),
@@ -469,6 +478,10 @@ export function installPreviewApi(): boolean {
     setOverlay: async (open) => {
       if (open === overlay) return
       overlay = open
+      if (!open && panneauPermissions) {
+        panneauPermissions = false
+        ecouteursPermissions.forEach((callback) => callback(false))
+      }
       overlayListeners.forEach((fn) => fn(overlay))
     },
     onOverlay: (callback) => {
@@ -522,6 +535,29 @@ export function installPreviewApi(): boolean {
     onFindResult: () => () => undefined,
     onFindFocus: () => () => undefined,
     showBlockedPopups: async () => undefined,
+    // Panneau des permissions (ARB-145) : deux sites d'exemple, réglages en mémoire.
+    getPermissionsPanel: async () => panneauPermissions,
+    onPermissionsPanel: (callback) => {
+      ecouteursPermissions.add(callback)
+      return () => ecouteursPermissions.delete(callback)
+    },
+    openSitePermissions: async () => {
+      if (overlay) return
+      panneauPermissions = true
+      ecouteursPermissions.forEach((callback) => callback(true))
+      overlay = true
+      overlayListeners.forEach((fn) => fn(overlay))
+    },
+    listSitePermissions: async () => sitesPermissions.map((site) => ({ hote: site.hote, choix: { ...site.choix } })),
+    setSitePermission: async (hote, permission, choix) => {
+      const site = sitesPermissions.find((autre) => autre.hote === hote)
+      if (!site) return
+      if (choix === 'demander') delete site.choix[permission]
+      else site.choix[permission] = choix
+    },
+    resetSitePermissions: async (hote) => {
+      sitesPermissions = sitesPermissions.filter((site) => site.hote !== hote)
+    },
     allowPopups: async () => undefined,
     closePopupNotice: async () => undefined,
     showTooltip: async () => undefined,

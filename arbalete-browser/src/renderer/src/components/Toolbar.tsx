@@ -1,5 +1,6 @@
 import type { RefObject } from 'react'
 import { Monitor, Moon, Plus, Sun } from 'lucide-react'
+import type { PermissionSite } from '../../../shared/permissions'
 import type { BrowserTab, ThemeChoice } from '../../../shared/types'
 import { AddressBar } from './AddressBar'
 import { NavigationControls } from './NavigationControls'
@@ -14,6 +15,7 @@ type ToolbarProps = {
   themeChoice: ThemeChoice
   favorite: boolean
   popupsBloquees: number
+  permissionsUtilisees: PermissionSite[]
   address: string
   addressRef: RefObject<HTMLInputElement | null>
   onAddressChange: (value: string) => void
@@ -27,6 +29,7 @@ export function Toolbar({
   themeChoice,
   favorite,
   popupsBloquees,
+  permissionsUtilisees,
   onNavigate,
   ...address
 }: ToolbarProps) {
@@ -39,6 +42,7 @@ export function Toolbar({
         onSubmit={onNavigate}
         favorite={favorite}
         popupsBloquees={popupsBloquees}
+        permissionsUtilisees={permissionsUtilisees}
         favoritable={/^https?:/i.test(activeTab?.url ?? '')}
       />
       <IconButton variant="secondary" title="Nouvel onglet" onClick={() => void window.arbalete.createTab()}>

@@ -223,6 +223,10 @@ kbd { color: var(--color-text-secondary); font: 10px var(--font-ui); border: 1px
 .address-bar .ui-field-group { flex: 1; }
 .favorite-on { color: var(--color-accent); }
 /* Icône des pop-ups bloquées (ARB-108), à droite de l'étoile : couleur d'avertissement, compteur en coin. */
+.permission-site { padding-bottom: var(--space-2); }
+.permission-site-tete { display: flex; align-items: center; justify-content: space-between; padding-right: 10px; }
+.permission-ligne { display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; font-size: 12px; color: var(--color-text-primary); }
+.permission-ligne select { min-width: 110px; }
 .popup-blocked { position: relative; color: var(--color-warning); }
 .popup-blocked-count { position: absolute; top: -2px; right: -2px; min-width: 14px; height: 14px; padding: 0 3px; box-sizing: border-box; border-radius: 7px; background: var(--color-warning); color: var(--color-background); font: 700 9px/14px var(--font-ui); text-align: center; }
 .secure-icon { color: var(--color-success); flex-shrink: 0; }

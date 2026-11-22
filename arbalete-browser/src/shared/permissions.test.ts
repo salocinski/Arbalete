@@ -1,6 +1,12 @@
 import { deepStrictEqual, strictEqual } from 'node:assert/strict'
 import { test } from 'node:test'
-import { decisionPermissions, permissionsDemandees, phraseDemande } from './permissions.ts'
+import {
+  choixSiteValide,
+  decisionPermissions,
+  permissionSiteValide,
+  permissionsDemandees,
+  phraseDemande
+} from './permissions.ts'
 
 // Tests unitaires des permissions de site (ARB-15).
 
@@ -8,7 +14,7 @@ test('les permissions gérées sont reconnues, les autres refusées', () => {
   deepStrictEqual(permissionsDemandees('fullscreen'), ['plein-ecran'])
   deepStrictEqual(permissionsDemandees('notifications'), ['notifications'])
   deepStrictEqual(permissionsDemandees('geolocation'), ['geolocalisation'])
-  for (const autre of ['clipboard-read', 'hid', 'usb', 'openExternal', 'midiSysex', ''])
+  for (const autre of ['clipboard-sanitized-write', 'hid', 'usb', 'openExternal', 'midiSysex', ''])
     strictEqual(permissionsDemandees(autre), null, autre)
 })
 
@@ -57,4 +63,27 @@ test('caméra et micro : un seul refus bloque, il faut les deux accords pour pas
 test('la phrase de l’invite liste ce qui est demandé', () => {
   strictEqual(phraseDemande(['micro']), 'utiliser votre micro')
   strictEqual(phraseDemande(['camera', 'micro']), 'utiliser votre caméra et utiliser votre micro')
+})
+
+test('le presse-papiers se lit sur demande, la liste de choix est fermée (ARB-145)', () => {
+  deepStrictEqual(permissionsDemandees('clipboard-read'), ['presse-papiers'])
+  strictEqual(permissionsDemandees('clipboard-sanitized-write'), null)
+  strictEqual(choixSiteValide('demander'), true)
+  strictEqual(choixSiteValide('plus-tard'), false)
+  strictEqual(permissionSiteValide('hid'), false)
+})
+
+test('presse-papiers : demandé sans choix, suivi une fois accordé ou refusé', () => {
+  strictEqual(
+    decisionPermissions(['presse-papiers'], () => undefined),
+    'demander'
+  )
+  strictEqual(
+    decisionPermissions(['presse-papiers'], () => 'autoriser'),
+    'autoriser'
+  )
+  strictEqual(
+    decisionPermissions(['presse-papiers'], () => 'refuser'),
+    'refuser'
+  )
 })

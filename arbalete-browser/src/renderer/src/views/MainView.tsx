@@ -115,6 +115,7 @@ export function MainView() {
           themeChoice={theme.choice}
           favorite={state.favorite}
           popupsBloquees={state.popupsBloquees}
+          permissionsUtilisees={state.permissionsUtilisees}
           address={address}
           addressRef={addressRef}
           onAddressChange={setAddress}

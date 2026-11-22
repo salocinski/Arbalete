@@ -16,3 +16,14 @@ export function enTransaction<T>(db: DatabaseSync, fn: () => T): T {
     throw erreur
   }
 }
+
+// Exécute fn dans une transaction qu'il annule toujours : donne le résultat d'un essai (ce qu'un import ajouterait) sans
+// rien écrire (ARB-146).
+export function essaiEnTransaction<T>(db: DatabaseSync, fn: () => T): T {
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    return fn()
+  } finally {
+    if (db.isTransaction) db.exec('ROLLBACK')
+  }
+}

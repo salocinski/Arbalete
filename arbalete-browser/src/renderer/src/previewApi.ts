@@ -521,8 +521,38 @@ export function installPreviewApi(): boolean {
     checkForUpdates: async () => {},
     installUpdate: async () => {},
     onUpdateState: () => () => {},
-    exportData: async () => ({ favoris: 3, pages: 12 }),
-    importData: async () => ({ favoris: 3, pages: 12, espaces: 1, reglages: true }),
+    exportData: async (complet) => ({
+      favoris: 3,
+      pages: 12,
+      profils: complet ? 1 : 0,
+      permissions: complet ? 4 : 0,
+      archive: complet ? 5 : 0
+    }),
+    previewImport: async () => ({
+      ajouts: {
+        favoris: 3,
+        pages: 12,
+        espaces: 1,
+        profils: 1,
+        permissions: 4,
+        archive: 5,
+        conflits: 2,
+        reglages: true
+      },
+      complet: true,
+      exporteLe: Date.now() - 86_400_000
+    }),
+    confirmImport: async () => ({
+      favoris: 3,
+      pages: 12,
+      espaces: 1,
+      profils: 1,
+      permissions: 4,
+      archive: 5,
+      conflits: 2,
+      reglages: true
+    }),
+    cancelImport: async () => {},
     openHistoryPage: async () => undefined,
     clearBrowsingData: async () => undefined,
     // Pas de menu contextuel dans l'aperçu : les pages y sont un cadre, sans clic droit de Chromium (ARB-40).

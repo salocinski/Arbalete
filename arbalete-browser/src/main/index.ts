@@ -22,6 +22,8 @@ import { pathToFileURL } from 'node:url'
 import { autoUpdater } from 'electron-updater'
 import { creerMiseAJour } from './miseAJour.ts'
 import type {
+  ApercuImport,
+  BilanImport,
   BrowserState,
   BrowserTab,
   DataIncident,
@@ -37,7 +39,8 @@ import {
   construireExport,
   ecrireExport,
   importerExport,
-  lireExport
+  lireExport,
+  type DonneesExportees
 } from './donnees/exportDonnees.ts'
 import { ouvrirBaseOuRecuperer, type IncidentBase } from './donnees/base.ts'
 import { estAboutBlank, retourPermis } from './aboutBlank.ts'
@@ -2887,25 +2890,33 @@ app.whenReady().then(() => {
       boiteFichierOuverte = false
     }
   }
-  ipcMain.handle('browser:export-data', async (event) => {
+  ipcMain.handle('browser:export-data', async (event, complet: unknown) => {
     exigerBarre(event)
+    if (typeof complet !== 'boolean') throw new Error('Argument IPC invalide : complet')
     const db = base
     if (!db) throw new Error('Base indisponible')
     const options = {
-      title: 'Exporter mes données',
-      defaultPath: join(app.getPath('documents'), `arbalete-donnees-${new Date().toISOString().slice(0, 10)}.json`),
+      title: complet ? 'Sauvegarde complète' : 'Exporter mes données',
+      defaultPath: join(
+        app.getPath('documents'),
+        `arbalete-${complet ? 'sauvegarde' : 'donnees'}-${new Date().toISOString().slice(0, 10)}.json`
+      ),
       filters: [{ name: 'Données Arbalète', extensions: ['json'] }]
     }
     const choix = await boiteDonnees(() =>
       mainWindow ? dialog.showSaveDialog(mainWindow, options) : dialog.showSaveDialog(options)
     )
     if (!choix || choix.canceled || !choix.filePath) return null
-    return ecrireExport(choix.filePath, construireExport(db))
+    return ecrireExport(choix.filePath, construireExport(db, Date.now(), complet))
   })
-  ipcMain.handle('browser:import-data', async (event) => {
+  // Import en deux temps (ARB-146) : `preview-import` choisit et valide le fichier, le garde en mémoire et rend ce qu'il
+  // ajouterait (essai annulé) ; `confirm-import` applique ce fichier-là, jamais un chemin ni des données venus de l'interface.
+  let importEnAttente: DonneesExportees | null = null
+  ipcMain.handle('browser:preview-import', async (event): Promise<ApercuImport | null> => {
     exigerBarre(event)
     const db = base
     if (!db) throw new Error('Base indisponible')
+    importEnAttente = null
     const options = {
       title: 'Importer mes données',
       properties: ['openFile' as const],
@@ -2917,13 +2928,30 @@ app.whenReady().then(() => {
     if (!choix || choix.canceled || choix.filePaths.length === 0) return null
     const chemin = choix.filePaths[0]
     if (statSync(chemin).size > TAILLE_MAX_FICHIER) throw new Error('Fichier trop volumineux')
-    const bilan = importerExport(db, lireExport(readFileSync(chemin, 'utf8')))
+    const donnees = lireExport(readFileSync(chemin, 'utf8'))
+    const ajouts = importerExport(db, donnees, true)
+    importEnAttente = donnees
+    return { ajouts, complet: donnees.profils !== undefined, exporteLe: donnees.exporteLe }
+  })
+  ipcMain.handle('browser:cancel-import', (event) => {
+    exigerBarre(event)
+    importEnAttente = null
+  })
+  ipcMain.handle('browser:confirm-import', (event): BilanImport => {
+    exigerBarre(event)
+    const db = base
+    if (!db) throw new Error('Base indisponible')
+    const donnees = importEnAttente
+    if (!donnees) throw new Error('Aucun import en attente')
+    importEnAttente = null
+    const bilan = importerExport(db, donnees)
     if (bilan.reglages) {
       reglages = lireReglages(db)
       envoyerAuxInterfaces('browser:settings', { ...reglages })
       moteur = lireMoteur(db)
       appliquerTheme(lireTheme(db))
     }
+    profils = lireProfils(db)
     espaces = lireEspaces(db)
     broadcastState()
     return bilan

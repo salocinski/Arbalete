@@ -2,6 +2,18 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.36] - 2026-11-22
+
+### Ajouté
+- Sauvegarde complète (ARB-146) : une case de la section « Sauvegarde des données » de Paramètres ajoute à l'export les profils, les permissions de site, l'archive et les onglets ouverts (format version 2 ; les fichiers de version 1 restent lisibles).
+- Import en deux temps : « Importer… » choisit le fichier et affiche ce qu'il ajouterait (favoris, pages, espaces, profils, permissions, onglets archivés), les réglages qui seraient remplacés et les permissions déjà réglées autrement, gardées telles quelles ; rien n'est écrit avant « Restaurer ». Les autorisations de site (caméra, micro…) du fichier ne sont jamais importées, seuls les refus le sont : une autorisation se redemande. Un rappel signale que cookies, mots de passe et données des sites n'en font jamais partie.
+
+### Modifié
+- Les espaces retrouvent leur profil à la restauration (profil du même nom réutilisé ou créé) ; les onglets ouverts du fichier arrivent dans l'archive plutôt que de s'ouvrir à la place de ceux de l'utilisateur.
+
+### Limites
+- Fichier JSON non chiffré. Les boîtes de fichier système et la restauration réelle sous Windows restent manuelles. Pas de choix fin du périmètre à l'import (tout ce que le fichier porte est restauré), ni de remplacement des permissions en conflit.
+
 ## [0.12.44.35] - 2026-11-22
 
 ### Ajouté

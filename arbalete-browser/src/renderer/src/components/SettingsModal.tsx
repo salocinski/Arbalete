@@ -11,7 +11,8 @@ import { DELAIS_ARCHIVAGE, LIBELLES_DELAI } from '../../../shared/archivage'
 import { DELAIS_VEILLE, LIBELLES_VEILLE, type MemoireOnglets } from '../../../shared/veille'
 import { accueilValide } from '../../../shared/reglages'
 import type { EtatMiseAJour } from '../../../shared/miseAJour'
-import type { SidebarState, ThemeChoice } from '../../../shared/types'
+import { resumeImport } from '../../../shared/sauvegarde'
+import type { ApercuImport, SidebarState, ThemeChoice } from '../../../shared/types'
 import { useSettings, useTheme } from '../state'
 import { ClearDataForm } from './ClearDataForm'
 import { Modal } from './ui/Modal'
@@ -138,6 +139,9 @@ export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onC
 
   // Export et import des données (ARB-79) : un seul à la fois ; l'annulation de la boîte ne laisse aucun message.
   const [donnees, setDonnees] = useState({ enCours: false, message: '' })
+  // ARB-146 : sauvegarde complète à l'export, et aperçu du fichier choisi, à confirmer avant toute restauration.
+  const [sauvegardeComplete, setSauvegardeComplete] = useState(false)
+  const [apercu, setApercu] = useState<ApercuImport | null>(null)
   const lancerDonnees = (action: () => Promise<string | null | undefined | false | 0>) => {
     setDonnees({ enCours: true, message: '' })
     action().then(
@@ -311,16 +315,33 @@ export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onC
       </Section>
 
       <Section titre="Sauvegarde des données">
+        <label className="settings-row settings-row--case">
+          <input
+            type="checkbox"
+            checked={sauvegardeComplete}
+            disabled={donnees.enCours || apercu !== null}
+            onChange={(event) => setSauvegardeComplete(event.target.checked)}
+          />
+          Sauvegarde complète (profils, permissions des sites, onglets ouverts, archive)
+        </label>
         <div className="settings-actions">
           <Button
             variant="secondary"
             size="sm"
-            disabled={donnees.enCours}
+            disabled={donnees.enCours || apercu !== null}
             onClick={() =>
               lancerDonnees(() =>
                 window.arbalete
-                  .exportData()
-                  .then((n) => n && `Exporté : ${n.favoris} favori(s), ${n.pages} page(s) d’historique.`)
+                  .exportData(sauvegardeComplete)
+                  .then(
+                    (n) =>
+                      n &&
+                      `Exporté : ${n.favoris} favori(s), ${n.pages} page(s) d’historique${
+                        sauvegardeComplete
+                          ? `, ${n.profils} profil(s), ${n.permissions} permission(s), ${n.archive} onglet(s) archivé(s)`
+                          : ''
+                      }.`
+                  )
               )
             }
           >
@@ -329,25 +350,62 @@ export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onC
           <Button
             variant="secondary"
             size="sm"
-            disabled={donnees.enCours}
+            disabled={donnees.enCours || apercu !== null}
             onClick={() =>
               lancerDonnees(() =>
-                window.arbalete
-                  .importData()
-                  .then(
-                    (b) =>
-                      b &&
-                      `Importé : ${b.favoris} favori(s), ${b.pages} page(s), ${b.espaces} espace(s)${b.reglages ? ', réglages' : ''}.`
-                  )
+                window.arbalete.previewImport().then((a) => {
+                  setApercu(a)
+                  return null
+                })
               )
             }
           >
             Importer…
           </Button>
         </div>
+        {apercu && (
+          <div className="settings-help" role="group" aria-label="Aperçu de la restauration">
+            <p>
+              {apercu.complet ? 'Sauvegarde complète' : 'Export simple'}
+              {apercu.exporteLe > 0 ? ` du ${new Date(apercu.exporteLe).toLocaleDateString('fr-FR')}` : ''}. Cette
+              restauration ajoutera : {resumeImport(apercu.ajouts)}.
+            </p>
+            {apercu.ajouts.reglages && <p>Les réglages du fichier remplaceront vos réglages actuels.</p>}
+            {apercu.ajouts.conflits > 0 && (
+              <p>
+                {apercu.ajouts.conflits} permission(s) de site déjà réglée(s) autrement sont gardées telles quelles.
+              </p>
+            )}
+            <div className="settings-actions">
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={donnees.enCours}
+                onClick={() => {
+                  setApercu(null)
+                  lancerDonnees(() => window.arbalete.confirmImport().then((b) => `Restauré : ${resumeImport(b)}.`))
+                }}
+              >
+                Restaurer
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setApercu(null)
+                  void window.arbalete.cancelImport().catch(() => {})
+                }}
+              >
+                Annuler
+              </Button>
+            </div>
+          </div>
+        )}
         <p className="settings-help">
-          Favoris, historique, espaces et réglages dans un fichier JSON non chiffré, à garder en lieu sûr. L’import
-          ajoute sans rien supprimer ni remplacer, sauf les réglages du fichier.
+          Fichier JSON non chiffré, à garder en lieu sûr. Les cookies, mots de passe et données des sites n’en font
+          jamais partie : il faudra vous reconnecter après une restauration. La restauration ajoute sans rien supprimer,
+          sauf les réglages du fichier ; les autorisations de site du fichier ne sont pas importées (seuls les refus),
+          elles se redemandent ; les onglets ouverts qu’il contient arrivent dans l’archive.
         </p>
         <p className="settings-help" role="status" aria-live="polite">
           {donnees.message}

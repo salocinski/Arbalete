@@ -21,14 +21,17 @@ export function lireProfils(db: DatabaseSync): ProfilStocke[] {
 export function creerProfil(db: DatabaseSync, nom: string): number {
   const propre = nomProfilValide(nom)
   if (!propre) throw new Error('Nom de profil invalide')
-  return enTransaction(db, () => {
-    const resultat = db
-      .prepare('INSERT INTO profil (nom, position) VALUES (?, (SELECT COALESCE(MAX(position) + 1, 0) FROM profil))')
-      .run(propre)
-    const id = Number(resultat.lastInsertRowid)
-    db.prepare('UPDATE profil SET partition = ? WHERE id = ?').run(nomPartitionProfil(id), id)
-    return id
-  })
+  return enTransaction(db, () => insererProfil(db, propre))
+}
+
+// Dans la transaction de l'appelant (import de sauvegarde, ARB-146) ; le nom est déjà validé.
+export function insererProfil(db: DatabaseSync, nom: string): number {
+  const resultat = db
+    .prepare('INSERT INTO profil (nom, position) VALUES (?, (SELECT COALESCE(MAX(position) + 1, 0) FROM profil))')
+    .run(nom)
+  const id = Number(resultat.lastInsertRowid)
+  db.prepare('UPDATE profil SET partition = ? WHERE id = ?').run(nomPartitionProfil(id), id)
+  return id
 }
 
 // Renvoie faux si le profil n'existe pas.

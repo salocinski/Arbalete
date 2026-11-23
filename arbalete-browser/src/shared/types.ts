@@ -1,5 +1,6 @@
 import type { Espace } from './espaces'
 import type { Profil } from './profils'
+import type { Extension } from './extensions'
 import type { ActionDossier, Reglages } from './reglages'
 import type { ChoixMoteur } from './moteurs'
 import type { Telechargement } from './telechargements'
@@ -40,6 +41,10 @@ export type BrowserState = {
   // l'espace affiché. Vide si la base est indisponible.
   profiles: Profil[]
   activeWorkspaceId: number | null
+  // Extensions Chrome (ARB-144) : celles du profil de l'espace affiché, et le réglage maître (faux par défaut ; un changement
+  // ne s'applique qu'au redémarrage).
+  extensions: Extension[]
+  extensionsActif: boolean
   // La page de l'onglet actif est un favori (ARB-47) : faux pour une page hors du web (adresse non enregistrable).
   favorite: boolean
   // Grille de favoris en haut de la barre latérale (ARB-49) : les 8 premiers favoris, adresse d'historique et titre.
@@ -275,6 +280,12 @@ export type BrowserAPI = {
   deleteProfile: (id: number) => Promise<void>
   // Efface cookies, cache et stockage du profil seulement (les autres profils gardent leurs comptes).
   clearProfileData: (id: number) => Promise<void>
+  // Extensions Chrome (ARB-144), vue de la barre seule : `addExtensionFolder` ouvre une boîte système et renvoie l'id ajouté
+  // (null si annulé) ; une extension s'ajoute inactive.
+  addExtensionFolder: () => Promise<number | null>
+  setExtensionEnabled: (id: number, actif: boolean) => Promise<void>
+  removeExtension: (id: number) => Promise<void>
+  setExtensionsEnabled: (actif: boolean) => Promise<void>
   // Téléchargements (ARB-55) : enregistrés sans invite dans le dossier Téléchargements, du plus récent au plus ancien, et
   // conservés au redémarrage (un téléchargement alors actif devient `interrompu`). Pause, reprise et annulation ne
   // concernent qu'un téléchargement actif ; `removeDownload` retire une ligne terminée de la liste, sans effacer le fichier.

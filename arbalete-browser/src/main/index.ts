@@ -151,6 +151,7 @@ import {
   ecrireBarre,
   ecrireMoteur,
   ecrireReglages,
+  ecrirePreference,
   ecrireTheme,
   lireBarre,
   lireMoteur,
@@ -185,6 +186,8 @@ import {
   type ProfilStocke
 } from './donnees/profils.ts'
 import { hotePourProfil, PROFIL_PRINCIPAL } from '../shared/profils.ts'
+import type { ElectronChromeExtensions as ElectronChromeExtensionsType } from 'electron-chrome-extensions'
+import { creerGestionnaireExtensions, type GestionnaireExtensions } from './extensions.ts'
 import {
   creerEspace,
   ecrireEspaceActif,
@@ -239,6 +242,10 @@ let barre: SidebarState = { ...ETAT_BARRE_INITIAL }
 // Couche d'overlays (ARB-39, décision 0002) : menus et palettes s'affichent dans la vue de la barre, agrandie à toute
 // la fenêtre tant qu'un overlay est ouvert. Le contenu de l'overlay ne regarde que cette vue.
 let overlayOuvert = false
+// Extensions Chrome (ARB-144) : gestionnaire créé au démarrage, réglage maître lu une fois (faux par défaut, un changement ne
+// s'applique qu'au redémarrage : rien n'est chargé ni créé tant qu'il est faux).
+let extensions: GestionnaireExtensions | null = null
+let extensionsActif = false
 let boiteFichierOuverte = false // boîte « Ouvrir » de l'import des favoris (ARB-50) : le blur qu'elle cause ne ferme pas l'overlay
 let echapAvale = false
 // Suggestions de la barre d'adresse (ARB-53) : liste affichée dans l'overlay tant qu'elle existe, fermée avec lui. Le
@@ -397,6 +404,8 @@ function stateSnapshot(): BrowserState {
     workspaces: espaces,
     profiles: profils.map(({ id, nom }) => ({ id, nom })),
     activeWorkspaceId: espaceActif,
+    extensions: extensionsDuProfilAffiche(),
+    extensionsActif,
     favorite: pageActiveEstFavorite(),
     favorites: grilleFavoris(),
     popupsBloquees: activeRecord()?.popupsBloquees ?? 0,
@@ -406,6 +415,16 @@ function stateSnapshot(): BrowserState {
       .map(({ id, nom, replie }) => ({ id, nom, replie })),
     split: partage ? [partage.gauche, partage.droite] : null,
     splitRatio: ratioBorne(partage?.ratio)
+  }
+}
+
+function extensionsDuProfilAffiche(): BrowserState['extensions'] {
+  if (!base || !extensions) return []
+  try {
+    return extensions.lister(profilDeEspace(espaceActif))
+  } catch (erreur) {
+    console.error('Extensions non lues :', erreur)
+    return []
   }
 }
 
@@ -631,6 +650,8 @@ function setActiveView() {
   if (rechercheView && rechercheVisible) mainWindow.contentView.addChildView(rechercheView)
   if (avisView && avisVisible) mainWindow.contentView.addChildView(avisView)
   if (barreView) mainWindow.contentView.addChildView(barreView)
+  const actif = activeRecord()
+  if (actif) extensions?.selectionnerOnglet(profilDeEspace(actif.espace), actif.view.webContents)
 }
 
 // Ouverte ou épinglée : pleine largeur de barre sur toute la hauteur ; masquée : la bande de survol. Pendant un
@@ -1730,6 +1751,7 @@ function sessionProfil(profil: number): Session {
   const partition = profils.find((p) => p.id === profil)?.partition
   const s = partition ? session.fromPartition(partition) : session.defaultSession
   securiserSession(s)
+  extensions?.preparer(profil, s).catch((erreur) => console.error('Extensions non préparées :', erreur))
   return s
 }
 
@@ -1755,6 +1777,7 @@ function nouvelleVue(espace: number | null): WebContentsView {
 // propre à une vue (`dernierGeste`, `blancDePage`…) vit dans cette fermeture et repart de zéro avec elle.
 function brancherOnglet(id: string, record: TabRecord) {
   const view = record.view
+  if (mainWindow) extensions?.ajouterOnglet(profilDeEspace(record.espace), view.webContents, mainWindow)
   view.webContents.on('enter-html-full-screen', () => entrerPleinEcranPage(view))
   view.webContents.on('leave-html-full-screen', () => sortirPleinEcranPage(view))
   view.webContents.on('page-title-updated', (_event, titre, explicite) => {
@@ -1976,6 +1999,7 @@ function closeTab(id: string, memoriser = true) {
       mainWindow.contentView.removeChildView(record.view)
     } catch {}
   }
+  extensions?.retirerOnglet(profilDeEspace(record.espace), record.view.webContents)
   record.view.webContents.close()
   const ordre = ongletsVisibles()
   tabs.delete(id)
@@ -2087,6 +2111,7 @@ function renouvelerVue(id: string, record: TabRecord) {
   } catch {
     // La vue peut déjà être détachée.
   }
+  extensions?.retirerOnglet(profilDeEspace(record.espace), record.view.webContents)
   record.view.webContents.close()
   record.view = nouvelleVue(record.espace)
   record.chargee = false
@@ -2219,7 +2244,9 @@ function renommerProfilUtilisateur(id: number, nom: string) {
 async function supprimerProfilUtilisateur(id: number) {
   if (!base) throw new Error('Base indisponible')
   const session = sessionProfil(id)
+  const copies = extensions?.copies(id) ?? []
   const supprime = supprimerProfil(base, id)
+  if (supprime) extensions?.effacerProfil(id, copies)
   profils = lireProfils(base)
   broadcastState()
   // Attendu : une partition non effacée ne se nettoierait plus jamais (l'id n'est pas réutilisé), l'erreur remonte à la modale.
@@ -2546,6 +2573,26 @@ app.whenReady().then(() => {
       reglages = lireReglages(base)
     } catch (erreur) {
       console.error('Réglages non relus :', erreur)
+    }
+    // Extensions Chrome (ARB-144) : réglage maître et gestionnaire (la bibliothèque n'est chargée qu'au besoin, par require).
+    try {
+      extensionsActif = lirePreference(base, 'extensions.actif') === '1'
+      const db = base
+      extensions = creerGestionnaireExtensions<Session, WebContents, BrowserWindow>({
+        db,
+        racine: join(app.getPath('userData'), 'extensions'),
+        actif: () => extensionsActif,
+        creerBibliotheque: (s) => {
+          const { ElectronChromeExtensions } = require('electron-chrome-extensions') as {
+            ElectronChromeExtensions: typeof ElectronChromeExtensionsType
+          }
+          return new ElectronChromeExtensions({ session: s })
+        },
+        charger: async (s, chemin) => (await s.extensions.loadExtension(chemin)).id,
+        decharger: (s, id) => s.extensions.removeExtension(id)
+      })
+    } catch (erreur) {
+      console.error('Extensions indisponibles :', erreur)
     }
     // Espaces (ARB-61) : créés au premier lancement, espace affiché relu avant la restauration de la session.
     try {
@@ -3071,6 +3118,42 @@ app.whenReady().then(() => {
   ipcMain.handle('browser:clear-profile-data', async (event, id) => {
     exigerBarre(event)
     await effacerSessionProfil(exigerEntier(id))
+  })
+  // Extensions Chrome (ARB-144) : vue de la barre seule. Le dossier décompressé vient d'une boîte système, jamais de l'interface ;
+  // le profil est celui de l'espace affiché.
+  ipcMain.handle('browser:add-extension-folder', async (event) => {
+    exigerBarre(event)
+    if (!extensions || boiteFichierOuverte) return null
+    boiteFichierOuverte = true
+    let choix
+    try {
+      const options = { title: 'Ajouter une extension (dossier décompressé)', properties: ['openDirectory' as const] }
+      choix = await (mainWindow ? dialog.showOpenDialog(mainWindow, options) : dialog.showOpenDialog(options))
+    } finally {
+      boiteFichierOuverte = false
+    }
+    if (choix.canceled || choix.filePaths.length === 0) return null
+    const id = extensions.installer(profilDeEspace(espaceActif), choix.filePaths[0])
+    broadcastState()
+    return id
+  })
+  ipcMain.handle('browser:set-extension-enabled', async (event, id, actif) => {
+    exigerBarre(event)
+    if (typeof actif !== 'boolean') throw new Error('Argument IPC invalide : booléen attendu')
+    await extensions?.definirActive(profilDeEspace(espaceActif), exigerEntier(id), actif)
+    broadcastState()
+  })
+  ipcMain.handle('browser:remove-extension', (event, id) => {
+    exigerBarre(event)
+    extensions?.supprimer(profilDeEspace(espaceActif), exigerEntier(id))
+    broadcastState()
+  })
+  ipcMain.handle('browser:set-extensions-enabled', (event, actif) => {
+    exigerBarre(event)
+    if (typeof actif !== 'boolean' || !base) throw new Error('Argument IPC invalide : booléen attendu')
+    ecrirePreference(base, 'extensions.actif', actif ? '1' : '0')
+    extensionsActif = actif
+    broadcastState()
   })
   traiter('browser:move-workspace', (id, sens) => deplacerEspace(exigerEntier(id), exigerSens(sens)))
   traiter('browser:delete-workspace', (id) => supprimerEspaceUtilisateur(exigerEntier(id)))

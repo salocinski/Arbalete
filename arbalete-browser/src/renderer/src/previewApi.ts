@@ -186,6 +186,8 @@ export function installPreviewApi(): boolean {
     workspaces: [...workspaces],
     profiles: [...profiles],
     activeWorkspaceId,
+    extensions: [],
+    extensionsActif: false,
     favorite: favorites.has(active()?.url ?? ''),
     favorites: [...favorites].slice(0, 8).map((url) => ({ url, title: titleFor(url) })),
     popupsBloquees: 0,
@@ -312,6 +314,10 @@ export function installPreviewApi(): boolean {
       emit()
     },
     clearProfileData: async () => {},
+    addExtensionFolder: async () => null,
+    setExtensionEnabled: async () => {},
+    removeExtension: async () => {},
+    setExtensionsEnabled: async () => {},
     moveWorkspace: async (id, direction) => {
       const ordre = ordreApresDeplacement(
         workspaces.map((item) => item.id),

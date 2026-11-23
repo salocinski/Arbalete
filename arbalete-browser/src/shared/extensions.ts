@@ -35,8 +35,22 @@ export function validerManifest(brut: unknown): ManifestValide | { erreur: strin
     if (liste === undefined) continue
     if (!Array.isArray(liste)) return { erreur: 'Permissions invalides' }
     for (const p of liste) {
-      if (typeof p !== 'string' || p.length === 0 || p.length > LONGUEUR_MAX_PERMISSION) continue // entrée invalide ignorée
+      // Une entrée invalide est refusée : l'ignorer cacherait à l'utilisateur une permission que l'extension garde.
+      if (typeof p !== 'string' || p.length === 0 || p.length > LONGUEUR_MAX_PERMISSION)
+        return { erreur: 'Permission invalide' }
       if (!permissions.includes(p)) permissions.push(p)
+    }
+  }
+  // Les scripts de contenu lisent aussi les pages : leurs adresses comptent parmi les accès à montrer.
+  if (Array.isArray(m.content_scripts)) {
+    for (const script of m.content_scripts) {
+      const matches = (script as { matches?: unknown } | null)?.matches
+      if (!Array.isArray(matches)) continue
+      for (const p of matches) {
+        if (typeof p !== 'string' || p.length === 0 || p.length > LONGUEUR_MAX_PERMISSION)
+          return { erreur: 'Permission invalide' }
+        if (!permissions.includes(p)) permissions.push(p)
+      }
     }
   }
   if (permissions.length > PERMISSIONS_MAX) return { erreur: 'Trop de permissions' }

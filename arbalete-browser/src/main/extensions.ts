@@ -42,11 +42,12 @@ type Profil<S, W, F> = {
   bibliotheque: Bibliotheque<W, F> | null
   charges: Map<number, string> // id en base -> id Electron
   enErreur: Set<number>
+  enCours: Set<number> // chargements en cours (un second appel, ou un double clic, ne charge pas deux fois)
 }
 
 // Copie sûre d'un dossier d'extension décompressé : ni lien symbolique, ni dépassement de taille, de nombre de fichiers ou de
 // profondeur ; écrite dans un dossier temporaire puis renommée, donc jamais à moitié copiée.
-function copierSur(source: string, destination: string): void {
+function verifierDossier(racine: string): void {
   let octets = 0
   let fichiers = 0
   const parcourir = (dossier: string, profondeur: number) => {
@@ -62,9 +63,14 @@ function copierSur(source: string, destination: string): void {
       } else throw new Error('Fichier spécial refusé')
     }
   }
-  parcourir(source, 0)
-  // verbatimSymlinks : un lien apparu entre la vérification et la copie ne serait pas suivi.
+  parcourir(racine, 0)
+}
+
+function copierSur(source: string, destination: string): void {
+  verifierDossier(source)
   cpSync(source, destination, { recursive: true, errorOnExist: true, force: false, verbatimSymlinks: true })
+  // Le dossier source a pu changer entre la vérification et la copie : la copie, seule chargée ensuite, est revérifiée.
+  verifierDossier(destination)
 }
 
 export function creerGestionnaireExtensions<S, W, F>(dep: Dependances<S, W, F>) {
@@ -77,12 +83,20 @@ export function creerGestionnaireExtensions<S, W, F>(dep: Dependances<S, W, F>) 
   }
 
   async function chargerUne(p: Profil<S, W, F>, profil: number, e: Extension, dossier: string) {
+    if (p.charges.has(e.id) || p.enCours.has(e.id)) return
+    p.enCours.add(e.id)
     try {
-      p.charges.set(e.id, await dep.charger(p.session, join(dossierProfil(profil), dossier)))
-      p.enErreur.delete(e.id)
+      const idElectron = await dep.charger(p.session, join(dossierProfil(profil), dossier))
+      // Désactivée ou retirée pendant le chargement : elle ne reste pas chargée.
+      if (listerExtensions(dep.db, profil).find((x) => x.id === e.id)?.actif) {
+        p.charges.set(e.id, idElectron)
+        p.enErreur.delete(e.id)
+      } else dep.decharger(p.session, idElectron)
     } catch (erreur) {
       p.enErreur.add(e.id)
       avertir(`Extension « ${e.nom} » non chargée :`, erreur)
+    } finally {
+      p.enCours.delete(e.id)
     }
   }
 
@@ -97,7 +111,13 @@ export function creerGestionnaireExtensions<S, W, F>(dep: Dependances<S, W, F>) 
     // la bibliothèque laisse le navigateur fonctionner sans extensions.
     async preparer(profil: number, session: S): Promise<void> {
       if (!dep.actif() || profils.has(profil)) return
-      const p: Profil<S, W, F> = { session, bibliotheque: null, charges: new Map(), enErreur: new Set() }
+      const p: Profil<S, W, F> = {
+        session,
+        bibliotheque: null,
+        charges: new Map(),
+        enErreur: new Set(),
+        enCours: new Set()
+      }
       profils.set(profil, p)
       try {
         p.bibliotheque = dep.creerBibliotheque(session)
@@ -133,8 +153,11 @@ export function creerGestionnaireExtensions<S, W, F>(dep: Dependances<S, W, F>) 
       mkdirSync(dossierProfil(profil), { recursive: true })
       try {
         copierSur(source, temporaire)
+        // Ce que l'utilisateur voit est le manifest de la copie, la seule qui sera chargée.
+        const copie = validerManifest(JSON.parse(readFileSync(join(temporaire, 'manifest.json'), 'utf8')))
+        if ('erreur' in copie) throw new Error(copie.erreur)
         renameSync(temporaire, final)
-        return ajouterExtension(dep.db, { profil, ...valide, dossier })
+        return ajouterExtension(dep.db, { profil, ...copie, dossier })
       } catch (erreur) {
         rmSync(temporaire, { recursive: true, force: true })
         rmSync(final, { recursive: true, force: true })
@@ -149,7 +172,7 @@ export function creerGestionnaireExtensions<S, W, F>(dep: Dependances<S, W, F>) 
       if (!e) return
       definirExtensionActive(dep.db, id, actif)
       const p = etatProfil(profil)
-      if (!p) return // réglage maître faux : l'état est écrit, rien n'est chargé
+      if (!p?.bibliotheque) return // réglage maître faux ou bibliothèque absente : l'état est écrit, rien n'est chargé
       if (actif) await chargerUne(p, profil, { ...e, actif }, dossier)
       else {
         const idElectron = p.charges.get(id)

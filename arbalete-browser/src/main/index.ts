@@ -2104,14 +2104,14 @@ function endormir(id: string) {
 
 // Remplace la vue de l'onglet par une vue neuve, dans l'état d'un onglet restauré : mise en veille, ou changement de session
 // de l'espace (ARB-65). La vue neuve prend la session que l'espace a à cet instant.
-function renouvelerVue(id: string, record: TabRecord) {
+function renouvelerVue(id: string, record: TabRecord, profilAvant = profilDeEspace(record.espace)) {
   if (record.view === pleinEcranPage) sortirPleinEcranPage(record.view)
   try {
     mainWindow?.contentView.removeChildView(record.view)
   } catch {
     // La vue peut déjà être détachée.
   }
-  extensions?.retirerOnglet(profilDeEspace(record.espace), record.view.webContents)
+  extensions?.retirerOnglet(profilAvant, record.view.webContents)
   record.view.webContents.close()
   record.view = nouvelleVue(record.espace)
   record.chargee = false
@@ -2246,7 +2246,14 @@ async function supprimerProfilUtilisateur(id: number) {
   const session = sessionProfil(id)
   const copies = extensions?.copies(id) ?? []
   const supprime = supprimerProfil(base, id)
-  if (supprime) extensions?.effacerProfil(id, copies)
+  if (supprime) {
+    // La suppression est faite : un fichier d'extension verrouillé (Windows) ne doit pas bloquer la suite.
+    try {
+      extensions?.effacerProfil(id, copies)
+    } catch (erreur) {
+      console.error('Copies d’extensions non effacées :', erreur)
+    }
+  }
   profils = lireProfils(base)
   broadcastState()
   // Attendu : une partition non effacée ne se nettoierait plus jamais (l'id n'est pas réutilisé), l'erreur remonte à la modale.
@@ -2260,6 +2267,7 @@ async function supprimerProfilUtilisateur(id: number) {
 function profilerEspaceUtilisateur(id: number, profil: number) {
   const espace = espaces.find((item) => item.id === id)
   if (!base || !espace || espace.profil === profil) return
+  const profilAvant = profilDeEspace(id)
   if (!definirProfilEspace(base, id, profil)) return
   espaces = lireEspaces(base)
   // La vue partagée tient deux pages de l'ancienne session : elle se termine si l'une est de l'espace.
@@ -2267,7 +2275,7 @@ function profilerEspaceUtilisateur(id: number, profil: number) {
   for (const [ongletId, onglet] of tabs) {
     if (onglet.espace !== id) continue
     try {
-      renouvelerVue(ongletId, onglet)
+      renouvelerVue(ongletId, onglet, profilAvant)
     } catch (erreur) {
       console.error('Onglet non basculé dans la nouvelle session :', erreur)
     }
@@ -2576,12 +2584,14 @@ app.whenReady().then(() => {
     }
     // Extensions Chrome (ARB-144) : réglage maître et gestionnaire (la bibliothèque n'est chargée qu'au besoin, par require).
     try {
-      extensionsActif = lirePreference(base, 'extensions.actif') === '1'
+      // Figé au démarrage : un changement du réglage ne s'applique qu'au redémarrage.
+      const actifAuDemarrage = lirePreference(base, 'extensions.actif') === '1'
+      extensionsActif = actifAuDemarrage
       const db = base
       extensions = creerGestionnaireExtensions<Session, WebContents, BrowserWindow>({
         db,
         racine: join(app.getPath('userData'), 'extensions'),
-        actif: () => extensionsActif,
+        actif: () => actifAuDemarrage,
         creerBibliotheque: (s) => {
           const { ElectronChromeExtensions } = require('electron-chrome-extensions') as {
             ElectronChromeExtensions: typeof ElectronChromeExtensionsType

@@ -38,12 +38,22 @@ test('un manifest hostile ou invalide est refusé avec une erreur', () => {
   }
 })
 
-test('une permission invalide est ignorée sans refuser le manifest', () => {
-  deepStrictEqual(validerManifest({ ...base, permissions: ['tabs', 7, '', 'x'.repeat(101), null] }), {
-    nom: 'Dark Reader',
-    version: '4.9.135',
-    permissions: ['tabs']
-  })
+test('une permission invalide refuse le manifest : l’ignorer cacherait un accès à l’utilisateur', () => {
+  for (const p of [7, '', 'x'.repeat(101), null]) {
+    deepStrictEqual(validerManifest({ ...base, permissions: ['tabs', p] }), { erreur: 'Permission invalide' })
+  }
+})
+
+test('les adresses des scripts de contenu comptent parmi les accès montrés', () => {
+  deepStrictEqual(
+    validerManifest({
+      ...base,
+      permissions: ['tabs'],
+      content_scripts: [{ matches: ['<all_urls>', 'https://a.fr/*'] }, {}]
+    }),
+    { nom: 'Dark Reader', version: '4.9.135', permissions: ['tabs', '<all_urls>', 'https://a.fr/*'] }
+  )
+  deepStrictEqual(validerManifest({ ...base, content_scripts: [{ matches: [3] }] }), { erreur: 'Permission invalide' })
 })
 
 test('les libellés de permission : connue, hôte, autre, et noms hérités d’Object ne passent pas pour connus', () => {

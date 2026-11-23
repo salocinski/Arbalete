@@ -153,6 +153,29 @@ test('un chargement qui échoue marque l’extension en erreur sans faire échou
   }
 })
 
+test('activer deux fois ne charge qu’une fois ; désactiver pendant le chargement ne laisse rien de chargé', async () => {
+  // Value: protects=pas de double chargement ni d'extension chargée alors que la base la dit inactive; fails_when=garde enCours/charges retirée; why_new=course relevée en revue; seam=none; no_claim=bibliothèque réelle non rejouée
+  const m = monter()
+  try {
+    const id = m.g.installer(1, m.source)
+    await m.g.preparer(1, 's1')
+    await Promise.all([m.g.definirActive(1, id, true), m.g.definirActive(1, id, true)])
+    strictEqual(m.journal.filter((j) => j === 'charger').length, 1)
+    await m.g.definirActive(1, id, true) // déjà chargée : sans effet
+    strictEqual(m.journal.filter((j) => j === 'charger').length, 1)
+    await m.g.definirActive(1, id, false)
+    const lance = m.g.definirActive(1, id, true)
+    const coupe = m.g.definirActive(1, id, false)
+    await Promise.all([lance, coupe])
+    strictEqual(m.g.lister(1)[0].actif, false)
+    const charges = m.journal.filter((j) => j === 'charger').length
+    const decharges = m.journal.filter((j) => j.startsWith('decharger:')).length
+    strictEqual(charges, decharges) // chaque chargement est suivi d'un déchargement
+  } finally {
+    m.nettoyer()
+  }
+})
+
 test('une bibliothèque qui ne se crée pas laisse le navigateur sans extensions, onglets ignorés', async () => {
   const m = monter({ echecCreation: true })
   try {

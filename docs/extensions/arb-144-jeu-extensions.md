@@ -22,6 +22,8 @@ un changement ne s'applique qu'au redémarrage. Il restera éteint jusqu'à l'au
 - `securiserSession` refuse toute permission à une page qui n'est pas l'onglet actif : les pages d'extension sont refusées
   (ARB-140, refus par défaut, non fait).
 - Pas de `chrome.commands`, `sidePanel`, `privacy`, `nativeMessaging` (uBOL Lite conditionnel, 1Password No-Go).
-- Changer l'espace d'un onglet de profil retire l'onglet de la bibliothèque du nouveau profil, pas de l'ancien (nettoyé à la
-  destruction de la vue, non vérifié). Mémoire des processus d'extension non mesurée.
+- Mémoire des processus d'extension non mesurée. La copie d'une extension est synchrone (jusqu'à 100 Mo, bloque l'interface le
+  temps de la copie) ; une copie orpheline (arrêt entre le renommage et l'écriture en base) n'est pas purgée au démarrage.
+- Le manifest affiché est celui de la copie ; les permissions comptent aussi les adresses des scripts de contenu, mais pas
+  `optional_permissions`.
 - Le nom localisé (`__MSG_…__`) s'affiche tel quel.

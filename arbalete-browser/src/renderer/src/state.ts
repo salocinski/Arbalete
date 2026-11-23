@@ -24,7 +24,8 @@ const starterState: BrowserState = {
   popupsBloquees: 0,
   permissionsUtilisees: [],
   folders: [],
-  split: null
+  split: null,
+  splitRatio: 0.5
 }
 
 export type ThemeState = { choice: ThemeChoice; effective: 'dark' | 'light' }

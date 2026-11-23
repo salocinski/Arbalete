@@ -52,6 +52,8 @@ export type BrowserState = {
   folders: DossierOnglet[]
   // Vue partagée (ARB-72) : ids des deux onglets côte à côte (gauche, droite) dans l'espace affiché, sinon null.
   split: [string, string] | null
+  // Part de la page de gauche en vue partagée, entre 0,2 et 0,8 (ARB-148).
+  splitRatio: number
 }
 
 // Barre latérale (ARB-33, ARB-123) : masquée par défaut, ouverte par-dessus la page au survol du bord gauche ;
@@ -137,6 +139,7 @@ export type BrowserAPI = {
   goBack: () => Promise<void>
   goForward: () => Promise<void>
   reload: () => Promise<void>
+  setSplitRatio: (ratio: number) => void
   setContentBounds: (bounds: { x: number; y: number; width: number; height: number }) => void
   getSystemTheme: () => Promise<'dark' | 'light'>
   onSystemTheme: (callback: (theme: 'dark' | 'light') => void) => () => void

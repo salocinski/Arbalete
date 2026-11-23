@@ -180,7 +180,10 @@ export function TabList({
           onDragStart: () => setTenu(tab.id),
           onDragEnd: () => setTenu(null),
           onDrop: (id) => {
-            if (id) {
+            // Déposer un onglet sur l'onglet actif forme la vue partagée (ARB-148) ; un onglet déjà partagé n'y quitte pas la vue.
+            if (id && tab.id === state.activeTabId && id !== tab.id) {
+              if (!state.split?.includes(id)) void window.arbalete.tabAction(id, 'vue-partagee')
+            } else if (id) {
               if (groupe === 'jour') void window.arbalete.setTabFolder(id, tab.folder ?? null)
               void window.arbalete.moveTab(id, index)
             }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { DataIncidentBanner } from '../components/DataIncidentBanner'
 import { RestoreBanner } from '../components/RestoreBanner'
 import { Sidebar } from '../components/Sidebar'
+import { SplitHandle } from '../components/SplitHandle'
 import { Toolbar } from '../components/Toolbar'
 import { StageFooter, WelcomeCard } from '../components/WelcomeCard'
 import { largeurBarre } from '../../../shared/barre'
@@ -127,6 +128,7 @@ export function MainView() {
 
         <div className="page-stage">
           <div className={`web-content ${isDemo ? 'demo-placeholder' : ''}`} ref={contentRef}>
+            {state.split && <SplitHandle ratio={state.splitRatio} />}
             {!isDemo && isPreviewMode() && activeTab && (
               <div className="preview-frame" data-testid="preview-frame">
                 <p className="eyebrow">APERÇU NAVIGATEUR</p>

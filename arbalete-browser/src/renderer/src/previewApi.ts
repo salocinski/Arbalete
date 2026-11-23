@@ -13,7 +13,7 @@ import { MOTEUR_DEFAUT, modeleDe, urlRecherche, type ChoixMoteur } from '../../s
 import { REGLAGES_DEFAUT, accueilValide, type Reglages } from '../../shared/reglages'
 import { delaiArchivageValide, type ElementArchive } from '../../shared/archivage'
 import { delaiVeilleValide } from '../../shared/veille'
-import { basculerPartage, dansPartage, type Partage } from '../../shared/vuePartagee'
+import { basculerPartage, dansPartage, ratioBorne, type Partage } from '../../shared/vuePartagee'
 import { estActif, type Telechargement } from '../../shared/telechargements'
 import type { SitePermissions } from '../../shared/permissions'
 import type { BrowserAPI, BrowserState, BrowserTab, SidebarState, ThemeChoice } from '../../shared/types'
@@ -194,7 +194,8 @@ export function installPreviewApi(): boolean {
       .filter((dossier) => dossier.espace === activeWorkspaceId)
       .map(({ id, nom, replie }) => ({ id, nom, replie })),
     // Un onglet actif hors des deux pages met fin à la vue partagée, comme dans le processus principal.
-    split: split && dansPartage(split, activeTabId) ? [split.gauche, split.droite] : null
+    split: split && dansPartage(split, activeTabId) ? [split.gauche, split.droite] : null,
+    splitRatio: split?.ratio ?? 0.5
   })
   const emit = () => {
     const state = snapshot()
@@ -457,6 +458,11 @@ export function installPreviewApi(): boolean {
       if (tab) sync(tab)
     },
     setContentBounds: () => {},
+    setSplitRatio: (ratio) => {
+      if (!split) return
+      split = { ...split, ratio: ratioBorne(ratio) }
+      emit()
+    },
     getSystemTheme: async () => systemTheme(),
     onSystemTheme: (callback) => {
       themeListeners.add(callback)

@@ -7,6 +7,7 @@ import { after, test } from 'node:test'
 import { BaseCorrompue, ouvrirBase, ouvrirBaseOuRecuperer } from './base.ts'
 import { noterFermetureNormale, noterOuverture } from './fermeture.ts'
 import { MIGRATIONS, appliquerMigrations, versionDuSchema } from './migrations.ts'
+import { lirePreference } from './preferences.ts'
 import { SUFFIXE_PRECEDENTE, SUFFIXE_SAUVEGARDE, sauvegarderBase } from './sauvegarde.ts'
 import { lireSession, ongletsARestaurer, sauverSession, type OngletSauve } from './session.ts'
 
@@ -428,4 +429,18 @@ test('la copie restaurée s’ouvre avec des réessais sur erreur d’E/S', () =
   strictEqual(incident?.type === 'corrompue' && incident.restauree, true)
   deepStrictEqual(lireSession(ouverte!), onglets)
   ouverte!.close()
+})
+
+test('la vue partagée s’écrit dans la même transaction que la session, et reste telle quelle si elle est absente (ARB-148)', () => {
+  const db = ouvrirBase(':memory:')
+  const onglets = [{ url: 'https://a.test/', titre: 'A', actif: true }]
+  sauverSession(db, onglets, '{"g":0,"d":1,"r":0.3}')
+  strictEqual(lirePreference(db, 'partage'), '{"g":0,"d":1,"r":0.3}')
+  sauverSession(db, onglets)
+  strictEqual(lirePreference(db, 'partage'), '{"g":0,"d":1,"r":0.3}')
+  // Un échec de l'écriture des onglets annule aussi celle de la vue : les indices ne servent qu'avec leur liste.
+  throws(() => sauverSession(db, [{ url: null as unknown as string, titre: 'X', actif: false }], ''))
+  strictEqual(lirePreference(db, 'partage'), '{"g":0,"d":1,"r":0.3}')
+  sauverSession(db, onglets, '')
+  strictEqual(lirePreference(db, 'partage'), '')
 })

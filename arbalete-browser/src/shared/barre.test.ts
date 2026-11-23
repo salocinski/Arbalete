@@ -39,6 +39,14 @@ test('masquée par défaut : le survol ouvre, la sortie referme', () => {
   deepEqual(transitionBarre(ouverte, 'hide'), ETAT_BARRE_INITIAL)
 })
 
+test('ouvrir une barre déjà ouverte ne change rien (ARB-114)', () => {
+  const ouverte = transitionBarre(ETAT_BARRE_INITIAL, 'open')
+  deepEqual(transitionBarre(ouverte, 'open'), ouverte)
+  strictEqual(largeurBarre(transitionBarre(ouverte, 'open')), largeurBarre(ouverte))
+  const epinglee = transitionBarre(ETAT_BARRE_INITIAL, 'toggle-pin')
+  deepEqual(transitionBarre(epinglee, 'open'), epinglee)
+})
+
 test('épinglée, la barre ne se masque pas ; désépingler la referme', () => {
   const epinglee = transitionBarre(ETAT_BARRE_INITIAL, 'toggle-pin')
   deepEqual(epinglee, { ...ETAT_BARRE_INITIAL, open: true, pinned: true })

@@ -4913,3 +4913,74 @@ test('C103 : la sauvegarde complète et l’import en deux temps ne se pilotent 
   await expect(barreUi.evaluate(() => window.arbalete.confirmImport())).rejects.toThrow()
   await barreUi.evaluate(() => window.arbalete.cancelImport())
 })
+
+// Value: protects=ARB-114 (ARB-29) : deux setSidebar('open') successifs laissent la barre ouverte, à la même place, sans
+//   modification de la mise en page; fails_when=un second 'open' déplace la barre ou la page, ou change l'état;
+//   why_new=C33 n'ouvre qu'une fois; seam=none; no_claim=ne compte pas les diffusions de l'état, ne simule ni le survol
+//   réel ni la rentrée rapide de la souris (le retour anticipé d'appliquerBarre n'est pas isolé de placerBarre).
+function boundsPage() {
+  return app.evaluate(({ BrowserWindow, WebContentsView }) =>
+    BrowserWindow.getAllWindows()[0]
+      .contentView.children.find(
+        (enfant) => enfant instanceof WebContentsView && /^https?:/.test(enfant.webContents.getURL())
+      )
+      ?.getBounds()
+  )
+}
+
+test('C104 : ouvrir deux fois la barre masquée la laisse ouverte, à la même place', async () => {
+  await ui.evaluate(() => window.arbalete.setSidebar('hide'))
+  await expect.poll(etatBarre).toEqual({ open: false, pinned: false })
+  await ui.evaluate(() => window.arbalete.setSidebar('open'))
+  await expect.poll(etatBarre).toEqual({ open: true, pinned: false })
+  const avant = { barre: await boundsBarre(), page: await boundsPage() }
+  await ui.evaluate(() => window.arbalete.setSidebar('open'))
+  expect(await etatBarre()).toEqual({ open: true, pinned: false })
+  expect(await boundsBarre()).toEqual(avant.barre)
+  expect(avant.page).toBeDefined()
+  expect(await boundsPage()).toEqual(avant.page)
+  await ui.evaluate(() => window.arbalete.setSidebar('hide'))
+  await expect.poll(etatBarre).toEqual({ open: false, pinned: false })
+})
+
+// Value: protects=ARB-114 (ARB-29) : le focus rendu à la page au chargement de la barre ne plante pas quand l'onglet
+//   actif a été fermé entre-temps; fails_when=rendreLeFocusALaPage déréférence l'onglet actif sans garde (erreur dans le
+//   processus principal); why_new=C58 ne ferme aucun onglet; seam=isFocused de la fenêtre remplacé par un faux (comme
+//   C58) pour différer le focus; no_claim=une fenêtre sans aucun onglet n'existe pas (le dernier fermé en rouvre un), donc
+//   le test ne prouve pas à lui seul la garde `?.` : il couvre la fermeture pendant le chargement et l'absence d'erreur.
+test("C104b : fermer l'onglet actif avant la fin du chargement de la barre ne provoque aucune erreur", async () => {
+  const stderr: string[] = []
+  const ecouter = (donnees: Buffer) => stderr.push(String(donnees))
+  app.process().stderr?.on('data', ecouter)
+  const barreChargee = () =>
+    app.evaluate(({ BrowserWindow, WebContentsView }) =>
+      BrowserWindow.getAllWindows()[0].contentView.children.some(
+        (enfant) =>
+          enfant instanceof WebContentsView &&
+          enfant.webContents.getURL().includes('vue=barre') &&
+          !enfant.webContents.isLoading()
+      )
+    )
+  const id = await ui.evaluate((url) => window.arbalete.createTab(url), `${origine}/page-a.html`)
+  await app.evaluate(({ BrowserWindow }) => {
+    ;(BrowserWindow.getAllWindows()[0] as unknown as { isFocused: () => boolean }).isFocused = () => false
+  })
+  try {
+    await app.evaluate(({ BrowserWindow, WebContentsView }) => {
+      const barre = BrowserWindow.getAllWindows()[0].contentView.children.find(
+        (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('vue=barre')
+      ) as InstanceType<typeof WebContentsView>
+      barre.webContents.reload()
+    })
+    await ui.evaluate((tab) => window.arbalete.closeTab(tab), id)
+    await expect.poll(barreChargee).toBe(true)
+  } finally {
+    await app.evaluate(({ BrowserWindow }) => {
+      delete (BrowserWindow.getAllWindows()[0] as unknown as { isFocused?: () => boolean }).isFocused
+    })
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].emit('focus'))
+    app.process().stderr?.off('data', ecouter)
+  }
+  expect((await etat()).tabs.length).toBeGreaterThan(0)
+  expect(stderr.join('')).not.toMatch(/TypeError|Uncaught|Cannot read/)
+})

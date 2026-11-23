@@ -88,6 +88,29 @@ test('installer refuse manifest absent, V2, lien symbolique et laisse aucune cop
   }
 })
 
+test('installer refuse un dossier trop profond ou trop de fichiers, sans laisser de copie', () => {
+  // Value: protects=copie sûre d'un dossier hostile; fails_when=une limite de profondeur ou de fichiers saute; why_new=seul le lien symbolique était testé; seam=none; no_claim=limite de 100 Mo non rejouée
+  const m = monter()
+  try {
+    let profond = m.source
+    for (let i = 0; i < 14; i++) {
+      profond = join(profond, 'd')
+      mkdirSync(profond)
+    }
+    throws(() => m.g.installer(1, m.source), /profond/)
+    rmSync(join(m.source, 'd'), { recursive: true })
+    const beaucoup = join(m.source, 'beaucoup')
+    mkdirSync(beaucoup)
+    for (let i = 0; i < 5001; i++) writeFileSync(join(beaucoup, i + '.js'), '')
+    throws(() => m.g.installer(1, m.source), /volumineuse/)
+    deepStrictEqual(m.g.lister(1), [])
+    const racine = join(m.dossier, 'extensions', '1')
+    deepStrictEqual(existsSync(racine) ? readdirSync(racine) : [], [])
+  } finally {
+    m.nettoyer()
+  }
+})
+
 test('réglage maître faux : rien n’est créé ni chargé, même pour une extension active', async () => {
   const m = monter({ actif: false })
   try {

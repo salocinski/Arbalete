@@ -1,5 +1,6 @@
 import {
   app,
+  net,
   BrowserWindow,
   Menu,
   clipboard,
@@ -188,6 +189,7 @@ import {
 import { hotePourProfil, PROFIL_PRINCIPAL } from '../shared/profils.ts'
 import type { ElectronChromeExtensions as ElectronChromeExtensionsType } from 'electron-chrome-extensions'
 import { creerGestionnaireExtensions, type GestionnaireExtensions } from './extensions.ts'
+import { creerRequeteNet, telechargerCrx, type FabriqueNet } from './webStore.ts'
 import {
   creerEspace,
   ecrireEspaceActif,
@@ -2599,7 +2601,12 @@ app.whenReady().then(() => {
           return new ElectronChromeExtensions({ session: s })
         },
         charger: async (s, chemin) => (await s.extensions.loadExtension(chemin)).id,
-        decharger: (s, id) => s.extensions.removeExtension(id)
+        decharger: (s, id) => s.extensions.removeExtension(id),
+        telecharger: (idStore) =>
+          telechargerCrx(idStore, {
+            requete: creerRequeteNet(net as unknown as FabriqueNet),
+            versionChromium: process.versions.chrome
+          })
       })
     } catch (erreur) {
       console.error('Extensions indisponibles :', erreur)
@@ -3146,6 +3153,24 @@ app.whenReady().then(() => {
     const id = extensions.installer(profilDeEspace(espaceActif), choix.filePaths[0])
     broadcastState()
     return id
+  })
+  // ARB-161 : extension du Chrome Web Store (identifiant ou lien de la fiche, texte borné), inactive à l'installation ; la mise à
+  // jour se fait à la demande. Le téléchargement et la signature sont vérifiés dans le processus principal.
+  ipcMain.handle('browser:add-extension-store', async (event, entree) => {
+    exigerBarre(event)
+    const texte = exigerTexte(entree)
+    if (texte.length > 512) throw new Error('Argument IPC invalide : texte trop long')
+    if (!extensions) throw new Error('Extensions indisponibles')
+    const id = await extensions.installerDepuisStore(profilDeEspace(espaceActif), texte)
+    broadcastState()
+    return id
+  })
+  ipcMain.handle('browser:update-extension', async (event, id) => {
+    exigerBarre(event)
+    if (!extensions) throw new Error('Extensions indisponibles')
+    const resultat = await extensions.mettreAJour(profilDeEspace(espaceActif), exigerEntier(id))
+    broadcastState()
+    return resultat
   })
   ipcMain.handle('browser:set-extension-enabled', async (event, id, actif) => {
     exigerBarre(event)

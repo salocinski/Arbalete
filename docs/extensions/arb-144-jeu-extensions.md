@@ -18,7 +18,7 @@ un changement ne s'applique qu'au redémarrage. Il restera éteint jusqu'à l'au
 ## Limites connues
 - Jeu d'extensions réel (Dark Reader, Bitwarden, uBOL Lite) **non rejoué** avec le gestionnaire : le chargement réel reste
   manuel, sous Electron 45 (bibliothèque annoncée pour Electron 44).
-- Pas de barre d'actions ni de popups d'extension (ARB-160) ; pas d'installation depuis le Web Store (ARB-161).
+- Pas de barre d'actions ni de popups d'extension (ARB-160) ; l'installation depuis le Web Store est faite par ARB-161 (`arb-161-web-store.md`).
 - `securiserSession` refuse toute permission à une page qui n'est pas l'onglet actif : les pages d'extension sont refusées
   (ARB-140, refus par défaut, non fait).
 - Pas de `chrome.commands`, `sidePanel`, `privacy`, `nativeMessaging` (uBOL Lite conditionnel, 1Password No-Go).

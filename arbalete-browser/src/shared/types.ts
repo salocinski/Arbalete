@@ -285,6 +285,10 @@ export type BrowserAPI = {
   addExtensionFolder: () => Promise<number | null>
   setExtensionEnabled: (id: number, actif: boolean) => Promise<void>
   removeExtension: (id: number) => Promise<void>
+  // ARB-161 : installe depuis un identifiant ou un lien du Chrome Web Store (inactive, signature vérifiée) et rend l'id ajouté ;
+  // `updateExtension` cherche à la demande une version plus récente (permissions élargies : l'extension revient inactive).
+  addExtensionStore: (entree: string) => Promise<number>
+  updateExtension: (id: number) => Promise<'a-jour' | 'mise-a-jour'>
   setExtensionsEnabled: (actif: boolean) => Promise<void>
   // Téléchargements (ARB-55) : enregistrés sans invite dans le dossier Téléchargements, du plus récent au plus ancien, et
   // conservés au redémarrage (un téléchargement alors actif devient `interrompu`). Pause, reprise et annulation ne

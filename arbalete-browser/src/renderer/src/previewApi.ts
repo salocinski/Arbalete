@@ -318,6 +318,8 @@ export function installPreviewApi(): boolean {
     setExtensionEnabled: async () => {},
     removeExtension: async () => {},
     setExtensionsEnabled: async () => {},
+    addExtensionStore: async () => 0,
+    updateExtension: async () => 'a-jour',
     moveWorkspace: async (id, direction) => {
       const ordre = ordreApresDeplacement(
         workspaces.map((item) => item.id),

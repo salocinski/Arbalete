@@ -9,7 +9,10 @@ import {
   definirExtensionActive,
   dossierExtension,
   dossiersDuProfil,
+  extensionDuProfil,
+  extensionDuStore,
   listerExtensions,
+  remplacerExtension,
   supprimerExtension
 } from './extensions.ts'
 
@@ -78,4 +81,49 @@ test('la migration 12 s’applique à une base du schéma 11 sans toucher aux pr
   strictEqual(versionDuSchema(ancienne), MIGRATIONS.length)
   deepStrictEqual(listerExtensions(ancienne, 2), [])
   strictEqual((ancienne.prepare('SELECT COUNT(*) AS n FROM profil').get() as { n: number }).n, 2)
+})
+
+const STORE = 'eimadpbcbfnmbkopoojfekhnkhdbieeh'
+
+test('une extension du Web Store garde son identifiant, unique par profil, et se remplace en place (ARB-161)', () => {
+  const db = ouvrirBase(':memory:')
+  const travail = creerProfil(db, 'Travail')
+  const id = ajouterExtension(db, { ...exemple, storeId: STORE })
+  strictEqual(listerExtensions(db, 1)[0].storeId, STORE)
+  strictEqual(extensionDuStore(db, 1, STORE), true)
+  strictEqual(extensionDuStore(db, travail, STORE), false)
+  throws(() => ajouterExtension(db, { ...exemple, storeId: STORE, dossier: 'zz-1' })) // déjà dans ce profil
+  ajouterExtension(db, { ...exemple, profil: travail, storeId: STORE, dossier: 'zz-2' }) // autre profil : permis
+  for (const mauvais of ['', 'abc', STORE.toUpperCase(), STORE + 'a']) {
+    throws(() => ajouterExtension(db, { ...exemple, storeId: mauvais, dossier: 'zz-3' }))
+  }
+  definirExtensionActive(db, id, true)
+  strictEqual(
+    remplacerExtension(db, id, { nom: 'Neuf', version: '5.0', permissions: ['tabs'], dossier: 'n-1', actif: false }),
+    true
+  )
+  const e = extensionDuProfil(db, 1, id)
+  deepStrictEqual(
+    [e?.nom, e?.version, e?.permissions, e?.actif, e?.dossier, e?.storeId],
+    ['Neuf', '5.0', ['tabs'], false, 'n-1', STORE]
+  )
+  strictEqual(extensionDuProfil(db, travail, id), undefined) // jamais l'extension d'un autre profil
+  strictEqual(
+    remplacerExtension(db, 99, { nom: 'x', version: '1', permissions: [], dossier: 'n-2', actif: false }),
+    false
+  )
+  throws(() => remplacerExtension(db, id, { nom: 'x', version: '1', permissions: [], dossier: '../x', actif: false }))
+})
+
+test('la migration 13 ajoute la source du Web Store à une base du schéma 12 sans perdre d’extension', () => {
+  const ancienne = new DatabaseSync(':memory:')
+  ancienne.exec('PRAGMA foreign_keys = ON')
+  appliquerMigrations(ancienne, MIGRATIONS.slice(0, 12))
+  ancienne.exec(
+    "INSERT INTO extension (profil, nom, version, dossier, permissions, ajoutee_le) VALUES (1, 'Vieille', '1.0', 'v-1', '[]', 0)"
+  )
+  appliquerMigrations(ancienne)
+  strictEqual(versionDuSchema(ancienne), MIGRATIONS.length)
+  const [e] = listerExtensions(ancienne, 1)
+  deepStrictEqual([e.nom, e.storeId], ['Vieille', undefined])
 })

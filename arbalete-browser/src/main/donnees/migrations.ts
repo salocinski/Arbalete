@@ -123,7 +123,11 @@ export const MIGRATIONS: readonly string[] = [
     actif INTEGER NOT NULL DEFAULT 0 CHECK (actif IN (0, 1)),
     ajoutee_le INTEGER NOT NULL
   );
-  CREATE INDEX extension_profil ON extension (profil)`
+  CREATE INDEX extension_profil ON extension (profil)`,
+  // 13 — Extensions du Chrome Web Store (ARB-161) : `store_id` est l'identifiant du Store (NULL = dossier décompressé), unique
+  // par profil, pour retrouver l'extension à mettre à jour.
+  `ALTER TABLE extension ADD COLUMN store_id TEXT;
+  CREATE UNIQUE INDEX extension_store ON extension (profil, store_id) WHERE store_id IS NOT NULL`
 ]
 
 export function versionDuSchema(db: DatabaseSync): number {

@@ -4972,6 +4972,12 @@ test('C106 : les extensions ne se pilotent que depuis la vue de la barre, étein
   await expect(ui.evaluate(() => window.arbalete.setExtensionEnabled(1, true))).rejects.toThrow()
   await expect(ui.evaluate(() => window.arbalete.removeExtension(1))).rejects.toThrow()
   await expect(ui.evaluate(() => window.arbalete.setExtensionsEnabled(true))).rejects.toThrow()
+  // ARB-161 : le Web Store et la mise à jour ne répondent pas à la fenêtre, et refusent un argument de mauvais type.
+  await expect(ui.evaluate(() => window.arbalete.addExtensionStore('a'.repeat(32)))).rejects.toThrow()
+  await expect(ui.evaluate(() => window.arbalete.updateExtension(1))).rejects.toThrow()
+  await expect(barreUi.evaluate(() => window.arbalete.addExtensionStore(1 as unknown as string))).rejects.toThrow()
+  await expect(barreUi.evaluate(() => window.arbalete.addExtensionStore('x'.repeat(513)))).rejects.toThrow()
+  await expect(barreUi.evaluate(() => window.arbalete.updateExtension('x' as unknown as number))).rejects.toThrow()
   await expect(
     barreUi.evaluate(() => window.arbalete.setExtensionEnabled(1, 'oui' as unknown as boolean))
   ).rejects.toThrow()

@@ -2,6 +2,14 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.37] - 2026-11-22
+
+### Ajouté
+- Tests de la barre latérale (ARB-114) : ouvrir deux fois la barre laisse l'état et la mise en page inchangés, et fermer l'onglet actif pendant le chargement de la barre ne provoque aucune erreur. Aucun changement visible pour l'utilisateur.
+
+### Limites
+- Le second test ne prouve pas à lui seul la garde du focus : une fenêtre sans onglet n'existe pas (fermer le dernier en rouvre un). Les diffusions d'état de la barre ne sont pas comptées.
+
 ## [0.12.44.36] - 2026-11-22
 
 ### Ajouté

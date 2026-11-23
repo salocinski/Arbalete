@@ -5,7 +5,9 @@ import {
   PERMISSIONS_MAX,
   dossierExtensionValide,
   libellePermission,
-  validerManifest
+  validerManifest,
+  cibleNomLocalise,
+  messageLocalise
 } from './extensions.ts'
 
 // Tests unitaires des extensions Chrome (ARB-144).
@@ -69,4 +71,29 @@ test('le nom du dossier de copie n’admet ni chemin ni point', () => {
   for (const mauvais of ['', '..', 'a/b', 'a\\b', 'A', 'a.b', 'x'.repeat(65), 7, null]) {
     strictEqual(dossierExtensionValide(mauvais), false)
   }
+})
+
+test('un nom « __MSG_cle__ » se résout par la langue par défaut et la clé, sans tenir compte de la casse (ARB-161)', () => {
+  deepStrictEqual(cibleNomLocalise({ name: '__MSG_extName__', default_locale: 'fr' }), { langue: 'fr', cle: 'extName' })
+  deepStrictEqual(cibleNomLocalise({ name: ' __MSG_a@b__ ', default_locale: 'pt_BR' }), { langue: 'pt_BR', cle: 'a@b' })
+  for (const mauvais of [
+    { name: 'Dark Reader', default_locale: 'fr' },
+    { name: '__MSG_x__' },
+    { name: '__MSG_x__', default_locale: '../..' },
+    { name: '__MSG_x y__', default_locale: 'fr' },
+    null,
+    'texte'
+  ])
+    strictEqual(cibleNomLocalise(mauvais), null)
+  strictEqual(messageLocalise({ EXTNAME: { message: 'Mon nom' } }, 'extName'), 'Mon nom')
+  for (const mauvais of [
+    {},
+    { extName: {} },
+    { extName: { message: '  ' } },
+    { extName: { message: 3 } },
+    [],
+    null,
+    'x'
+  ])
+    strictEqual(messageLocalise(mauvais, 'extName'), null)
 })

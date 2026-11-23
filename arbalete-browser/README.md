@@ -70,7 +70,7 @@ Arbalète est en développement, pas encore un navigateur prêt à être utilis�
 - Le sélecteur d'espaces change les onglets affichés et la session les rattache à leur espace ; le rendu du sélecteur n'a été essayé que dans l'aperçu navigateur.
 - Le thème suit `nativeTheme` : en mode système, il s'adapte au thème clair/sombre de Windows.
 - Les permissions de site sont restrictives : seuls le plein écran, la caméra, le micro, les notifications, la position et la lecture du presse-papiers se décident (invite par site), tout le reste est refusé ; le panneau « Permissions » permet de revenir sur un choix mémorisé (retirer une permission ne coupe pas un flux déjà ouvert).
-- Les extensions Chrome ne sont pas encore intégrées. Electron ne garantit pas la compatibilité avec toutes les extensions du Chrome Web Store.
+- Les extensions Chrome (Manifest V3) sont éteintes par défaut : une fois activées dans Paramètres, on les installe depuis un dossier ou depuis le Chrome Web Store (signature du `.crx` vérifiée, mise à jour à la demande). Pas de barre d'actions ni de popups d'extension, et Electron ne garantit pas la compatibilité avec toutes les extensions du Store.
 - Les onglets utilisent actuellement la session par défaut commune.
 - L'interface React se superpose au contenu Chromium via `WebContentsView`; le processus principal synchronise la zone visible à partir de la géométrie envoyée par le renderer. La barre latérale est une seconde vue native de la même interface (`?vue=barre`), posée au-dessus de la page.
 

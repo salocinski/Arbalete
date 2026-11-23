@@ -8,6 +8,8 @@ export type Extension = {
   version: string
   permissions: string[]
   actif: boolean
+  /** Identifiant du Chrome Web Store, présent seulement pour une extension installée depuis le Store (ARB-161). */
+  storeId?: string
   /** Présent (vrai) quand l'extension est active mais n'a pas pu être chargée (ARB-144). */
   erreur?: true
 }
@@ -17,10 +19,32 @@ export const LONGUEUR_MAX_PERMISSION = 100
 export const PERMISSIONS_MAX = 200
 export const TAILLE_MAX_MANIFEST = 1024 * 1024
 
+// Nom localisé (« __MSG_cle__ ») : la langue par défaut du manifest et la clé à chercher dans `_locales/<langue>/messages.json`.
+export function cibleNomLocalise(brut: unknown): { langue: string; cle: string } | null {
+  if (typeof brut !== 'object' || brut === null) return null
+  const m = brut as Record<string, unknown>
+  const cle = typeof m.name === 'string' ? /^__MSG_([A-Za-z0-9_@]{1,100})__$/.exec(m.name.trim())?.[1] : undefined
+  const langue = m.default_locale
+  if (!cle || typeof langue !== 'string' || !/^[A-Za-z0-9_]{2,10}$/.test(langue)) return null
+  return { langue, cle }
+}
+
+// Message de `messages.json` pour la clé (Chrome ne tient pas compte de la casse), ou null.
+export function messageLocalise(messages: unknown, cle: string): string | null {
+  if (typeof messages !== 'object' || messages === null || Array.isArray(messages)) return null
+  const voulue = cle.toLowerCase()
+  for (const [nom, entree] of Object.entries(messages)) {
+    if (nom.toLowerCase() !== voulue) continue
+    const texte = (entree as { message?: unknown } | null)?.message
+    return typeof texte === 'string' && texte.trim().length > 0 ? texte : null
+  }
+  return null
+}
+
 export type ManifestValide = { nom: string; version: string; permissions: string[] }
 
 // Manifest MV3 lu depuis le disque (donc hostile) : nom, version et permissions bornés, ou un message d'erreur.
-// shortcut: un nom localisé (« __MSG_… __ ») est gardé tel quel, sans lire _locales ; à résoudre si l'affichage gêne.
+// Un nom localisé est résolu avant (`cibleNomLocalise`, `messageLocalise`) ; sinon il s'affiche tel quel.
 export function validerManifest(brut: unknown): ManifestValide | { erreur: string } {
   if (typeof brut !== 'object' || brut === null || Array.isArray(brut)) return { erreur: 'Manifest invalide' }
   const m = brut as Record<string, unknown>

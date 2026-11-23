@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { BrowserAPI } from '../shared/types'
+import { injectBrowserAction } from 'electron-chrome-extensions/browser-action'
+
+// ARB-160 : `<browser-action-list>` (icônes des extensions) pour la fenêtre seulement, pas pour les vues natives (`?vue=`).
+// (le tsconfig du preload n'a pas le DOM, d'où le type local)
+if (!(globalThis as unknown as { location: { search: string } }).location.search.includes('vue=')) injectBrowserAction()
 
 // Abonnement à un canal diffusé par le processus principal ; renvoie la fonction de désabonnement.
 function ecouter<T>(canal: string, callback: (valeur: T) => void): () => void {

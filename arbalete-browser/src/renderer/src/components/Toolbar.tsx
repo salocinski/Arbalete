@@ -3,6 +3,7 @@ import { Monitor, Moon, Plus, Sun } from 'lucide-react'
 import type { PermissionSite } from '../../../shared/permissions'
 import type { BrowserTab, ThemeChoice } from '../../../shared/types'
 import { AddressBar } from './AddressBar'
+import { ExtensionActions } from './ExtensionActions'
 import { NavigationControls } from './NavigationControls'
 import { PinButton } from './PinButton'
 import { IconButton } from './ui/IconButton'
@@ -14,6 +15,7 @@ type ToolbarProps = {
   sidebarPinned: boolean
   themeChoice: ThemeChoice
   favorite: boolean
+  extensionsPartition: string | null // null : extensions éteintes
   popupsBloquees: number
   permissionsUtilisees: PermissionSite[]
   address: string
@@ -28,6 +30,7 @@ export function Toolbar({
   sidebarPinned,
   themeChoice,
   favorite,
+  extensionsPartition,
   popupsBloquees,
   permissionsUtilisees,
   onNavigate,
@@ -45,6 +48,7 @@ export function Toolbar({
         permissionsUtilisees={permissionsUtilisees}
         favoritable={/^https?:/i.test(activeTab?.url ?? '')}
       />
+      {extensionsPartition && <ExtensionActions partition={extensionsPartition} />}
       <IconButton variant="secondary" title="Nouvel onglet" onClick={() => void window.arbalete.createTab()}>
         <Plus size={16} />
       </IconButton>

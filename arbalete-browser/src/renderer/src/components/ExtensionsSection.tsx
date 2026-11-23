@@ -87,6 +87,19 @@ export function ExtensionsSection() {
         </div>
       ))}
       <div className="settings-actions">
+        <Button
+          size="sm"
+          onClick={() =>
+            // Ouvre le Web Store dans un onglet puis rend la main à la page ; l'identifiant se colle ensuite ci-dessous.
+            agir(
+              window.arbalete
+                .createTab('https://chromewebstore.google.com/category/extensions')
+                .then(() => window.arbalete.setOverlay(false))
+            )
+          }
+        >
+          Parcourir le Chrome Web Store
+        </Button>{' '}
         <Button size="sm" onClick={() => agir(window.arbalete.addExtensionFolder())}>
           Ajouter une extension (dossier)…
         </Button>

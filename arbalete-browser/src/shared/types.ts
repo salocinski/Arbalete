@@ -45,6 +45,8 @@ export type BrowserState = {
   // ne s'applique qu'au redémarrage).
   extensions: Extension[]
   extensionsActif: boolean
+  // Partition de la session du profil affiché pour `<browser-action-list>` (ARB-160) : '_self' = session par défaut, celle de l'interface.
+  extensionsPartition: string
   // La page de l'onglet actif est un favori (ARB-47) : faux pour une page hors du web (adresse non enregistrable).
   favorite: boolean
   // Grille de favoris en haut de la barre latérale (ARB-49) : les 8 premiers favoris, adresse d'historique et titre.

@@ -115,6 +115,7 @@ export function MainView() {
           sidebarPinned={sidebar.pinned}
           themeChoice={theme.choice}
           favorite={state.favorite}
+          extensionsPartition={state.extensionsActif ? state.extensionsPartition : null}
           popupsBloquees={state.popupsBloquees}
           permissionsUtilisees={state.permissionsUtilisees}
           address={address}

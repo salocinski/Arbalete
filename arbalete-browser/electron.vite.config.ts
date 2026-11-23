@@ -6,7 +6,8 @@ import { cspInterface } from './vite-csp'
 // electron-vite 6 externalise les dépendances de main et preload par défaut (build.externalizeDeps).
 export default defineConfig({
   main: {},
-  preload: {},
+  // ARB-160 : le preload sandboxé ne peut rien `require` hors d'electron ; `browser-action` de la bibliothèque y est embarqué.
+  preload: { build: { externalizeDeps: { exclude: ['electron-chrome-extensions'] } } },
   renderer: {
     resolve: {
       alias: {

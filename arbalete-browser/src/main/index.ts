@@ -399,6 +399,11 @@ function appliquerMoteur(choix: ChoixMoteur) {
   moteur = choix
 }
 
+// Partition du profil affiché, comme `<browser-action-list partition>` la désigne (ARB-160) ; '_self' = session par défaut.
+function partitionExtensions(): string {
+  return profils.find((p) => p.id === profilDeEspace(espaceActif))?.partition ?? '_self'
+}
+
 function stateSnapshot(): BrowserState {
   return {
     tabs: ongletsVisibles().map((id) => ({ ...tabs.get(id)!.data })),
@@ -408,6 +413,7 @@ function stateSnapshot(): BrowserState {
     activeWorkspaceId: espaceActif,
     extensions: extensionsDuProfilAffiche(),
     extensionsActif,
+    extensionsPartition: partitionExtensions(),
     favorite: pageActiveEstFavorite(),
     favorites: grilleFavoris(),
     popupsBloquees: activeRecord()?.popupsBloquees ?? 0,
@@ -2598,6 +2604,8 @@ app.whenReady().then(() => {
           const { ElectronChromeExtensions } = require('electron-chrome-extensions') as {
             ElectronChromeExtensions: typeof ElectronChromeExtensionsType
           }
+          // Icônes de <browser-action-list> (ARB-160) : crx:// se traite sur la session de l'interface, celle de la fenêtre.
+          ElectronChromeExtensions.handleCRXProtocol(session.defaultSession)
           return new ElectronChromeExtensions({ session: s })
         },
         charger: async (s, chemin) => (await s.extensions.loadExtension(chemin)).id,

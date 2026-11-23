@@ -109,7 +109,21 @@ export const MIGRATIONS: readonly string[] = [
   INSERT INTO profil (nom, partition, position)
     SELECT nom, 'persist:espace-' || id, 0 FROM espace WHERE isole = 1 ORDER BY position, id;
   UPDATE profil SET position = id;
-  UPDATE espace SET profil = COALESCE((SELECT p.id FROM profil p WHERE p.partition = 'persist:espace-' || espace.id), 1)`
+  UPDATE espace SET profil = COALESCE((SELECT p.id FROM profil p WHERE p.partition = 'persist:espace-' || espace.id), 1)`,
+  // 12 — Extensions Chrome (ARB-144, décision 0004) : une ligne par extension installée dans un profil. `dossier` est le nom
+  // du sous-dossier de la copie (généré, jamais un chemin), `permissions` un tableau JSON lu et écrit d'un bloc. Supprimer un
+  // profil supprime ses lignes (clés étrangères actives) : l'appelant efface avant les copies sur disque.
+  `CREATE TABLE extension (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    profil INTEGER NOT NULL REFERENCES profil (id) ON DELETE CASCADE,
+    nom TEXT NOT NULL,
+    version TEXT NOT NULL,
+    dossier TEXT NOT NULL UNIQUE,
+    permissions TEXT NOT NULL,
+    actif INTEGER NOT NULL DEFAULT 0 CHECK (actif IN (0, 1)),
+    ajoutee_le INTEGER NOT NULL
+  );
+  CREATE INDEX extension_profil ON extension (profil)`
 ]
 
 export function versionDuSchema(db: DatabaseSync): number {

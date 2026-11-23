@@ -2,6 +2,15 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.38] - 2026-11-22
+
+### Ajouté
+- Vue partagée (ARB-148) : une poignée dans l'écart entre les deux pages règle leur largeur (glisser, flèches gauche et droite, double-clic pour revenir à la moitié ; de 20 à 80 %). Déposer un onglet sur l'onglet actif de la barre latérale forme la vue.
+- La vue partagée revient au redémarrage (pages et largeur), si l'onglet actif en fait partie.
+
+### Limites
+- Déposer un onglet sur l'onglet actif forme la vue au lieu de le réordonner. Le glisser réel de la poignée au-dessus des pages et la restauration au redémarrage n'ont pas de test automatique.
+
 ## [0.12.44.37] - 2026-11-22
 
 ### Ajouté

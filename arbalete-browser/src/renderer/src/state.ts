@@ -19,6 +19,8 @@ const starterState: BrowserState = {
   workspaces: [],
   profiles: [],
   activeWorkspaceId: null,
+  extensions: [],
+  extensionsActif: false,
   favorite: false,
   favorites: [],
   popupsBloquees: 0,

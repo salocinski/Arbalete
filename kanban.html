@@ -2174,7 +2174,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "milestone": "M2",
       "prio": "P1",
       "size": "L",
-      "status": "todo",
+      "status": "done",
       "assigned_to": ""
     },
     {
@@ -2389,6 +2389,45 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "milestone": "M2",
       "prio": "P3",
       "size": "L",
+      "status": "todo",
+      "assigned_to": ""
+    },
+    {
+      "num": 160,
+      "title": "Extensions Chrome : barre d'actions et popups",
+      "note": "Suite d'ARB-144. Icônes d'extensions dans l'interface (browser-action-list de electron-chrome-extensions), popups dans la couche d'overlays, permissions accordées aux pages d'extension (limite de securiserSession, ARB-140).",
+      "deps": ["ARB-144"],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P2",
+      "size": "L",
+      "status": "todo",
+      "assigned_to": ""
+    },
+    {
+      "num": 161,
+      "title": "Extensions Chrome : installation depuis le Chrome Web Store",
+      "note": "Suite d'ARB-144. Téléchargement du .crx par le serveur de mises à jour (POC ARB-26), validation, mise à jour des extensions, source d'installation visible dans la gestion.",
+      "deps": ["ARB-144"],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P2",
+      "size": "L",
+      "status": "todo",
+      "assigned_to": ""
+    },
+    {
+      "num": 162,
+      "title": "Extensions Chrome : audit de sécurité EP-04, puis activation par défaut",
+      "note": "Jalon de la décision 0004 : audit complet (skill security-audit) avant d'allumer pref.extensions.actif par défaut ; couvre copie du dossier, IPC, permissions des pages d'extension, mémoire des processus.",
+      "deps": ["ARB-144", "ARB-160", "ARB-161"],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P2",
+      "size": "M",
       "status": "todo",
       "assigned_to": ""
     }

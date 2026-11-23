@@ -17,6 +17,7 @@ import { useSettings, useTheme } from '../state'
 import { ClearDataForm } from './ClearDataForm'
 import { Modal } from './ui/Modal'
 import { SearchEngineSection } from './SearchEngineSection'
+import { ExtensionsSection } from './ExtensionsSection'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 
@@ -228,6 +229,10 @@ export function SettingsModal({ sidebar, onClose }: { sidebar: SidebarState; onC
             ? `Mémoire des pages : ${memoire.mo} Mo, ${memoire.enVeille} onglet(s) sans page chargée.`
             : 'Mémoire des pages : mesure en cours…'}
         </p>
+      </Section>
+
+      <Section titre="Extensions">
+        <ExtensionsSection />
       </Section>
 
       <Section titre="Démarrage">

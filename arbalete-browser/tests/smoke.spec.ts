@@ -4963,6 +4963,25 @@ test('C103 : la sauvegarde complète et l’import en deux temps ne se pilotent 
   await barreUi.evaluate(() => window.arbalete.cancelImport())
 })
 
+// Value: protects=ARB-144 : les canaux des extensions Chrome ne répondent qu'à la vue de la barre, valident leurs arguments, et
+//   le réglage maître est faux par défaut (rien n'est chargé); fails_when=un canal accepte la fenêtre d'interface ou un
+//   argument de mauvais type, ou le réglage est vrai sans choix de l'utilisateur; why_new=aucun canal d'extension n'existait;
+//   seam=none; no_claim=la boîte de dossier, le chargement réel d'une extension et le redémarrage restent manuels.
+test('C106 : les extensions ne se pilotent que depuis la vue de la barre, éteintes par défaut', async () => {
+  await expect(ui.evaluate(() => window.arbalete.addExtensionFolder())).rejects.toThrow()
+  await expect(ui.evaluate(() => window.arbalete.setExtensionEnabled(1, true))).rejects.toThrow()
+  await expect(ui.evaluate(() => window.arbalete.removeExtension(1))).rejects.toThrow()
+  await expect(ui.evaluate(() => window.arbalete.setExtensionsEnabled(true))).rejects.toThrow()
+  await expect(
+    barreUi.evaluate(() => window.arbalete.setExtensionEnabled(1, 'oui' as unknown as boolean))
+  ).rejects.toThrow()
+  await expect(barreUi.evaluate(() => window.arbalete.removeExtension('x' as unknown as number))).rejects.toThrow()
+  await expect(barreUi.evaluate(() => window.arbalete.setExtensionsEnabled(1 as unknown as boolean))).rejects.toThrow()
+  const etat = await barreUi.evaluate(() => window.arbalete.getState())
+  expect(etat.extensionsActif).toBe(false)
+  expect(etat.extensions).toEqual([])
+})
+
 // Value: protects=ARB-114 (ARB-29) : deux setSidebar('open') successifs laissent la barre ouverte, à la même place, sans
 //   modification de la mise en page; fails_when=un second 'open' déplace la barre ou la page, ou change l'état;
 //   why_new=C33 n'ouvre qu'une fois; seam=none; no_claim=ne compte pas les diffusions de l'état, ne simule ni le survol

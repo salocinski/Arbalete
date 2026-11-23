@@ -39,7 +39,9 @@ export function lireSession(db: DatabaseSync): OngletSauve[] {
 }
 
 // Remplace la session enregistrée par ces onglets, d'un bloc : une lecture ne voit jamais une session à moitié écrite.
-export function sauverSession(db: DatabaseSync, onglets: readonly OngletSauve[]): void {
+// `partage` (ARB-148) : la vue partagée écrite sous `pref.partage`, dans la même transaction car ses indices ne valent que
+// pour cette liste d'onglets ; absent, la clé reste telle quelle.
+export function sauverSession(db: DatabaseSync, onglets: readonly OngletSauve[], partage?: string): void {
   // Un espace supprimé entre-temps devient « aucun espace » (NULL) : un id périmé ne doit pas faire perdre toute la session.
   // Un dossier supprimé entre-temps devient « à la racine », de même.
   const inserer = db.prepare(
@@ -59,6 +61,8 @@ export function sauverSession(db: DatabaseSync, onglets: readonly OngletSauve[])
         onglet.dossier ?? null
       )
     )
+    if (partage !== undefined)
+      db.prepare("INSERT OR REPLACE INTO etat (cle, valeur) VALUES ('pref.partage', ?)").run(partage)
   })
 }
 

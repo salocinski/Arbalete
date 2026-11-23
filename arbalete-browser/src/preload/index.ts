@@ -24,6 +24,7 @@ const api: BrowserAPI = {
   goBack: () => ipcRenderer.invoke('browser:back'),
   goForward: () => ipcRenderer.invoke('browser:forward'),
   reload: () => ipcRenderer.invoke('browser:reload'),
+  setSplitRatio: (ratio) => ipcRenderer.send('browser:set-split-ratio', ratio),
   setContentBounds: (bounds) => ipcRenderer.send('browser:set-content-bounds', bounds),
   getSystemTheme: () => ipcRenderer.invoke('browser:get-system-theme'),
   onSystemTheme: (callback) => ecouter('browser:system-theme', callback),

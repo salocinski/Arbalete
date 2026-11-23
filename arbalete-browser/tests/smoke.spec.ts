@@ -4856,6 +4856,55 @@ test('C100 : la vue partagée met deux onglets côte à côte, un clic active l�
   }
 })
 
+// Value: protects=la poignée de la vue partagée (ARB-148) : set-split-ratio règle la largeur de la page de gauche, borne 20 à 80 %,
+//   ignore une valeur non numérique et ne fait rien sans vue partagée; fails_when=le ratio n'est pas borné, une valeur aberrante
+//   est appliquée, ou les deux vues ne suivent pas; why_new=C100 ne règle aucun ratio; seam=none; no_claim=le glisser réel de la
+//   poignée, la capture de la souris au-dessus d'une page, la restauration au redémarrage et le rendu (manuels).
+test('C105 : la poignée règle la largeur des deux pages, bornée, et ne fait rien hors vue partagée', async () => {
+  const gauche = () =>
+    app.evaluate(({ BrowserWindow, WebContentsView }) => {
+      const vues = BrowserWindow.getAllWindows()[0]
+        .contentView.children.filter((e) => e instanceof WebContentsView && e.webContents.getURL().startsWith('http'))
+        .map((e) => e.getBounds())
+        .sort((a, b) => a.x - b.x)
+      return vues[0]?.width ?? 0
+    })
+  const premier = (await etat()).activeTabId!
+  const second = await ui.evaluate((url) => window.arbalete.createTab(url), `${origine}/page-survol.html`)
+  await attendreUrlActive(`${origine}/page-survol.html`)
+  try {
+    // Sans vue partagée, la poignée ne change rien.
+    await ui.evaluate(() => window.arbalete.setSplitRatio(0.3))
+    await ui.evaluate((id) => window.arbalete.tabAction(id, 'vue-partagee'), premier)
+    expect((await etat()).split).toEqual([second, premier])
+    expect((await etat()).splitRatio).toBe(0.5)
+    const zone = await rectangleZoneContenu()
+    const moitie = await gauche()
+    await ui.evaluate(() => window.arbalete.setSplitRatio(0.3))
+    await expect.poll(async () => (await etat()).splitRatio).toBe(0.3)
+    await expect.poll(gauche).toBe(Math.floor((zone.width - 8) * 0.3))
+    expect(await gauche()).toBeLessThan(moitie)
+    // Hors bornes : ramené à 20 % ou 80 %.
+    await ui.evaluate(() => window.arbalete.setSplitRatio(5))
+    await expect.poll(async () => (await etat()).splitRatio).toBe(0.8)
+    await ui.evaluate(() => window.arbalete.setSplitRatio(-1))
+    await expect.poll(async () => (await etat()).splitRatio).toBe(0.2)
+    // Valeur non numérique : ignorée.
+    await ui.evaluate(() => window.arbalete.setSplitRatio('x' as unknown as number))
+    await ui.evaluate(() => window.arbalete.setSplitRatio(Number.NaN))
+    await ui.evaluate(() => window.arbalete.setSplitRatio(0.6))
+    await expect.poll(async () => (await etat()).splitRatio).toBe(0.6)
+    // Terminer la vue remet la moitié pour la suivante.
+    await ui.evaluate((id) => window.arbalete.tabAction(id, 'vue-partagee'), premier)
+    expect((await etat()).split).toBeNull()
+    await ui.evaluate((id) => window.arbalete.tabAction(id, 'vue-partagee'), premier)
+    expect((await etat()).splitRatio).toBe(0.5)
+  } finally {
+    await ui.evaluate((id) => window.arbalete.tabAction(id, 'vue-partagee'), premier).catch(() => {})
+    await ui.evaluate((id) => window.arbalete.closeTab(id), second).catch(() => {})
+  }
+})
+
 // Value: protects=le panneau des permissions par site (ARB-145) : la vue de la barre liste, règle (Demander efface le choix) et
 //   réinitialise les sites du profil de l'espace affiché, la fenêtre ne le peut pas, un hôte, une permission ou un choix hors
 //   liste sont refusés, et le panneau s'ouvre dans la couche d'overlays; fails_when=la fenêtre règle une permission, un choix

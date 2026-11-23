@@ -94,7 +94,15 @@ import { placerRecherche, texteRecherche } from './recherche.ts'
 import { entreeMenuPageValide, type EntreeMenuPage, type MenuPage } from '../shared/menuPage.ts'
 import { adresseWeb, entreesMenuPage } from './menuPage.ts'
 import { reordonnerOnglets } from '../shared/ordreOnglets.ts'
-import { basculerPartage, dansPartage, scinder, type Partage } from '../shared/vuePartagee.ts'
+import {
+  basculerPartage,
+  dansPartage,
+  ecrirePartage,
+  lirePartage,
+  ratioBorne,
+  scinder,
+  type Partage
+} from '../shared/vuePartagee.ts'
 import { construirePalette, type ActionPalette, type EntreePalette } from '../shared/palette.ts'
 import { estActionOnglet, ongletsAFermer, type ActionOnglet } from '../shared/menuOnglet.ts'
 import { MOTEUR_DEFAUT, choixMoteurValide, modeleDe, urlRecherche, type ChoixMoteur } from '../shared/moteurs.ts'
@@ -146,6 +154,7 @@ import {
   ecrireTheme,
   lireBarre,
   lireMoteur,
+  lirePreference,
   lireReglages,
   lireTheme
 } from './donnees/preferences.ts'
@@ -316,12 +325,12 @@ function ongletsVisibles(): string[] {
 // la barre latérale étant masquée à l'ouverture (ARB-33).
 let contentBounds = { x: 8, y: 48, width: 884, height: 544 }
 // Vue partagée (ARB-72) : deux onglets de l'espace affiché côte à côte, dont l'actif.
-// shortcut: non écrite dans la session, la vue partagée ne survit pas au redémarrage ; à écrire (clé `pref.*` ou colonne d'onglet) si l'usage la réclame.
+// Écrite avec la session sous `pref.partage` (ARB-148), indices des deux onglets web.
 let partage: Partage | null = null
 // Zone de la page de l'onglet actif : sa moitié en vue partagée, sinon tout le cadre. Les petites vues natives (recherche, avis, aperçu) s'y placent.
 function rectanglePage() {
   if (!partage || !dansPartage(partage, activeTabId)) return contentBounds
-  const moities = scinder(contentBounds)
+  const moities = scinder(contentBounds, partage.ratio)
   return activeTabId === partage.gauche ? moities.gauche : moities.droite
 }
 
@@ -395,7 +404,8 @@ function stateSnapshot(): BrowserState {
     folders: dossiersOnglets
       .filter((dossier) => dossier.espace === espaceActif)
       .map(({ id, nom, replie }) => ({ id, nom, replie })),
-    split: partage ? [partage.gauche, partage.droite] : null
+    split: partage ? [partage.gauche, partage.droite] : null,
+    splitRatio: ratioBorne(partage?.ratio)
   }
 }
 
@@ -521,10 +531,14 @@ function ecrireSession() {
     ...(data.folder === undefined ? {} : { dossier: data.folder }),
     activite
   }))
-  const serialisee = JSON.stringify(onglets)
+  // La vue partagée s'écrit en indices parmi les onglets web, ceux que la restauration rouvre (ARB-148).
+  const web = ongletsARestaurer(onglets).onglets
+  const cles = [...tabs.keys()]
+  const partageEcrit = ecrirePartage(partage, (id) => web.indexOf(onglets[cles.indexOf(id)]))
+  const serialisee = JSON.stringify(onglets) + partageEcrit
   if (serialisee === derniereSessionEcrite) return
   try {
-    sauverSession(base, onglets)
+    sauverSession(base, onglets, partageEcrit)
     derniereSessionEcrite = serialisee
   } catch (erreur) {
     console.error('Session des onglets non enregistrée :', erreur)
@@ -545,7 +559,7 @@ function placerPage() {
     const { width, height } = mainWindow.getContentBounds()
     pleinEcranPage.setBounds({ x: 0, y: 0, width, height })
   } else if (partage) {
-    const moities = scinder(contentBounds)
+    const moities = scinder(contentBounds, partage.ratio)
     tabs.get(partage.gauche)?.view.setBounds(moities.gauche)
     tabs.get(partage.droite)?.view.setBounds(moities.droite)
   } else activeRecord()?.view.setBounds(contentBounds)
@@ -1898,6 +1912,16 @@ function rouvrirSession(session: OngletSauve[]): boolean {
   for (const [espace, indice] of actifsParEspace(rattaches)) dernierActif.set(espace ?? null, ids[indice])
   const restaure = dernierActif.get(espaceActif)
   if (restaure && tabs.get(restaure)?.espace === espaceActif) activeTabId = restaure
+  // Vue partagée (ARB-148) : rendue seulement si ses deux pages sont dans l'espace affiché et que l'une est l'onglet actif.
+  const ancien = base ? lirePartage(lirePreference(base, 'partage'), ids) : null
+  if (
+    ancien &&
+    !partage &&
+    tabs.get(ancien.gauche)?.espace === espaceActif &&
+    tabs.get(ancien.droite)?.espace === espaceActif &&
+    dansPartage(ancien, activeTabId)
+  )
+    partage = ancien
   // Un espace affiché sans onglet restauré reçoit son onglet de l'appelant (démarrage), qui sait si une adresse de lancement
   // s'ouvre déjà dedans.
   if (ongletsVisibles().length) setActiveView()
@@ -3077,6 +3101,16 @@ app.whenReady().then(() => {
     placerApercuVue()
     placerRechercheVue()
     placerAvisVue()
+  })
+  // Poignée de la vue partagée (ARB-148) : l'interface (fenêtre ou barre) règle la part de la page de gauche, bornée ici.
+  ipcMain.on('browser:set-split-ratio', (event, ratio) => {
+    if (!emetteurAutorise(event) || !partage || typeof ratio !== 'number' || !Number.isFinite(ratio)) return
+    partage = { ...partage, ratio: ratioBorne(ratio) }
+    placerPage()
+    placerApercuVue()
+    placerRechercheVue()
+    placerAvisVue()
+    broadcastState()
   })
   // Pop-ups bloquées (ARB-108) : l'icône (vue de la fenêtre ou de la barre) rouvre l'avis, sa vue seule autorise ou le ferme.
   const exigerAvis = (event: IpcMainInvokeEvent) => {

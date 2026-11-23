@@ -2,6 +2,16 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.40] - 2026-11-23
+
+### Ajouté
+- Extensions Chrome (ARB-161) : la section « Extensions » de Paramètres installe une extension depuis le Chrome Web Store en collant son identifiant ou son lien. Le fichier `.crx` est téléchargé (https, hôtes Google, 100 Mo au plus, sans cookies), sa signature est vérifiée et liée à l'identifiant demandé, puis il est extrait par un lecteur zip maison (chemins hors dossier, noms Windows réservés, doublons et bombes de décompression refusés). L'extension arrive inactive, nom localisé résolu.
+- « Rechercher une mise à jour » cherche une version plus récente à la demande. Si les permissions s'élargissent (permissions, accès aux sites, scripts de contenu), l'extension revient inactive jusqu'à ce que l'utilisateur les relise.
+- Un `manifest.json` d'un dossier est lu avec BOM et refusé au-delà de 1 Mo.
+
+### Limites
+- Le vrai téléchargement et le chargement d'une extension du Store sous Electron 45 ne sont pas rejoués ; seuls les tests unitaires (flux factices, .crx signés par une clé de test) et le smoke C106 les couvrent. Pas de mise à jour automatique en arrière-plan. Les permissions optionnelles d'un manifest ne sont pas comparées à la mise à jour.
+
 ## [0.12.44.39] - 2026-11-23
 
 ### Ajouté

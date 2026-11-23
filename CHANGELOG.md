@@ -2,6 +2,15 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.39] - 2026-11-23
+
+### Ajouté
+- Extensions Chrome (ARB-144) : la section « Extensions » de Paramètres installe une extension depuis un dossier décompressé (Manifest V3), liste ses permissions en français avant l'activation, puis l'active, la désactive ou la retire. Chaque profil a ses propres extensions ; supprimer un profil efface les siennes.
+- La fonction est éteinte par défaut : le réglage « Activer les extensions Chrome » ne s'applique qu'au redémarrage, et rien n'est chargé tant qu'il est éteint.
+
+### Limites
+- Le chargement réel d'extensions (Dark Reader, Bitwarden, uBOL Lite) n'est pas rejoué sous Electron 45. Pas de barre d'actions ni de popups d'extension, pas d'installation depuis le Web Store. La copie d'une extension bloque l'interface le temps de la copie (100 Mo au plus).
+
 ## [0.12.44.38] - 2026-11-22
 
 ### Ajouté

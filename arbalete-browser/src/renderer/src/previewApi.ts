@@ -188,6 +188,7 @@ export function installPreviewApi(): boolean {
     activeWorkspaceId,
     extensions: [],
     extensionsActif: false,
+    extensionsPartition: '_self',
     favorite: favorites.has(active()?.url ?? ''),
     favorites: [...favorites].slice(0, 8).map((url) => ({ url, title: titleFor(url) })),
     popupsBloquees: 0,

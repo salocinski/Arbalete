@@ -2,6 +2,15 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.41] - 2026-11-23
+
+### Ajouté
+- Extensions Chrome (ARB-160) : quand les extensions sont activées, la barre de contrôle affiche les icônes des extensions du profil de l'espace affiché, avec leur pastille. Un clic ouvre le popup de l'extension ancré sur la fenêtre. Un changement d'espace vers un autre profil change la liste.
+- Paramètres : un bouton « Parcourir le Chrome Web Store » ouvre le Store dans un nouvel onglet ; la fenêtre est plus large pour que les boutons ne soient plus serrés.
+
+### Limites
+- Le rendu réel des icônes et des popups est vérifié à la main, pas par un test automatique. Les pages d'extension restent soumises aux refus de permissions de la session (ARB-140). Le contrôle de l'émetteur du canal interne de la bibliothèque est laissé à l'audit de sécurité ARB-162.
+
 ## [0.12.44.40] - 2026-11-23
 
 ### Ajouté

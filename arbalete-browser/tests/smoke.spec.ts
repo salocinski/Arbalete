@@ -2308,7 +2308,7 @@ test('C50 : l’onglet affiche le favicon du site sans violation de la CSP, et l
   const csp = await barreUi.evaluate(
     () => document.querySelector<HTMLMetaElement>('meta[http-equiv="Content-Security-Policy"]')?.content ?? ''
   )
-  expect(csp).toMatch(/img-src 'self' data: https:(;|$)/)
+  expect(csp).toMatch(/img-src 'self' data: https: crx:(;|$)/)
   expect(csp).toMatch(/script-src 'self'(;|$)/)
   expect(csp).toMatch(/style-src 'self'(;|$)/)
 

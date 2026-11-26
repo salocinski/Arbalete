@@ -60,8 +60,8 @@ export function ecartsFuses(binaire: Uint8Array): string[] {
     .filter(([nom, valeur]) => lus[nom] !== valeur)
     .map(([nom, valeur]) => `${nom} : attendu ${valeur}, lu ${lus[nom] ?? 'absent'}`)
 }
-// Dossier de l'application empaquetée dont dist.mjs relit les fuses : celui de `--prepackaged` (aussi `--pd`, `--x <d>` ou
-// `--x=<d>`), sinon release/win-unpacked ; null si l'option est donnée sans valeur (ou avec une autre option à la place).
+// Dossier de l'application empaquetée dont dist.mjs relit les fuses : celui de `--prepackaged` (aussi `--pd` ; valeur après un espace
+// ou un `=`), sinon release/win-unpacked ; null si l'option est donnée sans valeur (ou avec une autre option à la place).
 // shortcut: un autre `directories.output` (-c.directories.output) n'est pas suivi (release.yml n'en change pas) ; à gérer si besoin.
 export function dossierApplication(args: string[]): string | null {
   const i = args.findIndex((a) => /^--(prepackaged|pd)(=|$)/.test(a))

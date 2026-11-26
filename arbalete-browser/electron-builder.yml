@@ -9,6 +9,16 @@ files:
   - "!out/web/**"
   - package.json
 asar: true
+# ARB-137 : fuses posés sur le binaire empaqueté (docs/securite/arb-11-checklist-electron.md, E1). grantFileProtocolExtraPrivileges
+# reste à sa valeur par défaut : l'interface est chargée en file:// (ARB-138).
+electronFuses:
+  runAsNode: false
+  enableNodeCliInspectArguments: false
+  onlyLoadAppFromAsar: true
+  # shortcut: le processus principal Node ignore aussi NODE_EXTRA_CA_CERTS (la pile réseau de Chromium, celle des pages et
+  # d'electron-updater, n'en dépend pas) ; à revoir si un besoin réel de Node derrière un proxy TLS apparaît.
+  enableNodeOptionsEnvironmentVariable: false
+  enableEmbeddedAsarIntegrityValidation: true
 # Écrit app-update.yml dans l'application et latest.yml à côté de l'installeur (lus par electron-updater, ARB-77).
 publish:
   provider: github

@@ -4,6 +4,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { FUSES_ATTENDUS } from './shared/fuses.ts'
 
 const racine = resolve(import.meta.dirname, '..')
 const config = readFileSync(resolve(racine, 'electron-builder.yml'), 'utf8')
@@ -123,4 +124,33 @@ test("signature du code (ARB-76) : publisherName, application puis installeur si
   const installeur = readFileSync(resolve(racine, '..', '.signpath/artifact-configuration-installeur.xml'), 'utf8')
   assert.match(application, /<pe-file path="Arbalete\.exe">\s*<authenticode-sign \/>/)
   assert.match(installeur, /<pe-file path="Arbalete-Setup-\*\.exe">\s*<authenticode-sign \/>/)
+})
+
+// Lit le bloc `electronFuses:` ligne à ligne : l'ordre des clés, les commentaires et les fuses ajoutés ne comptent pas.
+function fusesConfigures(): Map<string, string> {
+  const lignes = config.split('\n')
+  const debut = lignes.findIndex((l) => l.trimEnd() === 'electronFuses:')
+  const fuses = new Map<string, string>()
+  if (debut < 0) return fuses
+  for (const ligne of lignes.slice(debut + 1)) {
+    if (ligne.trim() === '' || ligne.trim().startsWith('#')) continue
+    if (!/^\s/.test(ligne)) break // fin du bloc : clé de premier niveau suivante
+    const m = ligne.match(/^\s+(\w+):\s*(\S+?)\s*(?:#.*)?\r?$/)
+    if (m) fuses.set(m[1], m[2])
+  }
+  return fuses
+}
+
+test('les fuses d’electron-builder.yml sont ceux que dist.mjs relit sur le binaire (ARB-137)', () => {
+  const fuses = fusesConfigures()
+  const attendus = Object.fromEntries(Object.entries(FUSES_ATTENDUS).map(([nom, v]) => [nom, String(v)]))
+  assert.deepEqual(Object.fromEntries(fuses), attendus)
+  // L'interface est chargée en file:// tant qu'ARB-138 n'est pas fait : ce fuse reste à sa valeur par défaut.
+  assert.equal(fuses.has('grantFileProtocolExtraPrivileges'), false)
+})
+
+test('scripts/dist.mjs relit les fuses sur le binaire produit (ARB-137)', () => {
+  const script = readFileSync(resolve(racine, 'scripts/dist.mjs'), 'utf8')
+  assert.match(script, /ecartsFuses\(readFileSync\(exe\)\)/)
+  assert.match(script, /dossierApplication\(process\.argv\.slice\(2\)\)/)
 })

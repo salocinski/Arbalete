@@ -38,6 +38,8 @@ test('une page web ne mène pas à un fichier, un fichier mène au web ou à un 
   assert.equal(navigationAutorisee('file:///C:/a.html', 'https://b.test/'), true)
   assert.equal(navigationAutorisee('file:///C:/a.html', 'file://serveur/p'), false)
   assert.equal(navigationAutorisee('https://a.test/', 'javascript:alert(1)'), false)
+  assert.equal(navigationAutorisee('about:blank', 'file:///C:/a.html'), false)
+  assert.equal(navigationAutorisee('', 'file:///C:/a.html'), false)
 })
 
 test('cadreAutorise (ARB-139) : un fichier local n’est atteint que depuis une page en file:, le reste est laissé à Chromium', () => {

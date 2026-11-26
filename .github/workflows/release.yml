@@ -31,7 +31,7 @@ jobs:
       contents: write
       actions: read
     env:
-      CLE_CACHE_ELECTRON: electron-windows-45.3.2
+      CLE_CACHE_ELECTRON: electron-windows-45.4.1
       SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
     steps:
       - name: Vérifier la configuration de signature
@@ -70,7 +70,7 @@ jobs:
         with:
           name: application-a-signer
           path: arbalete-browser/release/win-unpacked/Arbalete.exe
-      - uses: SignPath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0
+      - uses: SignPath/github-action-submit-signing-request@a2c5b60d9c75f073142b653c354b632eedce097b # v3.2
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: ${{ env.SIGNPATH_ORGANIZATION_ID }}
@@ -93,7 +93,7 @@ jobs:
         with:
           name: installeur-a-signer
           path: arbalete-browser/release/Arbalete-Setup-*.exe
-      - uses: SignPath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0
+      - uses: SignPath/github-action-submit-signing-request@a2c5b60d9c75f073142b653c354b632eedce097b # v3.2
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: ${{ env.SIGNPATH_ORGANIZATION_ID }}

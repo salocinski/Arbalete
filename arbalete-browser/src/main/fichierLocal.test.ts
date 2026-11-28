@@ -67,7 +67,7 @@ test('cadreAutorise (ARB-139) : un fichier local n’est atteint que depuis une 
 
 // Faux contenu : un EventEmitter qui garde l'URL courante, comme le fait WebContents pour filtrerCadres.
 function fauxContenu(url: string) {
-  const contenu = Object.assign(new EventEmitter(), { getURL: () => url })
+  const contenu = Object.assign(new EventEmitter(), { mainFrame: { url } })
   filtrerCadres(contenu as unknown as WebContents)
   return contenu
 }

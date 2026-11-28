@@ -4995,14 +4995,14 @@ test('C106 : les extensions ne se pilotent que depuis la vue de la barre, étein
 //   no_claim=les événements sont émis par le test (Chromium bloque déjà ces navigations réelles) ; les pop-ups partagent
 //   filtrerCadres mais ne sont pas exercées ici (test unitaire de filtrerCadres).
 test('C107 : un sous-cadre ou une redirection vers un fichier est annulé dans un onglet', async () => {
-  await ui.evaluate((url) => window.arbalete.createTab(url), `${origine}/page-a.html`)
-  await attendreUrlActive(`${origine}/page-a.html`)
+  await ui.evaluate((url) => window.arbalete.createTab(url), `${origine}/page-a.html?c107`)
+  await attendreUrlActive(`${origine}/page-a.html?c107`)
   await expect.poll(async () => ongletActif(await etat())?.title).toBe('Page A')
   const annule = (evenement: string, url: string, isMainFrame: boolean) =>
     app.evaluate(
       ({ BrowserWindow, WebContentsView }, { evenement, url, isMainFrame }) => {
         const vue = BrowserWindow.getAllWindows()[0].contentView.children.find(
-          (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('page-a.html')
+          (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('page-a.html?c107')
         ) as InstanceType<typeof WebContentsView>
         let refuse = false
         vue.webContents.emit(evenement, { url, isMainFrame, preventDefault: () => (refuse = true) })

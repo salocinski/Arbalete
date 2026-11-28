@@ -33,17 +33,18 @@ export function cadreAutorise(depuis: string, vers: string): boolean {
   return adresseFichierLocal(vers) !== null && /^file:/i.test(depuis)
 }
 
+// `mainFrame.url` est la page validée, pas l'adresse en attente de `getURL()` (un file: tapé dans la barre ne se fait pas passer pour la source).
 // Branche le filtre sur un contenu (onglet ou pop-up) : sous-cadres hors cadre principal (déjà filtré par will-navigate)
 // et redirections de tous les cadres.
 export function filtrerCadres(contenu: WebContents): void {
   const refuser = (details: { url: string; preventDefault: () => void }, nature: string) => {
-    console.warn(`Navigation refusée (${nature}) vers ${details.url.slice(0, 200)}`)
+    console.warn(`Navigation refusée (${nature}) vers une adresse file:`) // sans le chemin local : un flot d'iframes ne remplit pas les journaux de chemins
     details.preventDefault()
   }
   contenu.on('will-frame-navigate', (details) => {
-    if (!details.isMainFrame && !cadreAutorise(contenu.getURL(), details.url)) refuser(details, 'sous-cadre')
+    if (!details.isMainFrame && !cadreAutorise(contenu.mainFrame.url, details.url)) refuser(details, 'sous-cadre')
   })
   contenu.on('will-redirect', (details) => {
-    if (!cadreAutorise(contenu.getURL(), details.url)) refuser(details, 'redirection')
+    if (!cadreAutorise(contenu.mainFrame.url, details.url)) refuser(details, 'redirection')
   })
 }

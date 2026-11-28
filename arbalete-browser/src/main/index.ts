@@ -56,7 +56,7 @@ import {
 import { ongletVoisin } from './voisin.ts'
 import { depiler, empiler } from './ongletsFermes.ts'
 import { borner } from './bornes.ts'
-import { adresseFichierLocal, navigationAutorisee } from './fichierLocal.ts'
+import { adresseFichierLocal, filtrerCadres, navigationAutorisee } from './fichierLocal.ts'
 import { AVIS_DUREE_MS, estGeste, estPopup, gesteRecent, placerAvisPopup, POPUPS_MAX, tailleDePopup } from './popup.ts'
 import { autoriserPopups, popupsAutorises } from './donnees/popupsSites.ts'
 import { palierZoom, sensDuZoom, type SensZoom } from './zoom.ts'
@@ -1393,6 +1393,7 @@ function suivrePopup(fenetre: BrowserWindow) {
   contenu.on('will-navigate', (event, url) => {
     if (!/^https?:\/\//i.test(url)) event.preventDefault()
   })
+  filtrerCadres(contenu) // ARB-139 : sous-cadres et redirections de la pop-up
   // Pas de barre d'adresse : l'hôte réel précède le titre, que la page contrôle, contre l'usurpation d'une fenêtre de connexion.
   contenu.on('page-title-updated', (event, titre) => {
     event.preventDefault()
@@ -1904,6 +1905,7 @@ function brancherOnglet(id: string, record: TabRecord) {
   view.webContents.on('will-navigate', (event, url) => {
     if (!navigationAutorisee(view.webContents.getURL(), url)) event.preventDefault()
   })
+  filtrerCadres(view.webContents) // ARB-139
   view.webContents.on('context-menu', (_event, params) => ouvrirMenuPage(id, params))
   brancherF12(view.webContents)
   brancherRaccourcis(view.webContents)

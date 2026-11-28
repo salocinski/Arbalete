@@ -7,8 +7,8 @@ cards block                              matches=1 plan block                   
 <!--
   BASTION PROTOCOL — Kanban versionné dans le dépôt (suivi multi-providers d'IA).
   Données : les deux blocs <script type="application/json"> ci-dessous sont la source de vérité.
-    #bp-plan  → { "milestones": [...], "epics": [...] }   (constantes du projet, §11 du doc de référence)
-    #bp-cards → { "cards": [...] }                        (cartes prefixe-xxx ; statuts, notes, criteres)
+    #atlas-plan  → { "milestones": [...], "epics": [...] }   (constantes du projet, §11 du doc de référence)
+    #atlas-cards → { "cards": [...] }                        (cartes prefixe-xxx ; statuts, notes, criteres)
   Usage :
     1. Ouvrir ce fichier dans un navigateur, déplacer/éditer les cartes.
     2. Cliquer « Exporter le fichier » : le kanban.html mis à jour est téléchargé.
@@ -278,7 +278,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
   </form>
 </div>
 
-<script id="bp-plan" type="application/json">
+<script id="atlas-plan" type="application/json">
 {
   "epics": [
     {
@@ -442,7 +442,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
 }
 </script>
 
-<script id="bp-cards" type="application/json">
+<script id="atlas-cards" type="application/json">
 {
   "cards": [
     {
@@ -2082,11 +2082,11 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "epic": "phase-6-usage-quotidien",
       "kind": "tache",
       "milestone": "EP-14",
-      "note": "[Sécurité] Écart E1 de la revue de la checklist Electron (ARB-11, docs/securite/arb-11-checklist-electron.md), recommandation 19.\nProblème : aucun fuse n'est posé (pas de @electron/fuses). Un binaire empaqueté reste lançable en mode Node (ELECTRON_RUN_AS_NODE) et accepte les arguments d'inspection. Sans objet en développement, moyen à la distribution.\nPiste : ajouter @electron/fuses et l'appeler après l'empaquetage (flipFuses, ou le hook afterPack d'electron-builder) : RunAsNode off, EnableNodeCliInspectArguments off, OnlyLoadAppFromAsar on, EnableEmbeddedAsarIntegrityValidation on. À faire avec l'installeur NSIS, impossible tant qu'il n'y a pas de build empaqueté.\nCritère : Le binaire empaqueté a les quatre fuses attendus\nUn test lit l'état des fuses du binaire produit",
+      "note": "[Sécurité] Écart E1 de la revue de la checklist Electron (ARB-11, docs/securite/arb-11-checklist-electron.md), recommandation 19.\nProblème : aucun fuse n'est posé (pas de @electron/fuses). Un binaire empaqueté reste lançable en mode Node (ELECTRON_RUN_AS_NODE) et accepte les arguments d'inspection. Sans objet en développement, moyen à la distribution.\nPiste : ajouter @electron/fuses et l'appeler après l'empaquetage (flipFuses, ou le hook afterPack d'electron-builder) : RunAsNode off, EnableNodeCliInspectArguments off, OnlyLoadAppFromAsar on, EnableEmbeddedAsarIntegrityValidation on. À faire avec l'installeur NSIS, impossible tant qu'il n'y a pas de build empaqueté.\nCritère : Le binaire empaqueté a les quatre fuses attendus\nUn test lit l'état des fuses du binaire produit\n\n[RESOLUTION 2026-11-26] [RESOLUTION 2026-11-26] Fuses poses dans electron-builder.yml (electronFuses : RunAsNode, inspection et NODE_OPTIONS off, asar seul + integrite) ; releves sur win-unpacked/Arbalete.exe, application demarree. Test installeur.test.ts. Doc : docs/securite/arb-11-checklist-electron.md (E1).\n\n[NOTE 2026-11-26 20:53] x",
       "num": 137,
       "prio": "P2",
       "size": "S",
-      "status": "backlog",
+      "status": "done",
       "title": "Poser les fuses d'Electron sur le binaire empaqueté"
     },
     {
@@ -2106,11 +2106,11 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "epic": "phase-1-valider-le-socle",
       "kind": "tache",
       "milestone": "EP-02",
-      "note": "[Sécurité] Écart E3 de la revue de la checklist Electron (ARB-11, docs/securite/arb-11-checklist-electron.md), recommandation 13.\nProblème : seul will-navigate (cadre principal) filtre les adresses des onglets. will-frame-navigate et will-redirect ne sont pas branchés : un sous-cadre ou une redirection n'est filtré que par Chromium, pas par le code d'Arbalète. Faible.\nPiste : ajouter will-frame-navigate et will-redirect sur chaque onglet, avec le même filtre d'adresse que will-navigate. Vérifier la signature de l'événement (event.url ou paramètre) dans la documentation d'Electron 45 avant d'écrire le code ; sortir le filtre en fonction pure testable.\nCritère : Un sous-cadre ou une redirection vers un schéma non autorisé est annulé\nTest unitaire du filtre d'adresse",
+      "note": "[Sécurité] Écart E3 de la revue de la checklist Electron (ARB-11, docs/securite/arb-11-checklist-electron.md), recommandation 13.\nProblème : seul will-navigate (cadre principal) filtre les adresses des onglets. will-frame-navigate et will-redirect ne sont pas branchés : un sous-cadre ou une redirection n'est filtré que par Chromium, pas par le code d'Arbalète. Faible.\nPiste : ajouter will-frame-navigate et will-redirect sur chaque onglet, avec le même filtre d'adresse que will-navigate. Vérifier la signature de l'événement (event.url ou paramètre) dans la documentation d'Electron 45 avant d'écrire le code ; sortir le filtre en fonction pure testable.\nCritère : Un sous-cadre ou une redirection vers un schéma non autorisé est annulé\nTest unitaire du filtre d'adresse\n\n[RESOLUTION 2026-11-26] [RESOLUTION 2026-11-26] will-frame-navigate (sous-cadres) et will-redirect (onglets et pop-ups) filtres par cadreAutorise / filtrerCadres : seule une cible file: est jugee. Tests unitaires fichierLocal.test.ts et smoke C107. Doc : arb-11-checklist-electron.md (E3).",
       "num": 139,
       "prio": "P2",
       "size": "S",
-      "status": "backlog",
+      "status": "done",
       "title": "Filtrer aussi les navigations de sous-cadres et les redirections des onglets"
     },
     {
@@ -2395,7 +2395,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 160,
       "title": "Extensions Chrome : barre d'actions et popups",
-      "note": "Suite d'ARB-144. Icônes d'extensions dans l'interface (browser-action-list de electron-chrome-extensions), popups dans la couche d'overlays, permissions accordées aux pages d'extension (limite de securiserSession, ARB-140).",
+      "note": "Suite d'ARB-144. Icônes d'extensions dans l'interface (browser-action-list de electron-chrome-extensions), popups dans la couche d'overlays, permissions accordées aux pages d'extension (limite de securiserSession, ARB-140).\n\n[RESOLUTION 2026-11-25] [RESOLUTION 2026-11-25] Barre d'actions des extensions dans la barre de controle, livree (PR 152, v0.12.44.41).",
       "deps": [
         "ARB-144"
       ],
@@ -2404,7 +2404,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "milestone": "M2",
       "prio": "P2",
       "size": "L",
-      "status": "doing",
+      "status": "done",
       "assigned_to": ""
     },
     {
@@ -2425,7 +2425,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 162,
       "title": "Extensions Chrome : audit de sécurité EP-04, puis activation par défaut",
-      "note": "Jalon de la décision 0004 : audit complet (skill security-audit) avant d'allumer pref.extensions.actif par défaut ; couvre copie du dossier, IPC, permissions des pages d'extension, mémoire des processus.",
+      "note": "Jalon de la décision 0004 : audit complet (skill security-audit) avant d'allumer pref.extensions.actif par défaut ; couvre copie du dossier, IPC, permissions des pages d'extension, mémoire des processus.\n\n[RESOLUTION 2026-11-25] [RESOLUTION 2026-11-25] Audit securite complet EP-04 (run-2, hors depot) : 0 faille confirmee, 8 points needs_validation (comportement Electron 45 / Chromium non observable sans execution), a verifier sous npm run dev. Run incomplet : verification finale des enregistrements et validateurs officiels non executes. Extensions eteintes par defaut.",
       "deps": [
         "ARB-144",
         "ARB-160",
@@ -2436,6 +2436,19 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "milestone": "M2",
       "prio": "P2",
       "size": "M",
+      "status": "done",
+      "assigned_to": ""
+    },
+    {
+      "num": 163,
+      "title": "Smoke de l'exe empaqueté en CI (fuses, intégrité asar, runAsNode off)",
+      "note": "Suite d'ARB-137 : aucun test ne démarre Arbalete.exe empaqueté (et signé par SignPath) avec les fuses posés ; un exe qui abandonne au lancement partirait en Release. Piste : étape de release.yml qui lance l'exe avec ARBALETE_PROFIL_TEST et vérifie qu'une fenêtre s'ouvre.",
+      "deps": [],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P2",
+      "size": "S",
       "status": "todo",
       "assigned_to": ""
     }
@@ -2732,8 +2745,8 @@ board.addEventListener("drop", (e) => {
 function jsonSafe(obj) { return JSON.stringify(obj, null, 2).replace(/<\//g, "<\\/"); }
 function exporterFichier() {
   const clone = document.documentElement.cloneNode(true);
-  clone.querySelector("#bp-plan").textContent = jsonSafe(plan);
-  clone.querySelector("#bp-cards").textContent = jsonSafe({ cards });
+  clone.querySelector("#atlas-plan").textContent = jsonSafe(plan);
+  clone.querySelector("#atlas-cards").textContent = jsonSafe({ cards });
   // Vider le contenu rendu : il est régénéré au chargement par render().
   ["#stats", "#track", "#board", "#roadmap", "#matrix", "#f-epic-filter", "#notice"].forEach((sel) => {
     const el = clone.querySelector(sel); if (el) el.innerHTML = "";
@@ -2763,8 +2776,8 @@ $("#export-btn").addEventListener("click", exporterFichier);
 /* Chargement : le fichier est la source de vérité, le brouillon du navigateur s'applique au-dessus. */
 (async () => {
   try {
-    plan = JSON.parse(document.getElementById("bp-plan").textContent);
-    cards = (JSON.parse(document.getElementById("bp-cards").textContent).cards) || [];
+    plan = JSON.parse(document.getElementById("atlas-plan").textContent);
+    cards = (JSON.parse(document.getElementById("atlas-cards").textContent).cards) || [];
   } catch (e) {
     notice("JSON du fichier illisible : " + e.message, "err");
     return;

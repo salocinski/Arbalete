@@ -4988,6 +4988,37 @@ test('C106 : les extensions ne se pilotent que depuis la vue de la barre, étein
   expect(etat.extensions).toEqual([])
 })
 
+// Value: protects=ARB-139 : les onglets filtrent les sous-cadres et les redirections vers un fichier (will-frame-navigate,
+//   will-redirect, preventDefault) comme will-navigate le fait pour le cadre principal;
+//   fails_when=index.ts ne branche plus filtrerCadres sur l'onglet, ou la forme des détails d'Electron change (isMainFrame, url);
+//   why_new=aucun test n'exerçait ces écouteurs; seam=none;
+//   no_claim=les événements sont émis par le test (Chromium bloque déjà ces navigations réelles) ; les pop-ups partagent
+//   filtrerCadres mais ne sont pas exercées ici (test unitaire de filtrerCadres).
+test('C107 : un sous-cadre ou une redirection vers un fichier est annulé dans un onglet', async () => {
+  await ui.evaluate((url) => window.arbalete.createTab(url), `${origine}/page-a.html#c107`)
+  await attendreUrlActive(`${origine}/page-a.html#c107`)
+  await expect.poll(async () => ongletActif(await etat())?.title).toBe('Page A')
+  const annule = (evenement: string, url: string, isMainFrame: boolean) =>
+    app.evaluate(
+      ({ BrowserWindow, WebContentsView }, { evenement, url, isMainFrame }) => {
+        const vue = BrowserWindow.getAllWindows()[0].contentView.children.find(
+          (enfant) => enfant instanceof WebContentsView && enfant.webContents.getURL().includes('page-a.html#c107')
+        ) as InstanceType<typeof WebContentsView>
+        let refuse = false
+        vue.webContents.emit(evenement, { url, isMainFrame, preventDefault: () => (refuse = true) })
+        return refuse
+      },
+      { evenement, url, isMainFrame }
+    )
+  expect(await annule('will-frame-navigate', 'file:///C:/Windows/win.ini', false)).toBe(true)
+  expect(await annule('will-redirect', 'file:///C:/Windows/win.ini', false)).toBe(true)
+  expect(await annule('will-redirect', 'file:///C:/Windows/win.ini', true)).toBe(true)
+  expect(await annule('will-frame-navigate', 'file://serveur/partage/a.html', false)).toBe(true)
+  // Un sous-cadre web ou une redirection web passent.
+  expect(await annule('will-frame-navigate', `${origine}/page-b.html`, false)).toBe(false)
+  expect(await annule('will-redirect', `${origine}/page-b.html`, true)).toBe(false)
+})
+
 // Value: protects=ARB-114 (ARB-29) : deux setSidebar('open') successifs laissent la barre ouverte, à la même place, sans
 //   modification de la mise en page; fails_when=un second 'open' déplace la barre ou la page, ou change l'état;
 //   why_new=C33 n'ouvre qu'une fois; seam=none; no_claim=ne compte pas les diffusions de l'état, ne simule ni le survol

@@ -2,6 +2,15 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.42] - 2026-11-26
+
+### Ajouté
+- Sécurité du binaire (ARB-137) : l'application empaquetée est construite avec les fuses d'Electron posés (mode Node, arguments d'inspection et `NODE_OPTIONS` désactivés ; chargement depuis l'asar seul, intégrité de l'asar vérifiée). `npm run dist` relit les fuses sur l'exe produit et échoue en cas d'écart.
+- Navigation (ARB-139) : les sous-cadres et les redirections des onglets et des pop-ups ne mènent plus à un fichier local depuis une page qui n'est pas elle-même en `file:` (chemins réseau refusés). `will-navigate` applique la même règle : about:blank, data: et blob: ne mènent plus à un fichier.
+
+### Limites
+- Le démarrage de l'exe empaqueté et signé n'est pas rejoué en CI (ARB-163). Depuis une page `file:`, un iframe web ou une redirection peut encore viser un fichier local (décision prise sur l'adresse de l'onglet, Chromium garde sa garde). Le fuse `NODE_OPTIONS` ignore aussi `NODE_EXTRA_CA_CERTS` pour le processus principal.
+
 ## [0.12.44.41] - 2026-11-23
 
 ### Ajouté

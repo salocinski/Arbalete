@@ -97,6 +97,13 @@ jobs:
           electron_config_cache: ${{ runner.temp }}\electron-cache
       # test:smoke compile puis lance Playwright ; l'app des tests démarre sur une page locale, sans réseau.
       - run: npm run test:smoke
+      # ARB-163 : l'exe empaqueté (fuses posés par electron-builder) doit démarrer pour de bon ; le dossier sans installeur
+      # suffit, ce que release.yml rejoue ensuite sur l'exe signé. Le build de test:smoke (out/) est réutilisé.
+      # dist.mjs relit aussi les fuses sur l'exe produit (ARB-137) ; le cache du binaire d'Electron évite un nouveau téléchargement.
+      - run: node scripts/dist.mjs --dir
+        env:
+          electron_config_cache: ${{ runner.temp }}\electron-cache
+      - run: node scripts/smoke-exe.mjs release/win-unpacked/Arbalete.exe
       # ARB-133 : enregistrement de l’arbre testé, lu par /ship (.gstack/pregate.json) pour reprendre ce job au lieu de
       # relancer ses contrôles. Le nom du job est lié à ce fichier, comme au ruleset PR-Rule.
       - run: node scripts/ci-tree-json.mjs tree.json 'tests/**/*.spec.ts'

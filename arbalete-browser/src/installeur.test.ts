@@ -83,6 +83,7 @@ test("signature du code (ARB-76) : publisherName, application puis installeur si
   const etapes = [
     'run: npm run dist\n',
     'artifact-configuration-slug: application',
+    'node scripts/smoke-exe.mjs release/win-unpacked/Arbalete.exe',
     '--prepackaged release/win-unpacked',
     'artifact-configuration-slug: installeur',
     'node scripts/apres-signature.mjs',

@@ -86,6 +86,9 @@ jobs:
           Copy-Item ../signe/application/Arbalete.exe release/win-unpacked/Arbalete.exe -Force
           $s = Get-AuthenticodeSignature release/win-unpacked/Arbalete.exe
           if ($s.Status -ne 'Valid' -or $s.SignerCertificate.Subject -notmatch 'CN=SignPath Foundation') { throw "Application mal signée : $($s.Status) $($s.SignerCertificate.Subject)" }
+      # ARB-163 : l'exe signé, fuses posés, doit démarrer pour de bon (fenêtre ouverte) avant d'être mis dans l'installeur.
+      - name: Démarrer l'application signée
+        run: node scripts/smoke-exe.mjs release/win-unpacked/Arbalete.exe
       # 2. Installeur de l'application signée, signé à son tour.
       - run: npm run dist -- --prepackaged release/win-unpacked
       - id: installeur

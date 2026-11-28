@@ -44,7 +44,9 @@ test('la CI tourne sur Windows, sur main et sur les PR, avec typecheck, tests un
     commandes.join(' | '),
     'npm ci | npx install-electron | npm run typecheck | npm run lint | npm run format:check | npm run test:unit | npm run build | ' +
       "node scripts/ci-tree-json.mjs tree.json 'src/**/*.test.ts' | " +
-      "npm ci | npx install-electron | npm run test:smoke | node scripts/ci-tree-json.mjs tree.json 'tests/**/*.spec.ts'"
+      'npm ci | npx install-electron | npm run test:smoke | ' +
+      'node scripts/dist.mjs --dir | node scripts/smoke-exe.mjs release/win-unpacked/Arbalete.exe | ' +
+      "node scripts/ci-tree-json.mjs tree.json 'tests/**/*.spec.ts'"
   )
 })
 

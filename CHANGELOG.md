@@ -2,6 +2,14 @@
 
 Toutes les évolutions notables d'Arbalète. Versions à 4 segments (`MAJEUR.MINEUR.CORRECTIF.MICRO`), gérées par `/ship`.
 
+## [0.12.44.43] - 2026-11-28
+
+### Ajouté
+- Smoke de l'exe empaqueté (ARB-163) : `scripts/smoke-exe.mjs` lance `Arbalete.exe` avec un profil jetable et vérifie qu'une fenêtre s'ouvre et que le processus tient, que `ELECTRON_RUN_AS_NODE` ne le fait pas agir comme Node et qu'aucun inspecteur ne s'ouvre (message et sonde du port). Il tourne en CI sur un build `dist.mjs --dir` (fuses relus) et dans `release.yml` sur l'exe signé, avant l'installeur.
+
+### Limites
+- Le contenu de la page n'est pas contrôlé (Playwright ne peut pas piloter cet exe, l'inspection étant coupée par les fuses). Le smoke n'a pas encore tourné sur l'exe signé par SignPath (ARB-141).
+
 ## [0.12.44.42] - 2026-11-26
 
 ### Ajouté

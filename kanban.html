@@ -2442,14 +2442,14 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 163,
       "title": "Smoke de l'exe empaqueté en CI (fuses, intégrité asar, runAsNode off)",
-      "note": "Suite d'ARB-137 : aucun test ne démarre Arbalete.exe empaqueté (et signé par SignPath) avec les fuses posés ; un exe qui abandonne au lancement partirait en Release. Piste : étape de release.yml qui lance l'exe avec ARBALETE_PROFIL_TEST et vérifie qu'une fenêtre s'ouvre.",
+      "note": "Suite d'ARB-137 : aucun test ne démarre Arbalete.exe empaqueté (et signé par SignPath) avec les fuses posés ; un exe qui abandonne au lancement partirait en Release. Piste : étape de release.yml qui lance l'exe avec ARBALETE_PROFIL_TEST et vérifie qu'une fenêtre s'ouvre.\n\n[RESOLUTION 2026-11-28] Smoke de l'exe empaqueté (scripts/smoke-exe.mjs) lancé par ci.yml (job smoke, build dist.mjs --dir) et par release.yml sur l'exe signé. PR #157. Preuves : pregate vert sur l'arbre 7bb00ce (108 tests), smoke-exe.mjs en local sortie 0 (cas d'échec sortie 1), revue sans finding bloquant.",
       "deps": [],
       "epic": "realisation",
       "kind": "tache",
       "milestone": "M2",
       "prio": "P2",
       "size": "S",
-      "status": "doing",
+      "status": "done",
       "assigned_to": ""
     }
   ]
